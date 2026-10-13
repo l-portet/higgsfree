@@ -1,0 +1,2 @@
+<!-- Open Higgsfield mark. 64-grid, 8-unit margin (body 48). See docs/brand/BRAND.md -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><rect width="64" height="64" rx="15" fill="#d4f53c"/><path fill="#0a0a0a" transform="translate(6 6) scale(0.8125)" d="M11 8h6a3 3 0 0 1 3 3v13h8v12h-8v17a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zM47 8h6a3 3 0 0 1 3 3v42a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V36h-8V24h8V11a3 3 0 0 1 3-3z"/></svg>

@@ -1,0 +1,27 @@
+# Dependencies & build output (reinstalled / rebuilt inside the image)
+node_modules
+dist
+coverage
+
+# Local state — never bake secrets or user media into an image
+data
+.env
+.env.*
+
+# VCS / CI / editor / docs
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+*.log
+docs
+*.md
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore
+.editorconfig
+.prettierrc

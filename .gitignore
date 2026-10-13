@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+.vite/
+.cache/
+.eslintcache
+
+# Runtime data (SQLite DB + generated media). Keep out of git.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# Temp files written during downloads/uploads
+*.part
+*.tmp
+tmp/
+scratch/
+
+# Logs and reports
+*.log
+npm-debug.log*
+pnpm-debug.log*
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
