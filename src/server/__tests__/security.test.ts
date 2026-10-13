@@ -78,7 +78,7 @@ describe("securityGuard (unit)", () => {
     expect((await strict.request("/api/x", { method: "POST", headers: { "content-length": "0" } })).status).toBe(200);
   });
 
-  it("accepts Origin from the Vite dev server (same hostname, different port)", async () => {
+  it("accepts an Origin with the same hostname on another port (dev proxies)", async () => {
     const res = await strict.request("/api/x", {
       method: "POST", headers: { origin: "http://localhost:5173", "sec-fetch-site": "same-site", "content-type": "application/json", "content-length": "2" }, body: "{}",
     });
@@ -92,9 +92,8 @@ describe("securityGuard (real app)", () => {
   let dbmod: typeof import("../db.ts");
 
   beforeAll(async () => {
-    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-sec-"));
+    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-sec-"));
     process.env.DATA_DIR = dataDir;
-    process.env.NODE_ENV = "test";
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.OPENROUTER_BASE_URL = "http://127.0.0.1:9"; // never reached
     delete process.env.ALLOWED_HOSTS;

@@ -16,8 +16,8 @@ export default function SettingsPage() {
         title="Settings"
         description={
           server === "offline" && !settings
-            ? "Server unreachable. Start the API to edit settings."
-            : "Your OpenRouter key, default models and local storage."
+            ? "Server unreachable. Settings load again once it is back."
+            : "Your OpenRouter key, default models and storage."
         }
       />
       <div className="flex flex-col gap-4">

@@ -1,6 +1,6 @@
 /** Actions shared by the generation card and the lightbox: delete, retry, animate, reuse prompt. */
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Generation } from "@shared/types";
 import { describeApiError } from "@/lib/api";
@@ -8,7 +8,7 @@ import { useGenerations } from "@/store/generations";
 import { useUi } from "@/store/ui";
 
 export function useGenerationActions(g: Generation, onReuse?: (g: Generation) => void) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -42,7 +42,7 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     if (!g.output) return;
     useUi.getState().setPendingFirstFrame(g.output.url);
     useUi.getState().closeLightbox();
-    navigate("/video");
+    router.push("/video");
   };
 
   const reuse = () => {
@@ -57,7 +57,7 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
       lastFrame: g.inputs?.lastFrame,
     });
     useUi.getState().closeLightbox();
-    navigate(g.type === "image" ? "/image" : "/video");
+    router.push(g.type === "image" ? "/image" : "/video");
   };
 
   return { confirmDelete, setConfirmDelete, deleting, retrying, remove, retry, animate, reuse };

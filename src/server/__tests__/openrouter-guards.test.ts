@@ -17,9 +17,8 @@ const realFetch = globalThis.fetch;
 
 beforeAll(async () => {
   process.env.OPENROUTER_BASE_URL = BASE;
-  process.env.NODE_ENV = "test";
   or = await import("../openrouter.ts");
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-guards-"));
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-guards-"));
 });
 
 afterEach(() => {

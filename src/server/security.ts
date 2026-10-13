@@ -10,7 +10,7 @@
  *     without a preflight; Hono's `c.req.json()` would happily parse it).
  *  3. `Sec-Fetch-Site` / `Origin`, when the browser sends them, must point at
  *     this app. Only hostnames are compared, never ports or schemes: in dev the
- *     browser talks to Vite on :5173 which proxies to the server on :8787.
+ *     same guard runs whatever port Next is on, in dev or behind a proxy.
  *
  * Only the `Host` header as received is consulted, never `X-Forwarded-Host`
  * or any other `X-Forwarded-*` header, since anything that can reach the port
@@ -60,12 +60,17 @@ export function originHostname(origin: string | undefined): string | undefined {
 
 /**
  * Build the allowed-host set from the `ALLOWED_HOSTS` env value (comma-separated
- * hostnames; `*` = allow everything) plus the loopback names and `APP_URL`'s host.
+ * hostnames; `*` = allow everything) plus the loopback names, `APP_URL`'s host and
+ * any `extra` hostnames (the urls Vercel assigns to a deployment).
  */
-export function parseAllowedHosts(raw: string | undefined, appUrl?: string): AllowedHosts {
+export function parseAllowedHosts(raw: string | undefined, appUrl?: string, extra: readonly (string | undefined)[] = []): AllowedHosts {
   const set = new Set<string>(DEFAULT_ALLOWED_HOSTS);
   const appHost = originHostname(appUrl);
   if (appHost) set.add(appHost);
+  for (const e of extra) {
+    const host = e ? hostnameOf(e) : undefined;
+    if (host) set.add(host);
+  }
   for (const part of (raw ?? "").split(",")) {
     const v = part.trim();
     if (!v) continue;
@@ -100,15 +105,21 @@ function reject(c: Context, status: 403 | 415, message: string, reason: string):
 
 export interface SecurityOptions {
   allowedHosts: AllowedHosts;
+  /**
+   * Skip the `Host` allow-list: the platform in front (Vercel) only routes a request here when
+   * it was addressed to one of this deployment's own hostnames, so DNS rebinding cannot reach it.
+   * `Origin` is then compared against the request's own `Host` (same-origin) as well as the list.
+   */
+  trustHost?: boolean;
 }
 
 export function securityGuard(opts: SecurityOptions): MiddlewareHandler {
-  const { allowedHosts } = opts;
+  const { allowedHosts, trustHost = false } = opts;
   return async (c, next) => {
-    // 1. Host: every route, including /api/health, /media/* and the SPA.
+    // 1. Host: every route, including /api/health, /media/* and the pages.
     const hostHeader = c.req.header("host") ?? new URL(c.req.url).host;
     const host = hostnameOf(hostHeader);
-    if (!isAllowedHost(allowedHosts, host)) {
+    if (!trustHost && !isAllowedHost(allowedHosts, host)) {
       return reject(c, 403, "Unrecognised Host", `Host "${hostHeader}" is not allowed (set ALLOWED_HOSTS=${host ?? "<host>"} or ALLOWED_HOSTS=* to allow it)`);
     }
 
@@ -126,8 +137,14 @@ export function securityGuard(opts: SecurityOptions): MiddlewareHandler {
         return reject(c, 403, "Cross-site requests are not allowed", `Sec-Fetch-Site "${site}" rejected`);
       }
       const origin = c.req.header("origin");
-      if (origin !== undefined && !isAllowedHost(allowedHosts, originHostname(origin))) {
-        return reject(c, 403, "Origin not allowed", `Origin "${origin}" is not an allowed host`);
+      if (origin !== undefined) {
+        const originHost = originHostname(origin);
+        // Same hostname as the request itself is same-origin by definition (hostnames only, never ports:
+        // in dev the browser talks to Next on :3000 and the same guard runs under any port).
+        const sameOrigin = originHost !== undefined && host !== undefined && originHost === host;
+        if (!sameOrigin && !isAllowedHost(allowedHosts, originHost)) {
+          return reject(c, 403, "Origin not allowed", `Origin "${origin}" is not an allowed host`);
+        }
       }
     }
     await next();

@@ -122,9 +122,26 @@ export function extensionForMime(mime: string | undefined): string {
   }
 }
 
+/**
+ * Href for a Download link. Same-origin urls download as-is; a Blob store url is cross-origin, where
+ * browsers ignore the `download` attribute, so it gets `?download=1` and the store answers with
+ * `Content-Disposition: attachment`.
+ */
+export function downloadHref(url: string): string {
+  if (!/^https?:\/\//i.test(url)) return url;
+  try {
+    const u = new URL(url);
+    if (typeof location !== "undefined" && u.origin === location.origin) return url;
+    u.searchParams.set("download", "1");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** Filename for the Download action. */
 export function downloadFilename(id: string, mime: string | undefined, url?: string): string {
   const fromUrl = url?.split("/").pop()?.split("?")[0];
   const ext = fromUrl?.includes(".") ? fromUrl.split(".").pop() : extensionForMime(mime);
-  return `open-higgsfield-${id}.${ext ?? "bin"}`;
+  return `higgsfree-${id}.${ext ?? "bin"}`;
 }

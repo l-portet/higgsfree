@@ -148,7 +148,7 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
   };
 
   const badge = !settings ? null : fromEnv ? (
-    <Badge variant="neutral">From .env</Badge>
+    <Badge variant="neutral">From env</Badge>
   ) : hasKey ? (
     <Badge variant="new">Connected</Badge>
   ) : (
@@ -162,7 +162,7 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
       icon={<KeyRound />}
       title="OpenRouter key"
       badge={badge}
-      description="Stays on this machine and is only sent to openrouter.ai."
+      description="Stays on the server and is only sent to openrouter.ai."
     >
       {!settings ? (
         <div className="flex flex-col gap-3" aria-busy="true">
@@ -176,8 +176,8 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
               Set by the <Code>OPENROUTER_API_KEY</Code> environment variable.
             </p>
             <p className="mt-1 text-meta">
-              Read-only here. Edit <Code>.env</Code> and restart the server to change it; it overrides any key saved in the
-              app.
+              Read-only here. Change it where the environment is set (<Code>.env</Code> locally, the project&apos;s environment
+              variables on Vercel); it overrides any key saved in the app.
             </p>
             <dl className="mt-2 divide-y divide-border">
               <Row label="Active key" mono>
@@ -223,12 +223,12 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
           <p id={hintId} className="mt-2 text-meta">
             {hasKey ? (
               <>
-                Using <span className="text-mono text-fg">{settings.keyMasked}</span>, stored in the local database. The full
+                Using <span className="text-mono text-fg">{settings.keyMasked}</span>, stored in the app database. The full
                 key is never shown again.
               </>
             ) : (
               <>
-                Stored in the local database. Or set <Code>OPENROUTER_API_KEY</Code> in <Code>.env</Code>.
+                Stored in the app database. Or set <Code>OPENROUTER_API_KEY</Code> in the environment.
               </>
             )}
           </p>

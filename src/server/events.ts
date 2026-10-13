@@ -1,46 +1,34 @@
-/** Tiny in-process event bus feeding the SSE endpoint. */
-import { EventEmitter } from "node:events";
-import type { Generation, ServerEvent } from "../shared/types.ts";
+/**
+ * The change feed behind `GET /api/events`. There is no in-process bus any more
+ * (two requests rarely share a process on Vercel): clients poll with the cursor
+ * they got last time and receive every record whose `updated_at` moved since, plus
+ * tombstones for records that were deleted meanwhile.
+ */
+import type { EventsResponse, ServerEvent } from "../shared/types.ts";
+import { countActiveGenerations, listDeletionsSince, listGenerationsUpdatedSince, pruneDeletions, toPublic } from "./repo.ts";
 
-const bus = new EventEmitter();
-bus.setMaxListeners(0);
+/** Clocks of two function instances differ a little; re-sending a row is harmless (clients merge by id). */
+export const CURSOR_OVERLAP_MS = 2_000;
+export const CHANGES_LIMIT = 200;
+/** Tombstones only matter to tabs that were open at the time; a day is plenty. */
+const TOMBSTONE_TTL_MS = 24 * 3_600_000;
 
-export function publishGeneration(generation: Generation): void {
-  const event: ServerEvent = { type: "generation", generation };
-  bus.emit("event", event);
-}
-
-/** A record was removed: explicit DELETE, or a failed record replaced by a retry. */
-export function publishGenerationDeleted(id: string): void {
-  const event: ServerEvent = { type: "generation-deleted", id };
-  bus.emit("event", event);
-}
-
-export function subscribe(listener: (event: ServerEvent) => void): () => void {
-  bus.on("event", listener);
-  return () => {
-    bus.off("event", listener);
-  };
-}
-
-/** Open SSE connections, so shutdown can close them cleanly. */
-const closers = new Set<() => void>();
-export function trackStream(close: () => void): () => void {
-  closers.add(close);
-  return () => {
-    closers.delete(close);
-  };
-}
-export function closeAllStreams(): void {
-  for (const close of [...closers]) {
-    try {
-      close();
-    } catch {
-      /* ignore */
-    }
+export async function collectEvents(since?: string): Promise<EventsResponse> {
+  const nowIso = new Date().toISOString();
+  const pendingJobs = await countActiveGenerations();
+  if (!since || Number.isNaN(Date.parse(since))) {
+    await pruneDeletions(new Date(Date.now() - TOMBSTONE_TTL_MS).toISOString());
+    return { cursor: nowIso, pendingJobs, events: [{ type: "hello", pendingJobs }] };
   }
-  closers.clear();
-}
-export function openStreamCount(): number {
-  return closers.size;
+  const from = new Date(Date.parse(since) - CURSOR_OVERLAP_MS).toISOString();
+  const [changed, deletions] = await Promise.all([listGenerationsUpdatedSince(from, CHANGES_LIMIT + 1), listDeletionsSince(from)]);
+  const truncated = changed.length > CHANGES_LIMIT;
+  const rows = truncated ? changed.slice(0, CHANGES_LIMIT) : changed;
+  const events: ServerEvent[] = [
+    ...deletions.map((d): ServerEvent => ({ type: "generation-deleted", id: d.id })),
+    ...rows.map((g): ServerEvent => ({ type: "generation", generation: toPublic(g) })),
+  ];
+  // When the page overflowed, resume from the last row served so nothing is skipped.
+  const cursor = truncated ? (rows[rows.length - 1]?.updatedAt ?? nowIso) : nowIso;
+  return { cursor, pendingJobs, events };
 }

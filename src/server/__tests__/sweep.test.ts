@@ -1,7 +1,7 @@
 /**
- * Boot sweep: a crash mid-download leaves `.gen_<id>.<pid>.part` (and an atomic
- * write leaves `<file>.<pid>.tmp`) in the media dir forever. `resumePendingJobs`
- * (what index.ts calls once the server listens) removes the stale ones first.
+ * Temp-file sweep (local storage): a crash mid-download leaves `.gen_<id>.<pid>.part`
+ * (and an atomic write leaves `<file>.<pid>.tmp`) in the media dir forever. The first
+ * `advanceJobs()` of a process removes the stale ones.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -14,18 +14,16 @@ let media: typeof import("../media.ts");
 let dbmod: typeof import("../db.ts");
 
 beforeAll(async () => {
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-sweep-"));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-sweep-"));
   process.env.DATA_DIR = dataDir;
   process.env.OPENROUTER_API_KEY = "test-key";
   process.env.OPENROUTER_BASE_URL = "http://127.0.0.1:9";
-  process.env.NODE_ENV = "test";
   media = await import("../media.ts");
   jobs = await import("../jobs.ts");
   dbmod = await import("../db.ts");
 });
 
 afterAll(() => {
-  jobs.stopPoller();
   dbmod.closeDatabase();
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
@@ -38,8 +36,8 @@ function touch(file: string, ageMs: number): void {
   fs.utimesSync(file, t, t);
 }
 
-describe("boot sweep of orphaned temp files", () => {
-  it("removes stale .part / .tmp files under media/ and media/uploads/, keeps everything else", () => {
+describe("sweep of orphaned temp files", () => {
+  it("removes stale .part / .tmp files under media/ and media/uploads/, keeps everything else", async () => {
     const mediaDir = path.join(dataDir, "media");
     const stalePart = path.join(mediaDir, ".gen_x.123.part");
     const staleTmp = path.join(mediaDir, "gen_y.png.123.tmp");
@@ -51,7 +49,7 @@ describe("boot sweep of orphaned temp files", () => {
     for (const f of [stalePart, staleTmp, staleUploadTmp, output, upload, unrelated]) touch(f, 60_000);
     touch(freshPart, 0);
 
-    jobs.resumePendingJobs();
+    await jobs.advanceJobs();
 
     expect(fs.existsSync(stalePart)).toBe(false);
     expect(fs.existsSync(staleTmp)).toBe(false);
@@ -60,7 +58,6 @@ describe("boot sweep of orphaned temp files", () => {
     expect(fs.existsSync(output)).toBe(true);
     expect(fs.existsSync(upload)).toBe(true);
     expect(fs.existsSync(unrelated)).toBe(true);
-    expect(jobs.pollerRunning()).toBe(false); // nothing to resume
     expect(media.sweepTempFiles()).toBe(0); // idempotent; the fresh .part is still too young
   });
 

@@ -37,7 +37,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { ProviderTile } from "@/components/ProviderTile";
 import { RatioGlyph } from "@/components/RatioGlyph";
 
-const STORAGE_KEY = "oh.image.prompt-bar";
+const STORAGE_KEY = "higgsfree.image.prompt-bar";
 const MAX_COUNT = 4;
 
 /** Shape written to localStorage; every field is untrusted on the way back in. */

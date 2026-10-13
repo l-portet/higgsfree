@@ -20,11 +20,11 @@ const limit = bodyLimit({
 });
 
 export const settingsRoutes = new Hono()
-  .get("/", (c) => c.json(settingsResponse()))
+  .get("/", async (c) => c.json(await settingsResponse()))
   .put("/", limit, async (c) => {
     const body = parse(updateSettingsSchema, await c.req.json());
     if (body.apiKey !== undefined) {
-      setStoredApiKey(body.apiKey);
+      await setStoredApiKey(body.apiKey);
       invalidateCredits();
       log.info(body.apiKey.trim() ? "settings: OpenRouter key saved to DB" : "settings: OpenRouter key cleared from DB");
     }
@@ -33,17 +33,17 @@ export const settingsRoutes = new Hono()
         throw badRequest(`Unknown image model: ${body.defaults.imageModel}`);
       }
       if (body.defaults.videoModel) {
-        const m = await lookupVideoModel(body.defaults.videoModel, resolveApiKey().key);
+        const m = await lookupVideoModel(body.defaults.videoModel, (await resolveApiKey()).key);
         if (!m || m.hidden) throw badRequest(`Unknown video model: ${body.defaults.videoModel}`);
       }
-      setDefaults(body.defaults);
+      await setDefaults(body.defaults);
     }
-    return c.json(settingsResponse());
+    return c.json(await settingsResponse());
   })
   .post("/test", limit, async (c) => {
     const raw = await c.req.text();
     const body = parse(testKeySchema, raw.trim() ? JSON.parse(raw) : {});
-    const key = body.apiKey?.trim() || resolveApiKey().key;
+    const key = body.apiKey?.trim() || (await resolveApiKey()).key;
     if (!key) throw badRequest("No key to test. Pass { apiKey } or configure one first.");
     try {
       const res: CreditsResponse = await fetchCredits(key);
@@ -55,7 +55,7 @@ export const settingsRoutes = new Hono()
   });
 
 export const creditsRoutes = new Hono().get("/", async (c) => {
-  const key = requireApiKey();
+  const key = await requireApiKey();
   const res: CreditsResponse = await cachedCredits(key);
   return c.json(res);
 });

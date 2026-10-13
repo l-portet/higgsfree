@@ -50,9 +50,8 @@ async function buildApp(): Promise<void> {
 }
 
 beforeAll(async () => {
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-settings-"));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-settings-"));
   process.env.DATA_DIR = dataDir;
-  process.env.NODE_ENV = "test";
   process.env.OPENROUTER_BASE_URL = "http://127.0.0.1:9"; // fetch is stubbed, never reached
   // Empty string: `config.envApiKey` becomes undefined and the project `.env` cannot fill it in.
   process.env.OPENROUTER_API_KEY = "";
@@ -82,6 +81,7 @@ describe("settings without an env key", () => {
     expect(s).toMatchObject({ hasKey: false, keySource: null, defaults: { imageModel: DEFAULT_IMAGE_MODEL, videoModel: DEFAULT_VIDEO_MODEL } });
     expect(s).not.toHaveProperty("keyMasked");
     expect(s.dataDir).toBe(dataDir);
+    expect(s.storage).toBe("local");
     const res = await app.request("/api/credits");
     expect(res.status).toBe(401);
     expect(((await res.json()) as ApiError).error).toContain("No OpenRouter key configured");
@@ -94,7 +94,7 @@ describe("settings without an env key", () => {
     const body = (await res.json()) as SettingsResponse;
     expect(body).toMatchObject({ hasKey: true, keySource: "db", keyMasked: `${DB_KEY.slice(0, 9)}…${DB_KEY.slice(-4)}` });
     expect(JSON.stringify(body)).not.toContain(DB_KEY);
-    expect(repo.getSetting("openrouter_api_key")).toBe(DB_KEY); // trimmed
+    expect(await repo.getSetting("openrouter_api_key")).toBe(DB_KEY); // trimmed
 
     const again = await getSettings();
     expect(again).toMatchObject({ hasKey: true, keySource: "db", keyMasked: body.keyMasked });
@@ -195,7 +195,7 @@ describe("settings without an env key", () => {
     const res = await json("PUT", "/api/settings", { apiKey: "" });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ hasKey: false, keySource: null });
-    expect(repo.getSetting("openrouter_api_key")).toBeUndefined();
+    expect(await repo.getSetting("openrouter_api_key")).toBeUndefined();
     expect((await getSettings()).hasKey).toBe(false);
     expect((await app.request("/api/credits")).status).toBe(401);
     const test = await app.request("/api/settings/test", { method: "POST" });
@@ -217,7 +217,7 @@ describe("settings with OPENROUTER_API_KEY set", () => {
   });
 
   it("reports the env key masked and ignores the DB key", async () => {
-    expect(repo.getSetting("openrouter_api_key")).toBe(DB_KEY); // still stored, just not used
+    expect(await repo.getSetting("openrouter_api_key")).toBe(DB_KEY); // still stored, just not used
     const s = await getSettings();
     expect(s).toMatchObject({ hasKey: true, keySource: "env", keyMasked: `${ENV_KEY.slice(0, 9)}…${ENV_KEY.slice(-4)}` });
     const raw = JSON.stringify(s);
@@ -238,7 +238,7 @@ describe("settings with OPENROUTER_API_KEY set", () => {
     const res = await json("PUT", "/api/settings", { apiKey: "sk-or-v1-newdbkey0000111122223333" });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ keySource: "env", keyMasked: `${ENV_KEY.slice(0, 9)}…${ENV_KEY.slice(-4)}` });
-    expect(repo.getSetting("openrouter_api_key")).toBe("sk-or-v1-newdbkey0000111122223333");
+    expect(await repo.getSetting("openrouter_api_key")).toBe("sk-or-v1-newdbkey0000111122223333");
     expect((await json("PUT", "/api/settings", { apiKey: "" })).status).toBe(200);
     expect((await getSettings()).keySource).toBe("env");
   });

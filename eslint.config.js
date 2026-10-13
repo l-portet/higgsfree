@@ -1,15 +1,15 @@
 // @ts-check
 import js from "@eslint/js";
+import nextPlugin from "@next/eslint-plugin-next";
 import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist/**", "node_modules/**", "src/client/node_modules/**", "data/**"] },
+  { ignores: [".next/**", "dist/**", "node_modules/**", "data/**", "next-env.d.ts"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "*.{ts,mjs,js}"],
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "error",
@@ -18,7 +18,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/client/**/*.{ts,tsx}"],
+    files: ["src/client/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
     ...reactHooks.configs.flat.recommended,
     rules: {
       ...reactHooks.configs.flat.recommended.rules,
@@ -30,7 +30,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/client/**/*.{ts,tsx}"],
-    ...reactRefresh.configs.vite,
+    files: ["src/client/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    plugins: { "@next/next": nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+      // Generated media are dynamic, uncached URLs (Blob store or the media route): next/image buys nothing here.
+      "@next/next/no-img-element": "off",
+    },
   },
 );

@@ -1,7 +1,7 @@
 /** App-wide constants that don't belong to a feature. */
 
-/** Public repository link (placeholder until the repo is published). */
-export const GITHUB_URL = "https://github.com/joymadhu49/open-higgsfield";
+/** Public repository link. */
+export const GITHUB_URL = "https://github.com/l-portet/higgsfree";
 
 /** Prefix of every localStorage key this app writes (see `lib/storage.ts`). */
-export const STORAGE_PREFIX = "oh.";
+export const STORAGE_PREFIX = "higgsfree.";

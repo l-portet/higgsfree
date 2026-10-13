@@ -74,26 +74,25 @@ export function parseMp4Meta(b: Uint8Array): Mp4Meta {
   return meta;
 }
 
+/** Reads bytes `start..end` (inclusive) of the file; may return fewer bytes at the end. */
+export type RangeReader = (start: number, end: number) => Promise<Uint8Array>;
+
 /**
- * Same parse, but from a file on disk with bounded reads: walk the top-level
- * boxes by header only (16 bytes each), then load just the `moov` box,
- * never the `mdat` payload, which is the whole video.
+ * Same parse, but with bounded reads from any random-access source: walk the
+ * top-level boxes by header only (16 bytes each), then load just the `moov` box,
+ * never the `mdat` payload, which is the whole video. Used for files on disk and
+ * for blobs over HTTP `Range` requests.
  */
-export async function parseMp4MetaFromFile(file: string, maxMoovBytes = 64 * 1024 * 1024): Promise<Mp4Meta> {
-  const { open } = await import("node:fs/promises");
-  let handle: Awaited<ReturnType<typeof open>> | undefined;
+export async function parseMp4MetaFromRanges(size: number, read: RangeReader, maxMoovBytes = 64 * 1024 * 1024): Promise<Mp4Meta> {
   try {
-    handle = await open(file, "r");
-    const { size } = await handle.stat();
-    const header = new Uint8Array(16);
     let pos = 0;
     while (pos + 8 <= size) {
-      const { bytesRead } = await handle.read(header, 0, 16, pos);
-      if (bytesRead < 8) break;
+      const header = await read(pos, Math.min(pos + 15, size - 1));
+      if (header.length < 8) break;
       let boxSize = u32(header, 0);
       let headerLen = 8;
       if (boxSize === 1) {
-        if (bytesRead < 16) break;
+        if (header.length < 16) break;
         boxSize = u64(header, 8);
         headerLen = 16;
       } else if (boxSize === 0) {
@@ -102,16 +101,36 @@ export async function parseMp4MetaFromFile(file: string, maxMoovBytes = 64 * 102
       if (boxSize < headerLen || pos + boxSize > size) break;
       if (type(header, 4) === "moov") {
         if (boxSize > maxMoovBytes) break;
-        const moov = new Uint8Array(boxSize);
-        await handle.read(moov, 0, boxSize, pos);
-        return parseMp4Meta(moov);
+        return parseMp4Meta(await read(pos, pos + boxSize - 1));
       }
       pos += boxSize;
     }
   } catch {
     /* best-effort */
+  }
+  return {};
+}
+
+/** `parseMp4MetaFromRanges` over a file on disk. */
+export async function parseMp4MetaFromFile(file: string, maxMoovBytes = 64 * 1024 * 1024): Promise<Mp4Meta> {
+  const { open } = await import("node:fs/promises");
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(file, "r");
+    const h = handle;
+    const { size } = await h.stat();
+    return await parseMp4MetaFromRanges(
+      size,
+      async (start, end) => {
+        const buf = new Uint8Array(end - start + 1);
+        const { bytesRead } = await h.read(buf, 0, buf.length, start);
+        return buf.subarray(0, bytesRead);
+      },
+      maxMoovBytes,
+    );
+  } catch {
+    return {};
   } finally {
     await handle?.close();
   }
-  return {};
 }

@@ -1,61 +1,70 @@
 /**
- * Generation lifecycle: image batches (parallel, in-process) and video jobs
- * (submit → poll every 6s → stream download to disk). Every status change is
- * persisted and pushed over the SSE bus.
+ * Generation lifecycle without a resident process.
+ *
+ *  - Image batches run in the background of the request that created them
+ *    (`runInBackground`: `waitUntil` on Vercel), in parallel, each one its own record.
+ *  - Video jobs are submitted synchronously; from then on `advanceJobs()` moves every
+ *    active job one step whenever a client asks for events (`GET /api/events`): it
+ *    polls the provider, and when a clip is ready streams it into media storage.
+ *    A per-row lease (`lock_until`) makes concurrent requests on other instances skip
+ *    jobs somebody is already handling, and doubles as the 6 s poll spacing.
+ *
+ * Every status change is persisted with a fresh `updated_at`, which is what clients
+ * poll for.
  */
 import { nanoid } from "nanoid";
 import type {
   Generation, GenerationInputs, ImageGenerateRequest, ImageModel, ImageParams, VideoGenerateRequest, VideoModel, VideoParams,
 } from "../shared/types.ts";
 import { findImageModel } from "../shared/models.ts";
+import { runInBackground } from "./background.ts";
 import { lookupVideoModel } from "./catalog.ts";
 import { config } from "./config.ts";
 import { badRequest, conflict, HttpError, notFound, UnsupportedOptionError } from "./errors.ts";
-import { publishGeneration, publishGenerationDeleted } from "./events.ts";
 import { errorMessage, log } from "./log.ts";
-import {
-  deleteMediaUrl, inputMediaUrls, mediaUrlToDataUrl, normalizeInputUrl, parseDataUrl, removeFile, saveImageOutput, saveVideoOutput, sweepTempFiles,
-  videoDownloadPath,
-} from "./media.ts";
+import { deleteMediaUrl, inputMediaUrls, mediaUrlToDataUrl, normalizeInputUrl, parseDataUrl, saveImageOutput, saveVideoOutput, sweepTempFiles } from "./media.ts";
 import * as or from "./openrouter.ts";
 import { buildImagePayload, buildVideoPayload, type VideoPayload } from "./payloads.ts";
 import {
-  countActiveGenerations, countGenerationsReferencingMedia, deleteGeneration, getGeneration, insertGeneration, listActiveGenerations, toPublic,
-  updateGeneration, type StoredGeneration,
+  claimGeneration, countActiveGenerations, countGenerationsReferencingMedia, deleteGeneration, getGeneration, insertGeneration, listActiveGenerations,
+  recordDeletion, setLease, toPublic, updateGeneration, type StoredGeneration,
 } from "./repo.ts";
 import { requireApiKey, resolveApiKey } from "./settings.ts";
 
 export const POLL_INTERVAL_MS = 6_000;
 export const JOB_TIMEOUT_MS = 45 * 60_000;
+/** An image request is one provider call that cannot be resumed: past this the function that ran it is gone. */
+export const IMAGE_TIMEOUT_MS = 10 * 60_000;
+/** Lease held while one poll is in flight. */
+const POLL_LEASE_MS = 30_000;
+/** Lease held while a finished clip is being downloaded (it may outlive the request that started it). */
+const DOWNLOAD_LEASE_MS = 10 * 60_000;
 const PENDING_STATUSES = new Set(["pending", "queued", "processing", "running", "in_progress", "starting"]);
 const DONE_STATUSES = new Set(["completed", "succeeded", "success", "done"]);
 const FAILED_STATUSES = new Set(["failed", "error", "errored", "cancelled", "canceled", "rejected"]);
 
 const newId = (): string => `gen_${nanoid(12)}`;
 const now = (): string => new Date().toISOString();
+const inMs = (ms: number): string => new Date(Date.now() + ms).toISOString();
 const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$${c.toFixed(4)}`);
 
-function save(id: string, patch: Partial<Omit<StoredGeneration, "id">>): StoredGeneration | undefined {
-  const g = updateGeneration(id, patch);
-  if (g) publishGeneration(toPublic(g));
-  return g;
-}
+const save = (id: string, patch: Partial<Omit<StoredGeneration, "id">>): Promise<StoredGeneration | undefined> => updateGeneration(id, patch);
 
-function failGeneration(id: string, err: unknown): void {
+async function failGeneration(id: string, err: unknown): Promise<void> {
   const message = errorMessage(err) || "Unknown error";
   warnedUnknownStatus.delete(id);
-  const g = save(id, { status: "failed", error: message, completedAt: now() });
+  const g = await save(id, { status: "failed", error: message, completedAt: now() });
   if (g) log.error(`job ${id} ${g.type} failed model=${g.model}: ${message}`);
 }
 
-export function activeJobCount(): number {
+export function activeJobCount(): Promise<number> {
   return countActiveGenerations();
 }
 
 /** 429 when `requested` more jobs would push pending + running past `MAX_ACTIVE_JOBS`. */
-function assertCapacity(requested: number): void {
+async function assertCapacity(requested: number): Promise<void> {
   const max = config.maxActiveJobs;
-  if (countActiveGenerations() + requested > max) {
+  if ((await countActiveGenerations()) + requested > max) {
     throw new HttpError(429, `Too many active generations (${max}). Wait for some to finish.`);
   }
 }
@@ -63,8 +72,8 @@ function assertCapacity(requested: number): void {
 const list = (values: readonly string[]): string => values.join(", ");
 
 /**
- * Normalizes request inputs and remembers which `data:` ones it wrote to disk, so
- * a validation or capacity failure later in the same call can remove them again
+ * Normalizes request inputs and remembers which `data:` ones it persisted, so a
+ * validation or capacity failure later in the same call can remove them again
  * instead of leaving orphan `up_*` files behind.
  */
 class InputUploads {
@@ -109,16 +118,16 @@ function validateImageRequest(model: ImageModel, req: ImageGenerateRequest): voi
 }
 
 export async function createImageBatch(req: ImageGenerateRequest): Promise<Generation[]> {
-  const key = requireApiKey();
+  const key = await requireApiKey();
   const model = findImageModel(req.model);
   if (!model) throw badRequest(`Unknown image model: ${req.model}`);
   validateImageRequest(model, req);
-  assertCapacity(req.count); // early, so a full instance fails before any upload is written
+  await assertCapacity(req.count); // early, so a full instance fails before any upload is written
   const uploads = new InputUploads();
   let refs: string[];
   try {
     refs = await uploads.many(req.referenceImages ?? [], "referenceImages");
-    assertCapacity(req.count); // again: other requests were admitted while the inputs were persisted
+    await assertCapacity(req.count); // again: other requests were admitted while the inputs were persisted
   } catch (err) {
     await uploads.discard();
     throw err;
@@ -135,12 +144,11 @@ export async function createImageBatch(req: ImageGenerateRequest): Promise<Gener
       params, batchId, batchIndex: i, createdAt: ts, updatedAt: ts,
     };
     if (inputs) g.inputs = inputs;
-    insertGeneration(g);
+    await insertGeneration(g);
     gens.push(g);
   }
-  for (const g of gens) publishGeneration(toPublic(g));
   log.info(`batch ${batchId} submitted ${gens.length} image job(s) model=${model.id} refs=${refs.length}`);
-  void runImageBatch(key, model, gens, refs);
+  runInBackground(runImageBatch(key, model, gens, refs));
   return gens.map(toPublic);
 }
 
@@ -149,7 +157,7 @@ async function runImageBatch(key: string, model: ImageModel, gens: StoredGenerat
   try {
     refDataUrls = await Promise.all(refUrls.map((u) => mediaUrlToDataUrl(u)));
   } catch (err) {
-    for (const g of gens) failGeneration(g.id, err);
+    for (const g of gens) await failGeneration(g.id, err);
     return;
   }
   await Promise.allSettled(gens.map((g) => runImage(key, model, g, refDataUrls)));
@@ -158,7 +166,7 @@ async function runImageBatch(key: string, model: ImageModel, gens: StoredGenerat
 async function runImage(key: string, model: ImageModel, g: StoredGeneration, refDataUrls: string[]): Promise<void> {
   const params = g.params as ImageParams;
   const startedAt = Date.now();
-  if (!save(g.id, { status: "running" })) return; // deleted before it started: no provider call
+  if (!(await save(g.id, { status: "running" }))) return; // deleted before it started: no provider call
   try {
     const payload = buildImagePayload(model, { prompt: g.prompt, aspectRatio: params.aspectRatio, size: params.size }, refDataUrls);
     let bytes: Uint8Array;
@@ -175,17 +183,17 @@ async function runImage(key: string, model: ImageModel, g: StoredGeneration, ref
       costUsd = r.costUsd;
     }
     const output = await saveImageOutput(g.id, bytes);
-    if (!getGeneration(g.id)) {
+    if (!(await getGeneration(g.id))) {
       await deleteMediaUrl(output.url); // deleted while running
       return;
     }
     const elapsedMs = Date.now() - startedAt;
     const patch: Partial<StoredGeneration> = { status: "completed", output, completedAt: now(), elapsedMs };
     if (costUsd !== undefined) patch.costUsd = costUsd;
-    save(g.id, patch);
+    await save(g.id, patch);
     log.info(`job ${g.id} image completed model=${model.id} ${output.width ?? "?"}x${output.height ?? "?"} ${elapsedMs}ms cost=${fmtCost(costUsd)}`);
   } catch (err) {
-    failGeneration(g.id, err);
+    await failGeneration(g.id, err);
   }
 }
 
@@ -233,17 +241,17 @@ async function prepareVideo(model: VideoModel, req: VideoGenerateRequest, prompt
     frames,
     refDataUrls,
   );
-  assertCapacity(1); // again: other requests were admitted while the inputs were persisted and read back
+  await assertCapacity(1); // again: other requests were admitted while the inputs were persisted and read back
   return { inputs, body, effective };
 }
 
 export async function createVideoGeneration(req: VideoGenerateRequest): Promise<Generation> {
-  const key = requireApiKey();
+  const key = await requireApiKey();
   const model = await lookupVideoModel(req.model, key);
   if (!model || model.hidden) throw badRequest(`Unknown video model: ${req.model}`);
   const prompt = req.prompt.trim();
   validateVideoRequest(model, req, prompt);
-  assertCapacity(1); // early, so a full instance fails before any upload is written
+  await assertCapacity(1); // early, so a full instance fails before any upload is written
 
   const uploads = new InputUploads();
   let prepared: PreparedVideo;
@@ -264,55 +272,72 @@ export async function createVideoGeneration(req: VideoGenerateRequest): Promise<
     id: newId(), type: "video", status: "pending", prompt, model: model.id, modelName: model.name, params, createdAt: ts, updatedAt: ts,
   };
   if (Object.keys(inputs).length > 0) g.inputs = inputs;
-  insertGeneration(g);
-  publishGeneration(toPublic(g));
+  await insertGeneration(g);
 
   try {
     const submitted = await or.submitVideo(key, body);
-    const updated = save(g.id, { status: "running", providerJobId: submitted.id, pollingUrl: submitted.pollingUrl });
+    const updated = await save(g.id, { status: "running", providerJobId: submitted.id, pollingUrl: submitted.pollingUrl });
     log.info(
       `job ${g.id} video submitted model=${model.id} duration=${effective.duration}s res=${effective.resolution ?? "-"} ar=${effective.aspectRatio ?? "-"} audio=${body.generate_audio ?? "-"} frames=${body.frame_images?.length ?? 0} provider=${submitted.id}`,
     );
-    ensurePoller();
     return toPublic(updated ?? g);
   } catch (err) {
-    failGeneration(g.id, err);
+    await failGeneration(g.id, err);
     throw err;
   }
 }
 
-// ---------- poller ----------
+// ---------- advancing active jobs ----------
 
-let timer: NodeJS.Timeout | undefined;
-const inFlight = new Set<string>();
 /** Job ids already warned about a status outside the known sets (once per job, not every tick). */
 const warnedUnknownStatus = new Set<string>();
+let sweptTempFiles = false;
 
-export function ensurePoller(): void {
-  if (timer) return;
-  timer = setInterval(() => void pollTick(), POLL_INTERVAL_MS);
+export interface AdvanceOptions {
+  /** Await finished downloads instead of handing them to the background (tests). */
+  wait?: boolean;
+  /** Gap before the same job is polled again; `0` lets back-to-back ticks poll it (tests). */
+  minIntervalMs?: number;
 }
 
-export function stopPoller(): void {
-  if (timer) clearInterval(timer);
-  timer = undefined;
-}
-
-export function pollerRunning(): boolean {
-  return timer !== undefined;
-}
-
-function activeVideoJobs(): StoredGeneration[] {
-  return listActiveGenerations().filter((g) => g.type === "video" && Boolean(g.pollingUrl));
-}
-
-export async function pollTick(): Promise<void> {
-  const jobs = activeVideoJobs().filter((g) => !inFlight.has(g.id));
-  if (jobs.length === 0 && inFlight.size === 0) {
-    stopPoller();
-    return;
+/**
+ * Move every active job one step: fail what has timed out, poll each running video
+ * whose lease is free, and start downloading finished clips. Cheap when nothing is
+ * running (one indexed query). Called whenever a client asks for events.
+ */
+export async function advanceJobs(opts: AdvanceOptions = {}): Promise<void> {
+  if (config.storage === "local" && !sweptTempFiles) {
+    sweptTempFiles = true;
+    const swept = sweepTempFiles();
+    if (swept > 0) log.info(`removed ${swept} orphaned temp file(s) from ${config.mediaDir}`);
   }
-  await Promise.allSettled(jobs.map((g) => pollOne(g)));
+  const active = await listActiveGenerations();
+  if (active.length === 0) return;
+  const polls: Promise<void>[] = [];
+  const nowMs = Date.now();
+  for (const g of active) {
+    const age = nowMs - Date.parse(g.createdAt);
+    if (g.type === "image") {
+      if (age > IMAGE_TIMEOUT_MS) await failGeneration(g.id, "Timed out: the image request did not finish");
+      continue;
+    }
+    if (!g.pollingUrl) {
+      // Submit still in flight in another request, or that request died before it got a job id.
+      if (age > IMAGE_TIMEOUT_MS) await failGeneration(g.id, "Timed out before the provider accepted the job");
+      continue;
+    }
+    if (age > JOB_TIMEOUT_MS) {
+      await failGeneration(g.id, "Timed out waiting for provider");
+      continue;
+    }
+    polls.push(pollOne(g, opts));
+  }
+  await Promise.allSettled(polls);
+}
+
+/** One synchronous round for tests: every job is polled and finished downloads are awaited. */
+export function pollTick(): Promise<void> {
+  return advanceJobs({ wait: true, minIntervalMs: 0 });
 }
 
 /**
@@ -322,92 +347,79 @@ export async function pollTick(): Promise<void> {
  */
 const isPermanent = (err: unknown): boolean => err instanceof or.ForeignOriginError || (err instanceof HttpError && [400, 404].includes(err.status));
 
-async function pollOne(g: StoredGeneration): Promise<void> {
-  inFlight.add(g.id);
+async function pollOne(g: StoredGeneration, opts: AdvanceOptions): Promise<void> {
+  const minInterval = opts.minIntervalMs ?? POLL_INTERVAL_MS;
+  const at = now();
+  if (!(await claimGeneration(g.id, inMs(POLL_LEASE_MS), at))) return; // polled too recently, or another instance is on it
+  let leaseKept = false;
   try {
-    if (Date.now() - Date.parse(g.createdAt) > JOB_TIMEOUT_MS) {
-      failGeneration(g.id, "Timed out waiting for provider");
-      return;
-    }
-    const { key } = resolveApiKey();
+    const { key } = await resolveApiKey();
     if (!key) return; // key removed: keep the job and wait for one
     let poll: or.VideoPollResult;
     try {
       poll = await or.pollVideo(key, g.pollingUrl ?? "");
     } catch (err) {
-      if (isPermanent(err)) failGeneration(g.id, err);
+      if (isPermanent(err)) await failGeneration(g.id, err);
       else log.warn(`job ${g.id} poll error (will retry): ${errorMessage(err)}`);
       return;
     }
     if (FAILED_STATUSES.has(poll.status)) {
-      failGeneration(g.id, poll.error ?? `Provider reported status "${poll.status}"`);
+      await failGeneration(g.id, poll.error ?? `Provider reported status "${poll.status}"`);
       return;
     }
     if (PENDING_STATUSES.has(poll.status)) return;
     if (!DONE_STATUSES.has(poll.status)) {
       // Unknown status: an attached error means it is over; otherwise keep polling and say so once.
       if (poll.error) {
-        failGeneration(g.id, poll.error);
+        await failGeneration(g.id, poll.error);
       } else if (!warnedUnknownStatus.has(g.id)) {
         warnedUnknownStatus.add(g.id);
         log.warn(`job ${g.id} unknown provider status "${poll.status}" (will keep polling)`);
       }
       return;
     }
-
     const url = poll.urls[0];
     if (!url) {
-      failGeneration(g.id, "Provider reported completion but returned no video url");
+      await failGeneration(g.id, "Provider reported completion but returned no video url");
       return;
     }
-    // Stream straight to a hidden temp file in the media dir; a 4K clip never sits in RAM.
-    const partFile = videoDownloadPath(g.id);
-    try {
-      await or.downloadVideo(key, url, partFile);
-    } catch (err) {
-      if (isPermanent(err)) failGeneration(g.id, err);
-      else log.warn(`job ${g.id} download error (will retry): ${errorMessage(err)}`);
-      return;
-    }
-    if (!getGeneration(g.id)) {
-      await removeFile(partFile); // deleted while downloading
-      return;
-    }
-    const output = await saveVideoOutput(g.id, partFile, (g.params as VideoParams).duration);
-    if (!getGeneration(g.id)) {
-      await deleteMediaUrl(output.url);
+    // Finished: keep the lease for the download, which may outlive this request.
+    await setLease(g.id, inMs(DOWNLOAD_LEASE_MS));
+    leaseKept = true;
+    const download = finishVideo(g, key, url, poll.costUsd);
+    if (opts.wait) await download;
+    else runInBackground(download);
+  } catch (err) {
+    await failGeneration(g.id, err);
+  } finally {
+    if (!leaseKept) await setLease(g.id, minInterval > 0 ? inMs(minInterval) : null).catch(() => undefined);
+  }
+}
+
+/** Stream the finished clip into media storage and complete the record. Transient failures release the lease so the next tick retries. */
+async function finishVideo(g: StoredGeneration, key: string, url: string, costUsd: number | undefined): Promise<void> {
+  try {
+    const body = await or.openVideoStream(key, url);
+    const output = await saveVideoOutput(g.id, body, (g.params as VideoParams).duration);
+    if (!(await getGeneration(g.id))) {
+      await deleteMediaUrl(output.url); // deleted while downloading
       return;
     }
     const completedAt = now();
     const elapsedMs = Date.parse(completedAt) - Date.parse(g.createdAt);
     const patch: Partial<StoredGeneration> = { status: "completed", output, completedAt, elapsedMs };
-    if (poll.costUsd !== undefined) patch.costUsd = poll.costUsd;
+    if (costUsd !== undefined) patch.costUsd = costUsd;
     warnedUnknownStatus.delete(g.id);
-    save(g.id, patch);
-    log.info(`job ${g.id} video completed model=${g.model} ${output.width ?? "?"}x${output.height ?? "?"} ${Math.round(elapsedMs / 1000)}s cost=${fmtCost(poll.costUsd)}`);
+    await save(g.id, patch);
+    await setLease(g.id, null);
+    log.info(`job ${g.id} video completed model=${g.model} ${output.width ?? "?"}x${output.height ?? "?"} ${Math.round(elapsedMs / 1000)}s cost=${fmtCost(costUsd)}`);
   } catch (err) {
-    failGeneration(g.id, err);
-  } finally {
-    inFlight.delete(g.id);
-  }
-}
-
-/**
- * On boot: sweep temp files a previous process left behind, resume polling video
- * jobs that have a polling url, and fail anything else left in flight.
- */
-export function resumePendingJobs(): void {
-  const swept = sweepTempFiles();
-  if (swept > 0) log.info(`removed ${swept} orphaned temp file(s) from ${config.mediaDir}`);
-  let resumed = 0;
-  for (const g of listActiveGenerations()) {
-    if (g.type === "video" && g.pollingUrl) resumed++;
-    else failGeneration(g.id, "Server restarted before the job finished");
-  }
-  if (resumed > 0) {
-    log.info(`resuming ${resumed} pending video job(s)`);
-    ensurePoller();
-    void pollTick();
+    if (isPermanent(err)) {
+      await failGeneration(g.id, err);
+    } else {
+      log.warn(`job ${g.id} download error (will retry): ${errorMessage(err)}`);
+      await setLease(g.id, null).catch(() => undefined);
+    }
   }
 }
 
@@ -415,15 +427,15 @@ export function resumePendingJobs(): void {
 
 /**
  * Remove a record, its output file, and any uploaded inputs no other generation
- * still references. Publishes `generation-deleted` so open tabs drop the card.
+ * still references. Leaves a tombstone so other open tabs drop the card.
  */
 export async function removeGeneration(g: Generation): Promise<{ uploads: number }> {
-  deleteGeneration(g.id);
-  publishGenerationDeleted(g.id);
+  await deleteGeneration(g.id);
+  await recordDeletion(g.id);
   await deleteMediaUrl(g.output?.url);
   let uploads = 0;
   for (const url of inputMediaUrls(g.inputs)) {
-    if (countGenerationsReferencingMedia(url, g.id) > 0) continue;
+    if ((await countGenerationsReferencingMedia(url, g.id)) > 0) continue;
     await deleteMediaUrl(url);
     uploads++;
   }
@@ -431,10 +443,10 @@ export async function removeGeneration(g: Generation): Promise<{ uploads: number
 }
 
 export async function retryGeneration(id: string): Promise<Generation[]> {
-  const g = getGeneration(id);
+  const g = await getGeneration(id);
   if (!g) throw notFound(`Generation ${id} not found`);
   if (g.status === "pending" || g.status === "running") throw conflict("Generation is still running");
-  const known = g.type === "image" ? findImageModel(g.model) : await lookupVideoModel(g.model, resolveApiKey().key);
+  const known = g.type === "image" ? findImageModel(g.model) : await lookupVideoModel(g.model, (await resolveApiKey()).key);
   if (!known || (known.kind === "video" && known.hidden)) {
     throw badRequest(`${g.modelName} (${g.model}) is no longer available. Generate a new one with a current model.`);
   }

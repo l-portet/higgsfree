@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Clapperboard, Image, LayoutGrid, type LucideIcon } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { useGenerationList, useGenerations, useListState, usePage } from "@/store/generations";
@@ -10,34 +10,34 @@ import { Page } from "@/components/layout/Page";
 import { LinkButton } from "@/components/ui/Button";
 import { GenerationCard, GenerationCardSkeleton } from "@/components/GenerationCard";
 
-const TILES: { to: string; icon: LucideIcon; chip: string; title: string; text: string }[] = [
+const TILES: { href: string; icon: LucideIcon; chip: string; title: string; text: string }[] = [
   {
-    to: "/image",
+    href: "/image",
     icon: Image,
     chip: "Image",
     title: "Text & image to image",
     text: "Nano Banana Pro, GPT Image, Krea. Reference images, batches of four, 1K to 4K.",
   },
   {
-    to: "/video",
+    href: "/video",
     icon: Clapperboard,
     chip: "Video",
     title: "Text & image to video",
     text: "Seedance, Kling, Veo, Sora, Wan. First and last frame, native audio, up to 30s.",
   },
   {
-    to: "/assets",
+    href: "/assets",
     icon: LayoutGrid,
     chip: "Library",
     title: "Everything you made",
-    text: "Every generation with its prompt, options and cost. Stored locally, searchable, reusable.",
+    text: "Every generation with its prompt, options and cost. Kept in your own storage, searchable, reusable.",
   },
 ];
 
-function FeatureTile({ to, icon: Icon, chip, title, text }: (typeof TILES)[number]) {
+function FeatureTile({ href, icon: Icon, chip, title, text }: (typeof TILES)[number]) {
   return (
     <Link
-      to={to}
+      href={href}
       className="group relative flex flex-col justify-between gap-6 rounded-lg border border-border bg-surface p-4 transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
     >
       <div className="flex items-start justify-between">
@@ -100,7 +100,7 @@ export default function HomePage() {
   const tiles = (
     <div className={cn("grid gap-3 sm:grid-cols-3", feedFirst && "mt-10")}>
       {TILES.map((t) => (
-        <FeatureTile key={t.to} {...t} />
+        <FeatureTile key={t.href} {...t} />
       ))}
     </div>
   );
@@ -110,7 +110,7 @@ export default function HomePage() {
       title="Recent"
       className={feedFirst ? undefined : "mt-14"}
       aside={
-        <Link to="/assets" className="inline-flex items-center gap-1 text-body text-fg-muted transition-colors hover:text-fg">
+        <Link href="/assets" className="inline-flex items-center gap-1 text-body text-fg-muted transition-colors hover:text-fg">
           View all <ArrowRight size={14} aria-hidden="true" />
         </Link>
       }
@@ -126,7 +126,7 @@ export default function HomePage() {
       ) : recent.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center">
           <p className="text-body text-fg-muted">Nothing here yet.</p>
-          <Link to="/image" className="mt-1 inline-block text-body font-medium text-fg underline-offset-4 hover:underline">
+          <Link href="/image" className="mt-1 inline-block text-body font-medium text-fg underline-offset-4 hover:underline">
             Generate your first image →
           </Link>
         </div>
@@ -149,14 +149,14 @@ export default function HomePage() {
           AI-native creative suite, <span className="text-accent">open.</span>
         </h1>
         <p className="mt-5 max-w-xl text-lead">
-          Nano Banana, Seedance, Kling, Veo and more, from one self-hosted studio. Bring your own OpenRouter key;
-          everything you make stays on your machine.
+          Nano Banana, Seedance, Kling, Veo and more, from one studio you run yourself. Bring your own OpenRouter key;
+          everything you make stays in your own storage.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <LinkButton to="/image" variant="primary" size="lg" leftIcon={<Image />}>
+          <LinkButton href="/image" variant="primary" size="lg" leftIcon={<Image />}>
             Create image
           </LinkButton>
-          <LinkButton to="/video" variant="secondary" size="lg" leftIcon={<Clapperboard />}>
+          <LinkButton href="/video" variant="secondary" size="lg" leftIcon={<Clapperboard />}>
             Create video
           </LinkButton>
         </div>

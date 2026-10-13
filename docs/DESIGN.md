@@ -1,4 +1,4 @@
-# Open Higgsfield design spec
+# higgsfree design spec
 
 Derived from a live walkthrough of higgsfield.ai (Aug 2026). The goal is a faithful, *professional-minimal* interpretation:
 Vercel/Linear dark discipline with Higgsfield's single lime accent. No neon, no glows, no gamer aesthetics.
@@ -62,13 +62,13 @@ Copy rules: sentence case (display headings excepted), no em dashes in prose (th
 data cells is fine), one or two short sentences per hint / toast / empty state.
 
 ## Layout
-- **Top nav** 56px, sticky, `bg-bg/80 backdrop-blur`, bottom border. Left: logo mark (simple lime square-ish glyph) + "Open Higgsfield" wordmark.
+- **Top nav** 56px, sticky, `bg-bg/80 backdrop-blur`, bottom border. Left: the logo tile (black script F on lime, `Logo` in `src/client/components/Logo.tsx`) + "higgsfree" wordmark.
   Full-bleed (`px-3 sm:px-5`, no inner max-width). Center-left links: Home · Image · Video · Assets. Active link = fg + 2px lime underline. Right: credits pill (`h-8`, wallet icon, `$1,362.69 left`) and Settings (gear). GitHub lives in Settings › About, not in the nav.
 - Content max-width 1400px, page padding 24px.
 
 ## Image page (`/image`)
 - Empty state centered: 3–4 slightly rotated sample cards (no hotlinked images; bundled sample stills in `public/samples/` are fine, with a CSS-gradient fallback underneath) + display heading
-  "START CREATING WITH" / lime "OPEN HIGGSFIELD" + muted subline.
+  "START CREATING WITH" / lime "HIGGSFREE" + muted subline.
 - Results: responsive grid (`grid-cols-[repeat(auto-fill,minmax(260px,1fr))]`) newest first, each card keeps its aspect ratio.
   Pending cards show a shimmer skeleton with model name + elapsed timer. Failed cards show the provider error with a Retry button.
   Hover overlay: Download · Animate (→ /video with this image as first frame) · Reuse prompt · Delete.

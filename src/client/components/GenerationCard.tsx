@@ -2,7 +2,7 @@ import { memo, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import { CircleAlert, Download, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { cn } from "@/lib/cn";
-import { downloadFilename } from "@/lib/files";
+import { downloadFilename, downloadHref } from "@/lib/files";
 import { formatDims, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
 import { useGenerationActions } from "@/lib/actions";
 import { useElapsed, useMediaQuery, useNearViewport } from "@/lib/hooks";
@@ -192,7 +192,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
               <div className="pointer-events-auto ml-auto flex items-center gap-1">
                 <Tooltip content="Download">
                   <a
-                    href={out.url}
+                    href={downloadHref(out.url)}
                     download={filename}
                     aria-label="Download"
                     className={iconButtonClasses("overlay", "sm")}

@@ -41,11 +41,10 @@ let dbmod: typeof import("../db.ts");
 beforeAll(async () => {
   const m = await mockOpenRouter();
   mock = m.server;
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-live-"));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-live-"));
   process.env.DATA_DIR = dataDir;
   process.env.OPENROUTER_API_KEY = "bad-key";
   process.env.OPENROUTER_BASE_URL = m.base;
-  process.env.NODE_ENV = "test";
   app = (await import("../app.ts")).createApp();
   or = await import("../openrouter.ts");
   dbmod = await import("../db.ts");

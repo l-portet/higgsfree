@@ -209,6 +209,8 @@ export interface UploadResponse {
   media: MediaRef;
 }
 
+export type StorageKind = "local" | "blob";
+
 export interface SettingsResponse {
   hasKey: boolean;
   /** e.g. `sk-or-v1-…a1b2` */
@@ -218,6 +220,9 @@ export interface SettingsResponse {
     imageModel: string;
     videoModel: string;
   };
+  /** Where media live: files under `DATA_DIR` (`local`) or a Vercel Blob store (`blob`). Decides how the browser uploads. */
+  storage: StorageKind;
+  /** Human label for that place: the data directory, or the blob store. */
   dataDir: string;
   version: string;
 }
@@ -243,14 +248,24 @@ export interface HealthResponse {
   version: string;
   hasKey: boolean;
   pendingJobs: number;
+  storage: StorageKind;
 }
 
-/** Server-sent event payloads on `GET /api/events`. */
+/** Change-feed events served by `GET /api/events`. */
 export type ServerEvent =
   | { type: "generation"; generation: Generation }
   /** A record was removed (explicit DELETE, or a failed record replaced by a retry). */
   | { type: "generation-deleted"; id: string }
+  /** First answer of a session (no cursor yet). */
   | { type: "hello"; pendingJobs: number };
+
+/** `GET /api/events?since=<cursor>`: everything that changed since the cursor, polled by the client. */
+export interface EventsResponse {
+  /** Pass back as `since` on the next call. */
+  cursor: string;
+  pendingJobs: number;
+  events: ServerEvent[];
+}
 
 export interface ApiError {
   error: string;

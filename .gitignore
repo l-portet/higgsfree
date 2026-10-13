@@ -5,7 +5,6 @@ node_modules/
 # Build output
 dist/
 *.tsbuildinfo
-.vite/
 .cache/
 .eslintcache
 
@@ -39,3 +38,11 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Vercel
+.vercel

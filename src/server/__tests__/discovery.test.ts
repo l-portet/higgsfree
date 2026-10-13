@@ -63,24 +63,20 @@ function mockOpenRouter(): Promise<{ server: http.Server; base: string }> {
 let mock: http.Server;
 let dataDir: string;
 let app: Hono;
-let jobs: typeof import("../jobs.ts");
 let dbmod: typeof import("../db.ts");
 
 beforeAll(async () => {
   const m = await mockOpenRouter();
   mock = m.server;
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-discovery-"));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-discovery-"));
   process.env.DATA_DIR = dataDir;
   process.env.OPENROUTER_API_KEY = "test-key";
   process.env.OPENROUTER_BASE_URL = m.base;
-  process.env.NODE_ENV = "test";
   app = (await import("../app.ts")).createApp();
-  jobs = await import("../jobs.ts");
   dbmod = await import("../db.ts");
 });
 
 afterAll(() => {
-  jobs.stopPoller();
   dbmod.closeDatabase();
   mock.close();
   fs.rmSync(dataDir, { recursive: true, force: true });

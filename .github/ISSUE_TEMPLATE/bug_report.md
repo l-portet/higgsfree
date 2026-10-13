@@ -32,8 +32,8 @@ body verbatim. It usually lists the supported values, e.g. `Supported resolution
 
 ## Environment
 
-- Open Higgsfield version / commit:
-- How are you running it: `pnpm dev` / `pnpm start` / Docker (`docker compose`)
+- higgsfree version / commit:
+- How are you running it: `pnpm dev` / `pnpm start` / Vercel / Docker (`docker compose`)
 - Node version (`node --version`):
 - OS / browser:
 - Model slug (from `src/shared/models.ts`, e.g. `bytedance/seedance-2.5`):
@@ -41,7 +41,7 @@ body verbatim. It usually lists the supported values, e.g. `Supported resolution
 
 ## Logs
 
-Relevant server output (`pnpm dev` terminal or `docker compose logs open-higgsfield`).
+Relevant server output (`pnpm dev` terminal or `docker compose logs higgsfree`, or the Vercel function logs).
 **Redact your API key.** It should never appear in logs, but check before pasting.
 
 ```

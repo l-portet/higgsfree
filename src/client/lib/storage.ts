@@ -36,7 +36,7 @@ export function writeJson(key: string, value: unknown): void {
   }
 }
 
-/** Remove every key this app wrote (`oh.*`). Used by the route error screen. */
+/** Remove every key this app wrote (`higgsfree.*`). Used by the route error screen. */
 export function clearAppStorage(): void {
   try {
     const keys: string[] = [];

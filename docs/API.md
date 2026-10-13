@@ -1,10 +1,12 @@
-# Open Higgsfield server API contract
+# higgsfree server API contract
 
 All endpoints are JSON unless noted. Errors use the `ApiError` shape from `src/shared/types.ts`:
 `{ error: string, status: number, provider?: unknown }`: when OpenRouter returned a body, put it in
 `provider` **verbatim** (their 400 messages list the supported values, e.g. "Supported resolutions: 480p, 720p").
 
-Base URL in dev: Vite proxies `/api` and `/media` to `http://localhost:8787`.
+The API is a Hono app (`src/server/app.ts`) mounted by Next.js route handlers at `/api/*` and `/media/*`
+(`src/app/api/[[...route]]/route.ts`, `src/app/media/[file]/route.ts`), same origin as the pages, in dev and on
+Vercel alike. Node.js runtime; `maxDuration` 300 s on the API handler.
 
 ## Request guards (no auth; the browser's same-origin policy is the perimeter)
 
@@ -12,17 +14,18 @@ Implemented in `src/server/security.ts`, applied before every route:
 
 | Check | Applies to | Failure |
 |---|---|---|
-| `Host` hostname (port stripped, `[::1]` handled) must be in the allowed set: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, the host of `APP_URL`, plus `ALLOWED_HOSTS` (comma-separated). `ALLOWED_HOSTS=*` disables the check. Only the received `Host` counts: `X-Forwarded-Host` / `X-Forwarded-*` are never consulted, so a reverse proxy must pass the browser's `Host` through (nginx `proxy_set_header Host $host;`) and its public hostname must be allowed. | every request: `/api/*` (incl. `/api/health`), `/media/*`, the SPA | `403 {error:"Unrecognised Host"}` |
+| `Host` hostname (port stripped, `[::1]` handled) must be in the allowed set: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, the host of `APP_URL`, the urls Vercel assigns to the deployment (`VERCEL_URL`, `VERCEL_BRANCH_URL`, `VERCEL_PROJECT_PRODUCTION_URL`), plus `ALLOWED_HOSTS` (comma-separated). `ALLOWED_HOSTS=*` disables the check. Only the received `Host` counts: `X-Forwarded-Host` / `X-Forwarded-*` are never consulted, so a reverse proxy must pass the browser's `Host` through (nginx `proxy_set_header Host $host;`) and its public hostname must be allowed. **On Vercel the check is skipped** (`config.trustHost`): the platform only routes a request to the app under one of its own domains, so DNS rebinding cannot reach it and custom domains need no entry. | every request: `/api/*` (incl. `/api/health`), `/media/*` | `403 {error:"Unrecognised Host"}` |
 | Requests **with a body** must send `Content-Type: application/json` or `multipart/form-data` (blocks CORS "simple requests" such as `text/plain` POSTs, which browsers send without a preflight). Bodiless `DELETE` / `POST …/retry` are exempt. | `POST/PUT/PATCH/DELETE /api/*` | `415 {error:"Content-Type must be application/json"}` |
 | `Sec-Fetch-Site`, if present, must be `same-origin`, `same-site` or `none`. | `POST/PUT/PATCH/DELETE /api/*` | `403` |
-| `Origin`, if present, must have an allowed hostname (only hostnames are compared, never ports or schemes, so the Vite dev server on `:5173` proxying to `:8787` passes). | `POST/PUT/PATCH/DELETE /api/*` | `403 {error:"Origin not allowed"}` |
+| `Origin`, if present, must have an allowed hostname, or the same hostname as the request's own `Host` (same-origin; only hostnames are compared, never ports or schemes). | `POST/PUT/PATCH/DELETE /api/*` | `403 {error:"Origin not allowed"}` |
 
 Every rejection logs one line (`security: 403 POST /api/generate/video: Host "…" is not allowed …`), never a body.
 Every response carries `X-Content-Type-Options: nosniff`.
 
-Body limits: `/api/upload` = 25 MB × 1.37 + 4 KB; `/api/generate/*` = `max(maxReferenceImages) × 25 MB × 1.37 + 64 KB`
-(6 × 25 MB ≈ 206 MB with the current catalog; the 64 KB is headroom for the prompt and the other JSON
-fields around the inline images); over the limit → `413` with a readable message.
+Body limits: `/api/upload` = 25 MB × 1.37 + 4 KB; `/api/generate/*` = 2 inline images × 25 MB × 1.37 + 64 KB ≈ 69 MB
+(the 64 KB is headroom for the prompt and the other JSON fields around the inline images); over the limit → `413`
+with a readable message. On Vercel the platform caps every request body at 4.5 MB before it reaches the app, which
+is why the browser uploads reference images directly to Blob first and sends their urls.
 
 Concurrency: `MAX_ACTIVE_JOBS` (default 8) caps pending + running generations across the instance.
 `POST /api/generate/*` returns `429 {error:"Too many active generations (8). Wait for some to finish."}`
@@ -32,23 +35,23 @@ the async upload / read-back of inputs, so concurrent requests cannot overshoot 
 
 | Method | Path | Body / Query | Response | Notes |
 |---|---|---|---|---|
-| GET | `/api/health` | — | `HealthResponse` | |
-| GET | `/api/settings` | — | `SettingsResponse` | Never returns the raw key. |
+| GET | `/api/health` | — | `HealthResponse` | Includes `storage: "local" \| "blob"`. |
+| GET | `/api/settings` | — | `SettingsResponse` | Never returns the raw key. `storage` tells the browser how to upload; `dataDir` is the data directory (local) or the blob store (blob), for display. |
 | PUT | `/api/settings` | `UpdateSettingsRequest` | `SettingsResponse` | `apiKey: ""` clears the DB key. Env key always wins. |
 | POST | `/api/settings/test` | `{ apiKey?: string }` | `CreditsResponse` | Tests the given key (or the active one) against `GET /api/v1/key` + `/credits`. 401 → `{error:"Invalid API key"}`. |
 | GET | `/api/credits` | — | `CreditsResponse` | Cached 30s. |
 | GET | `/api/models` | — | `ModelsResponse` | Catalog from `src/shared/models.ts` (hidden models excluded) + live availability (cached 10 min, best-effort). `video` also carries **discovered** models: every slug in OpenRouter's `output_modalities=video` list that the catalog does not know, synthesized with conservative caps (`discovered: true`, `resolutions: []`, no price; see [MODELS.md](MODELS.md#discovered-models)). They follow the snapshot, so a new OpenRouter model appears within 10 minutes. `live` is omitted when no key is configured (nothing is fetched); after a failed refresh the previous snapshot is served and upstream is left alone for 60 s. |
-| POST | `/api/generate/image` | `ImageGenerateRequest` | `GenerateResponse` | Returns `count` records immediately with `status:"pending"` sharing one `batchId`; server runs them in parallel and pushes updates over SSE. `aspectRatio` (except `auto`) and `size` must be in the model's catalog entry → 400 listing the allowed values. 429 over `MAX_ACTIVE_JOBS`. |
-| POST | `/api/generate/video` | `VideoGenerateRequest` | `GenerateResponse` | Submits to OpenRouter `/videos` (expects **HTTP 202**), stores `providerJobId` + polling url, returns 1 pending record. Background poller updates it. `resolution` / `aspectRatio` must be in the catalog entry → 400 listing the allowed values (aspect ratio is not checked when it will be dropped on i2v; a model that lists no resolutions rejects any `resolution` with "does not accept a resolution"). `lastFrame` needs `caps.lastFrame`; `references` is rejected with 400 when `caps.references === false` (e.g. `FLUX.3 Video does not accept style references`). `audio` → `generate_audio` for audio-capable models. Discovered models (see `GET /api/models`) are accepted like catalog ones; the live snapshot is refreshed first if the slug is unknown. 429 over `MAX_ACTIVE_JOBS`. |
+| POST | `/api/generate/image` | `ImageGenerateRequest` | `GenerateResponse` | Returns `count` records immediately with `status:"pending"` sharing one `batchId`; the server runs them in parallel in the background of the same request (`waitUntil`) and the change feed carries the updates. A record still `running` after 10 min is failed by the next feed poll (the function that ran it is gone). `aspectRatio` (except `auto`) and `size` must be in the model's catalog entry → 400 listing the allowed values. 429 over `MAX_ACTIVE_JOBS`. |
+| POST | `/api/generate/video` | `VideoGenerateRequest` | `GenerateResponse` | Submits to OpenRouter `/videos` (expects **HTTP 202**), stores `providerJobId` + polling url, returns 1 `running` record. Every `GET /api/events` then polls it (see below). `resolution` / `aspectRatio` must be in the catalog entry → 400 listing the allowed values (aspect ratio is not checked when it will be dropped on i2v; a model that lists no resolutions rejects any `resolution` with "does not accept a resolution"). `lastFrame` needs `caps.lastFrame`; `references` is rejected with 400 when `caps.references === false` (e.g. `FLUX.3 Video does not accept style references`). `audio` → `generate_audio` for audio-capable models. Discovered models (see `GET /api/models`) are accepted like catalog ones; the live snapshot is refreshed first if the slug is unknown. 429 over `MAX_ACTIVE_JOBS`. |
 | GET | `/api/generations` | `ListGenerationsQuery` | `ListGenerationsResponse` | Newest first. `limit` default 60, max 200. |
 | GET | `/api/generations/:id` | — | `Generation` | |
-| DELETE | `/api/generations/:id` | — | `{ ok: true }` | Deletes the DB row, its output file, and any uploaded inputs (`/media/up_*` in `inputs.referenceImages/firstFrame/lastFrame`) that **no other generation still references**. Publishes `generation-deleted`. |
-| POST | `/api/generations/:id/retry` | — | `GenerateResponse` | Re-submits with the same prompt/params/inputs (new id). If the original was `failed`, it is deleted after a **successful** re-submit and a `generation-deleted` event is published. `409 {error:"Generation is still running"}` while the record is `pending` / `running`. `400` when the catalog moved on since the record was made; the message names the saved value, e.g. `Saved resolution 4K is no longer supported by Seedance 2.5 (allowed: 480p, 720p). Generate a new one with the current options.` or `Seedance 9 (bytedance/seedance-9) is no longer available. Generate a new one with a current model.`; the record is left untouched. |
-| POST | `/api/upload` | `multipart/form-data` field `file` **or** JSON `{ dataUrl }` | `UploadResponse` | Accepts png/jpg/webp ≤ 25 MB. Stores under `DATA_DIR/media/uploads/`. Returns dimensions. A malformed data URL (bad base64 / percent-encoding) → 400. |
-| GET | `/media/:file` | — | file | `Cache-Control: public, max-age=31536000, immutable`. Correct `Content-Type`. Supports `Range` for video. Path-traversal safe. |
-| GET | `/api/events` | — | `text/event-stream` | Emits `ServerEvent` JSON as `data:` lines: `hello` first, `generation` on every status change, `generation-deleted` on DELETE / retry-replace. Heartbeat comment every 15s. |
+| DELETE | `/api/generations/:id` | — | `{ ok: true }` | Deletes the DB row, its output file, and any uploaded inputs (`up_*` urls in `inputs.referenceImages/firstFrame/lastFrame`) that **no other generation still references**. Leaves a tombstone so the change feed emits `generation-deleted`. |
+| POST | `/api/generations/:id/retry` | — | `GenerateResponse` | Re-submits with the same prompt/params/inputs (new id). If the original was `failed`, it is deleted after a **successful** re-submit and a `generation-deleted` tombstone is left. `409 {error:"Generation is still running"}` while the record is `pending` / `running`. `400` when the catalog moved on since the record was made; the message names the saved value, e.g. `Saved resolution 4K is no longer supported by Seedance 2.5 (allowed: 480p, 720p). Generate a new one with the current options.` or `Seedance 9 (bytedance/seedance-9) is no longer available. Generate a new one with a current model.`; the record is left untouched. |
+| POST | `/api/upload` | `multipart/form-data` field `file` **or** JSON `{ dataUrl }` **or** a `@vercel/blob/client` token request | `UploadResponse` (or the token) | Server-side path: accepts png/jpg/webp ≤ 25 MB, sniffed from the bytes (the declared MIME is ignored), stored as `up_<id>.<ext>` in media storage; returns dimensions; a malformed data URL → 400. Blob storage: the browser calls `upload()` from `@vercel/blob/client` with `handleUploadUrl: "/api/upload"`; this route issues the token only for pathnames `media/uploads/up_<id>.(png\|jpg\|webp)`, image content types and ≤ 25 MB, and the browser then builds the `MediaRef` itself (dimensions decoded locally). |
+| GET | `/media/:file` | — | file | Local storage only (with Blob the urls are absolute and served by the store). `Cache-Control: public, max-age=31536000, immutable`. Correct `Content-Type`. Supports `Range` for video. Path-traversal safe. |
+| GET | `/api/events` | `since?` (the previous `cursor`) | `EventsResponse` | The change feed the browser polls (2.5 s while jobs are active, 20 s idle, 60 s in a background tab). Without `since`: one `hello` event and a fresh cursor. With it: a `generation` event for every record whose `updatedAt` moved after `since` (minus a 2 s overlap, oldest first, 200 per page; the cursor stops at the last row when the page is full) and a `generation-deleted` event per tombstone. **Each call also advances running video jobs** (see below), so a job progresses whenever any tab is open. `Cache-Control: no-store`. |
 
-In production (`pnpm start`) the server also serves `dist/client` with SPA fallback to `index.html` for non-`/api`, non-`/media` routes.
+Media urls are `/media/<name>` with local storage and absolute `https://<store>.public.blob.vercel-storage.com/media/…` urls with Blob; the server accepts only its own `gen_*` / `up_*` names from either (`mediaName` in `media.ts`) and verifies that an input exists before using it.
 
 ## OpenRouter integration rules (verified; do not "simplify" these)
 
@@ -79,10 +82,10 @@ Headers on every call: `Authorization: Bearer <key>`, `Content-Type: application
   - Only send `resolution` if the model lists it; some models accept only one value (Hailuo 3 → `2K`).
   - Read uploaded `/media/...` inputs from disk and convert to data URLs before sending.
 - Poll `polling_url` (absolute; if relative, resolve against `https://openrouter.ai`) every **6s** per pending job. Response: `{ status: "pending"|"in_progress"|"processing"|"completed"|"failed", unsigned_urls?: string[], urls?: string[], usage?: { cost }, error?|message? }`.
-  - On `completed`: download `unsigned_urls[0] ?? urls[0]` **with the Bearer header** (raw fetch returns 401). The body is **streamed** to `DATA_DIR/media/.gen_<id>.<pid>.part` (`stream/promises.pipeline` → `createWriteStream`; never `arrayBuffer()`, a 4K clip must not sit in RAM), then renamed to `gen_<id>.mp4`. Width / height / duration come from the `moov` box read from the file with bounded reads (`parseMp4MetaFromFile`). Set `output`, `costUsd = usage.cost`, `elapsedMs`, `completedAt`.
+  - On `completed`: download `unsigned_urls[0] ?? urls[0]` **with the Bearer header** (raw fetch returns 401). The body is **streamed** into media storage (never `arrayBuffer()`, a 4K clip must not sit in RAM): locally to `DATA_DIR/media/.gen_<id>.<pid>.part` then renamed to `gen_<id>.mp4`; with Blob as a multipart `put` of the stream. Width / height / duration come from the `moov` box with bounded reads (`parseMp4MetaFromRanges`: file reads locally, HTTP `Range` requests against the blob). Set `output`, `costUsd = usage.cost`, `elapsedMs`, `completedAt`. The download runs in the background of the feed request that saw the job finish (`waitUntil`), under a 10 min lease.
   - On `failed`: store the provider's error text verbatim.
   - Moderation is async: a 202 can still fail minutes later; never mark completed before the poll says so.
-- On server boot, first delete temp files a previous process left behind (`.gen_<id>.<pid>.part` downloads and `<file>.<pid>.tmp` atomic writes under `media/` and `media/uploads/`, only when older than 5 s), then resume polling for every generation still `pending`/`running` that has a polling url. Jobs older than 45 min with no completion → `failed` ("Timed out waiting for provider").
+- There is no resident poller. `advanceJobs()` runs at the start of every `GET /api/events`: it first (once per process, local storage only) deletes temp files a previous process left behind (`.gen_<id>.<pid>.part` downloads and `<file>.<pid>.tmp` atomic writes under `media/` and `media/uploads/`, only when older than 5 s), fails jobs that can never finish (`running` images and un-submitted videos older than 10 min, videos older than 45 min: "Timed out waiting for provider"), then polls every running video whose lease (`lock_until`) is free, taking the lease first with one atomic `UPDATE` so concurrent requests on other function instances skip it. A poll that changes nothing re-arms the lease for 6 s (the poll spacing) without touching `updated_at`.
 
 ### Credits
 - `GET /api/v1/credits` → `{ data: { total_credits, total_usage } }`.

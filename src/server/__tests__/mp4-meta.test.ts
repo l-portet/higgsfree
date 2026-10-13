@@ -44,7 +44,7 @@ describe("parseMp4Meta", () => {
 
 describe("parseMp4MetaFromFile", () => {
   const withFile = async <T>(bytes: Uint8Array, fn: (file: string) => Promise<T>): Promise<T> => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-mp4-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-mp4-"));
     const file = path.join(dir, "v.mp4");
     fs.writeFileSync(file, bytes);
     try {

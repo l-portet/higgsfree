@@ -4,7 +4,8 @@ import { config } from "../config.ts";
 import { activeJobCount } from "../jobs.ts";
 import { resolveApiKey } from "../settings.ts";
 
-export const healthRoutes = new Hono().get("/", (c) => {
-  const body: HealthResponse = { ok: true, version: config.version, hasKey: Boolean(resolveApiKey().key), pendingJobs: activeJobCount() };
+export const healthRoutes = new Hono().get("/", async (c) => {
+  const [{ key }, pendingJobs] = await Promise.all([resolveApiKey(), activeJobCount()]);
+  const body: HealthResponse = { ok: true, version: config.version, hasKey: Boolean(key), pendingJobs, storage: config.storage };
   return c.json(body);
 });

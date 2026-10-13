@@ -11,7 +11,7 @@ export default function NotFound() {
         title="Page not found"
         description="That page doesn't exist."
         action={
-          <LinkButton to="/" variant="primary">
+          <LinkButton href="/" variant="primary">
             Go home
           </LinkButton>
         }

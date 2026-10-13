@@ -1,11 +1,12 @@
-import { useEffect, type CSSProperties } from "react";
-import { Outlet } from "react-router-dom";
+"use client";
+
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { Toaster, toast } from "sonner";
 import { CircleAlert } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 import { Lightbox } from "@/components/Lightbox";
 import { Nav } from "./Nav";
-import { connectEvents, subscribeEventStatus } from "@/lib/sse";
+import { connectEvents, subscribeEventStatus } from "@/lib/live";
 import { useModels } from "@/store/models";
 import { useSettings } from "@/store/settings";
 
@@ -39,7 +40,7 @@ function useBoot() {
         wasOffline = true;
         toast("Server unreachable", {
           id: OFFLINE_TOAST,
-          description: "Reconnects on its own once the API is running (pnpm dev:server).",
+          description: "Reconnects on its own once the server is reachable again.",
           icon: <CircleAlert size={16} className="text-fg-muted" aria-hidden="true" />,
           duration: 8000,
         });
@@ -61,15 +62,13 @@ const toasterStyle = {
   "--width": "356px",
 } as CSSProperties;
 
-export default function Shell() {
+export default function Shell({ children }: { children: ReactNode }) {
   useBoot();
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={400}>
       <div className="flex min-h-dvh flex-col">
         <Nav />
-        <main className="flex flex-1 flex-col">
-          <Outlet />
-        </main>
+        <main className="flex flex-1 flex-col">{children}</main>
       </div>
       <Lightbox />
       {/* Top-right (not bottom-right as in DESIGN.md): the fixed prompt bar owns the bottom edge and toasts would cover Generate. */}

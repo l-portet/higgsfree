@@ -2,7 +2,7 @@ import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, RefreshCw, RotateCcw, Trash2, WandSparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { downloadFilename } from "@/lib/files";
+import { downloadFilename, downloadHref } from "@/lib/files";
 import { formatBytes, formatDateTime, formatDims, formatDurationMs, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
 import { useGenerationActions } from "@/lib/actions";
 import { copyText, useElapsed, useReturnFocus } from "@/lib/hooks";
@@ -118,7 +118,7 @@ function Details({ g }: { g: Generation }) {
 
       <section className="mt-auto grid grid-cols-2 gap-2">
         {out ? (
-          <AnchorButton href={out.url} download={downloadFilename(g.id, out.mime, out.url)} leftIcon={<Download />}>
+          <AnchorButton href={downloadHref(out.url)} download={downloadFilename(g.id, out.mime, out.url)} leftIcon={<Download />}>
             Download
           </AnchorButton>
         ) : null}
@@ -221,7 +221,7 @@ export function Lightbox() {
   const focus = useReturnFocus();
 
   const currentId = lb ? lb.ids[lb.index] : undefined;
-  // Subscribe to the current item only (not the whole `byId` map) so unrelated SSE updates don't re-render the dialog.
+  // Subscribe to the current item only (not the whole `byId` map) so unrelated feed updates don't re-render the dialog.
   const g = useGenerations((s) => (currentId ? s.byId[currentId] : undefined));
   const count = lb?.ids.length ?? 0;
 

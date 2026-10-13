@@ -40,9 +40,8 @@ let media: typeof import("../media.ts");
 let generate: typeof import("../routes/generate.ts");
 
 beforeAll(async () => {
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-upload-"));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-upload-"));
   process.env.DATA_DIR = dataDir;
-  process.env.NODE_ENV = "test";
   process.env.OPENROUTER_API_KEY = "test-key";
   process.env.OPENROUTER_BASE_URL = "http://127.0.0.1:9"; // never reached
   app = (await import("../app.ts")).createApp();

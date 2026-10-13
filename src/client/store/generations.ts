@@ -1,13 +1,13 @@
 /**
  * Normalized generations store: `byId` + `ids` (newest first), per-list paging,
- * wired to the SSE stream so cards update live.
+ * wired to the live change feed so cards update as jobs progress.
  */
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type { Generation, GenerationStatus, GenerationType, ListGenerationsQuery } from "@shared/types";
 import * as api from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
-import { subscribeEvents, subscribeEventStatus } from "@/lib/sse";
+import { nudgeEvents, subscribeEvents, subscribeEventStatus } from "@/lib/live";
 import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 
@@ -48,7 +48,7 @@ interface GenerationsState {
   remove: (id: string) => void;
   /** Fetch the first page (or the next one with `more: true`) for a list. */
   fetchPage: (q: ListGenerationsQuery & { more?: boolean }) => Promise<void>;
-  /** Re-fetch every locally pending/running record (whenever the SSE stream opens). */
+  /** Re-fetch every locally pending/running record (whenever the live feed (re)connects). */
   refreshPending: () => Promise<void>;
   deleteGeneration: (id: string) => Promise<void>;
   retryGeneration: (id: string) => Promise<Generation[]>;
@@ -67,8 +67,9 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
       let changedOrder = false;
       for (const g of list) {
         const prev = byId[g.id];
-        // A stale REST list response can arrive after a fresher SSE record; never let it win.
-        if (prev && prev.updatedAt > g.updatedAt) continue;
+        // A stale REST list response can arrive after a fresher record from the feed; never let it win
+        // (an equal timestamp is the same write: the feed re-sends recent rows on purpose).
+        if (prev && prev.updatedAt >= g.updatedAt) continue;
         if (!prev) changedOrder = true;
         byId[g.id] = g;
       }
@@ -79,6 +80,8 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
         : s.ids;
       return { byId, ids };
     });
+    // New work in flight: poll fast right away instead of waiting for the idle interval.
+    if (list.some(isPending)) nudgeEvents();
   },
 
   remove: (id) => {
@@ -147,7 +150,7 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
     if (wasFailed && next && lb?.ids.includes(id)) {
       useUi.getState().lightboxSetIds(lb.ids.map((x) => (x === id ? next : x)));
     }
-    // The server also publishes `generation-deleted` for a replaced failure; removing here is a harmless double.
+    // The server also leaves a `generation-deleted` tombstone for a replaced failure; removing here is a harmless double.
     if (wasFailed) get().remove(id);
     return res.generations;
   },
@@ -217,7 +220,7 @@ subscribeEvents((ev) => {
   else if (ev.type === "generation-deleted") s.remove(ev.id);
 });
 
-// On every open, not only reconnects: pages fetch their lists before the stream is up, so a record
+// On every open, not only reconnects: pages fetch their lists before the first poll, so a record
 // that completed in that gap has no event to deliver it.
 subscribeEventStatus((status) => {
   if (status === "open") void useGenerations.getState().refreshPending();

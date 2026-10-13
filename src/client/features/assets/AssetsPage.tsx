@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 import { CircleAlert, Clapperboard, Image as ImageIcon, LayoutGrid, SearchX, SquareCheck } from "lucide-react";
 import type { Generation } from "@shared/types";
-import { downloadFilename } from "@/lib/files";
+import { downloadFilename, downloadHref } from "@/lib/files";
 import { formatBytes, pluralize } from "@/lib/format";
 import { cardAspectRatio, skeletonItems, type MasonryItem } from "@/lib/masonry";
 import { readJson, writeJson } from "@/lib/storage";
@@ -30,7 +30,7 @@ import {
   type TypeFilter,
 } from "@/components/assets/filters";
 
-const STORAGE_KEY = "oh.assets.filter";
+const STORAGE_KEY = "higgsfree.assets.filter";
 const SKELETON_ASPECTS = ["3 / 4", "16 / 9", "1 / 1", "3 / 4", "9 / 16", "4 / 3", "1 / 1", "16 / 9"];
 const SKELETON_ITEMS = skeletonItems(SKELETON_ASPECTS, (a) => <GenerationCardSkeleton aspect={a} />);
 const EMPTY_PAGE: PageState = { loading: false, loaded: false };
@@ -82,7 +82,7 @@ function triggerDownload(g: Generation): boolean {
   const out = g.output;
   if (!out) return false;
   const a = document.createElement("a");
-  a.href = out.url;
+  a.href = downloadHref(out.url);
   a.download = downloadFilename(g.id, out.mime, out.url);
   a.rel = "noopener";
   a.style.display = "none";
@@ -336,7 +336,7 @@ export default function AssetsPage() {
           title="No images yet"
           description="Images you generate land here with their prompt, model, options and cost."
           action={
-            <LinkButton to="/image" variant="primary" leftIcon={<ImageIcon />}>
+            <LinkButton href="/image" variant="primary" leftIcon={<ImageIcon />}>
               Create image
             </LinkButton>
           }
@@ -351,7 +351,7 @@ export default function AssetsPage() {
           title="No videos yet"
           description="Videos you render land here. Hover to preview, open for the full player."
           action={
-            <LinkButton to="/video" variant="primary" leftIcon={<Clapperboard />}>
+            <LinkButton href="/video" variant="primary" leftIcon={<Clapperboard />}>
               Create video
             </LinkButton>
           }
@@ -366,10 +366,10 @@ export default function AssetsPage() {
         description="Everything you generate is stored on this machine and shows up here."
         action={
           <div className="flex flex-wrap justify-center gap-2">
-            <LinkButton to="/image" variant="primary" leftIcon={<ImageIcon />}>
+            <LinkButton href="/image" variant="primary" leftIcon={<ImageIcon />}>
               Create image
             </LinkButton>
-            <LinkButton to="/video" variant="secondary" leftIcon={<Clapperboard />}>
+            <LinkButton href="/video" variant="secondary" leftIcon={<Clapperboard />}>
               Create video
             </LinkButton>
           </div>

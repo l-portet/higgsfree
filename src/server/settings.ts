@@ -3,6 +3,7 @@ import type { SettingsResponse } from "../shared/types.ts";
 import { DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL } from "../shared/models.ts";
 import { config } from "./config.ts";
 import { HttpError } from "./errors.ts";
+import { storageLocation } from "./media.ts";
 import { deleteSetting, getSetting, setSetting } from "./repo.ts";
 
 export const SETTING_API_KEY = "openrouter_api_key";
@@ -14,15 +15,15 @@ export interface ResolvedKey {
   source: SettingsResponse["keySource"];
 }
 
-export function resolveApiKey(): ResolvedKey {
+export async function resolveApiKey(): Promise<ResolvedKey> {
   if (config.envApiKey) return { key: config.envApiKey, source: "env" };
-  const stored = getSetting(SETTING_API_KEY)?.trim();
+  const stored = (await getSetting(SETTING_API_KEY))?.trim();
   if (stored) return { key: stored, source: "db" };
   return { source: null };
 }
 
-export function requireApiKey(): string {
-  const { key } = resolveApiKey();
+export async function requireApiKey(): Promise<string> {
+  const { key } = await resolveApiKey();
   if (!key) throw new HttpError(401, "No OpenRouter key configured. Add one in Settings or set OPENROUTER_API_KEY.");
   return key;
 }
@@ -33,30 +34,29 @@ export function maskKey(key: string): string {
   return `${key.slice(0, 9)}…${key.slice(-4)}`;
 }
 
-export function setStoredApiKey(key: string): void {
-  if (key.trim()) setSetting(SETTING_API_KEY, key.trim());
-  else deleteSetting(SETTING_API_KEY);
+export async function setStoredApiKey(key: string): Promise<void> {
+  if (key.trim()) await setSetting(SETTING_API_KEY, key.trim());
+  else await deleteSetting(SETTING_API_KEY);
 }
 
-export function getDefaults(): SettingsResponse["defaults"] {
-  return {
-    imageModel: getSetting(SETTING_IMAGE_MODEL) ?? DEFAULT_IMAGE_MODEL,
-    videoModel: getSetting(SETTING_VIDEO_MODEL) ?? DEFAULT_VIDEO_MODEL,
-  };
+export async function getDefaults(): Promise<SettingsResponse["defaults"]> {
+  const [imageModel, videoModel] = await Promise.all([getSetting(SETTING_IMAGE_MODEL), getSetting(SETTING_VIDEO_MODEL)]);
+  return { imageModel: imageModel ?? DEFAULT_IMAGE_MODEL, videoModel: videoModel ?? DEFAULT_VIDEO_MODEL };
 }
 
-export function setDefaults(d: { imageModel?: string; videoModel?: string }): void {
-  if (d.imageModel) setSetting(SETTING_IMAGE_MODEL, d.imageModel);
-  if (d.videoModel) setSetting(SETTING_VIDEO_MODEL, d.videoModel);
+export async function setDefaults(d: { imageModel?: string; videoModel?: string }): Promise<void> {
+  if (d.imageModel) await setSetting(SETTING_IMAGE_MODEL, d.imageModel);
+  if (d.videoModel) await setSetting(SETTING_VIDEO_MODEL, d.videoModel);
 }
 
-export function settingsResponse(): SettingsResponse {
-  const { key, source } = resolveApiKey();
+export async function settingsResponse(): Promise<SettingsResponse> {
+  const { key, source } = await resolveApiKey();
   const res: SettingsResponse = {
     hasKey: Boolean(key),
     keySource: source,
-    defaults: getDefaults(),
-    dataDir: config.dataDir,
+    defaults: await getDefaults(),
+    storage: config.storage,
+    dataDir: storageLocation(),
     version: config.version,
   };
   if (key) res.keyMasked = maskKey(key);

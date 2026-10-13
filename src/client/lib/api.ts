@@ -2,20 +2,26 @@
  * Typed client for every endpoint in docs/API.md.
  * All functions throw `ApiClientError` (status 0 = server unreachable).
  */
+import { upload as blobUpload } from "@vercel/blob/client";
 import type {
   ApiError,
   CreditsResponse,
+  EventsResponse,
   GenerateResponse,
   Generation,
   ImageGenerateRequest,
   ListGenerationsQuery,
   ListGenerationsResponse,
+  MediaRef,
   ModelsResponse,
   SettingsResponse,
+  StorageKind,
   UpdateSettingsRequest,
   UploadResponse,
   VideoGenerateRequest,
 } from "@shared/types";
+import { extensionForMime, readImageDimensions } from "@/lib/files";
+import { shortId } from "@/lib/uid";
 
 export class ApiClientError extends Error {
   readonly status: number;
@@ -115,7 +121,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     if (isApiError(data)) throw new ApiClientError(res.status, data.error, data.provider);
-    // Vite's dev proxy answers 5xx with a non-JSON body when the API server is down.
+    // A gateway in front answers 5xx with a non-JSON body when the app is down.
     if (res.status >= 500 && res.status <= 599) throw new ApiClientError(0, OFFLINE_MESSAGE);
     throw new ApiClientError(res.status, res.statusText || `Request failed (${res.status})`);
   }
@@ -128,8 +134,13 @@ function json(method: "POST" | "PUT" | "PATCH", body: unknown): RequestInit {
 
 // ---------- Endpoints ----------
 
-export function getSettings(): Promise<SettingsResponse> {
-  return request<SettingsResponse>("/api/settings");
+/** Known after the first `getSettings()`; decides how `upload()` moves bytes. */
+let storageMode: StorageKind | undefined;
+
+export async function getSettings(): Promise<SettingsResponse> {
+  const res = await request<SettingsResponse>("/api/settings");
+  storageMode = res.storage;
+  return res;
 }
 
 export function updateSettings(body: UpdateSettingsRequest): Promise<SettingsResponse> {
@@ -146,6 +157,11 @@ export function getCredits(): Promise<CreditsResponse> {
 
 export function getModels(): Promise<ModelsResponse> {
   return request<ModelsResponse>("/api/models");
+}
+
+/** Change feed since `since` (omit on the first call). Also advances running jobs server-side. */
+export function getEvents(since?: string): Promise<EventsResponse> {
+  return request<EventsResponse>(withQuery("/api/events", { since }), { cache: "no-store" });
 }
 
 export function generateImage(body: ImageGenerateRequest): Promise<GenerateResponse> {
@@ -172,10 +188,45 @@ export function retryGeneration(id: string): Promise<GenerateResponse> {
   return request<GenerateResponse>(`/api/generations/${encodeURIComponent(id)}/retry`, { method: "POST" });
 }
 
-/** Upload a reference image as a `File` (multipart) or a data URL (JSON). */
+/**
+ * Upload a reference image as a `File` or a data URL (JSON). With Blob storage a `File` goes from
+ * the browser straight to the store (the server only signs a token), which is what gets a 25 MB
+ * image past the 4.5 MB request body limit of a Vercel function.
+ */
 export function upload(input: File | string): Promise<UploadResponse> {
   if (typeof input === "string") return request<UploadResponse>("/api/upload", json("POST", { dataUrl: input }));
+  if (storageMode === "blob") return uploadDirect(input);
   const form = new FormData();
   form.append("file", input, input.name);
   return request<UploadResponse>("/api/upload", { method: "POST", body: form });
+}
+
+const MULTIPART_FROM_BYTES = 8 * 1024 * 1024;
+
+async function uploadDirect(file: File): Promise<UploadResponse> {
+  // The server only admits `media/uploads/up_<id>.<png|jpg|webp>` (see routes/upload.ts).
+  const pathname = `media/uploads/up_${shortId(12)}.${extensionForMime(file.type)}`;
+  let stored: { url: string };
+  try {
+    stored = await blobUpload(pathname, file, {
+      access: "public",
+      handleUploadUrl: "/api/upload",
+      contentType: file.type,
+      multipart: file.size > MULTIPART_FROM_BYTES,
+    });
+  } catch (err) {
+    throw new ApiClientError(502, err instanceof Error && err.message ? err.message : "Upload failed");
+  }
+  const media: MediaRef = { url: stored.url, mime: file.type, bytes: file.size };
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const dims = await readImageDimensions(objectUrl);
+    media.width = dims.width;
+    media.height = dims.height;
+  } catch {
+    /* dimensions are a nicety */
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+  return { media };
 }

@@ -48,7 +48,7 @@ import { RatioGlyph } from "@/components/RatioGlyph";
 import { DurationControl } from "./DurationControl";
 import { FrameSlot, ReferenceStrip } from "./FrameSlot";
 
-const STORAGE_KEY = "oh.video.panel";
+const STORAGE_KEY = "higgsfree.video.panel";
 const MAX_REFS = 4;
 
 /** Camera chips: each one appends a phrase to the prompt and stays active while that phrase is present. */

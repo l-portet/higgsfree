@@ -33,7 +33,7 @@ export default function VideoPage() {
       useGenerations.getState().upsert(res.generations);
       setTab("history");
       const name = res.generations[0]?.modelName ?? "the model";
-      toast.success(`Rendering with ${name}…`, { description: "Usually 2–5 min. Leave the page and the job keeps going." });
+      toast.success(`Rendering with ${name}…`, { description: "Usually 2–5 min. You can keep working in the app meanwhile." });
       // On stacked layouts the canvas sits below the panel: bring the new card into view.
       if (window.matchMedia("(max-width: 767px)").matches) {
         document.getElementById(CANVAS_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });

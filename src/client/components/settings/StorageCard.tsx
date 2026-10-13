@@ -91,20 +91,21 @@ export function StorageCard({ settings }: { settings: SettingsResponse | null })
 
   const truncated = Boolean(stats?.image?.truncated || stats?.video?.truncated);
   const totalBytes = (stats?.image?.bytes ?? 0) + (stats?.video?.bytes ?? 0);
+  const blob = settings?.storage === "blob";
 
   return (
     <SettingsCard
       icon={<HardDrive />}
       title="Storage"
-      description="Media and the database live in the data directory on this machine."
+      description={blob ? "Media live in a Vercel Blob store; records and settings in the database." : "Media and the database live in the data directory on this machine."}
     >
-      <FieldLabel>Data directory</FieldLabel>
+      <FieldLabel>{blob ? "Blob store" : "Data directory"}</FieldLabel>
       {settings ? (
         <div className="flex items-center gap-1.5">
           <code className="min-w-0 flex-1 truncate rounded-sm border border-border bg-surface-2 px-3 py-2 text-mono text-fg" title={settings.dataDir}>
             {settings.dataDir}
           </code>
-          <IconButton label="Copy path" variant="secondary" onClick={() => void copyText(settings.dataDir, "Path copied")}>
+          <IconButton label="Copy" variant="secondary" onClick={() => void copyText(settings.dataDir, "Copied")}>
             <Copy />
           </IconButton>
         </div>
@@ -128,7 +129,9 @@ export function StorageCard({ settings }: { settings: SettingsResponse | null })
       ) : null}
 
       <p className="mt-3 text-meta">
-        Deleting a generation removes its record and file from disk. Back up the data directory to keep everything.
+        {blob
+          ? "Deleting a generation removes its record and its file from the store."
+          : "Deleting a generation removes its record and file from disk. Back up the data directory to keep everything."}
       </p>
     </SettingsCard>
   );

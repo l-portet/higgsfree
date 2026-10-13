@@ -1,9 +1,9 @@
 /**
  * End-to-end pipeline against a local mock of OpenRouter: image batches (chat +
  * images endpoints), video submit (202) → poll → authenticated streaming download,
- * SSE bus, provider-error passthrough, retry (and its guards), delete, live
- * availability, the active-job ceiling (including the re-check after async input
- * handling). No network, no real key.
+ * the change feed (`GET /api/events`), provider-error passthrough, retry (and its
+ * guards), delete, live availability, the active-job ceiling (including the re-check
+ * after async input handling). No network, no real key.
  */
 import fs from "node:fs";
 import http from "node:http";
@@ -12,7 +12,7 @@ import path from "node:path";
 import type { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { IMAGE_MODELS, VIDEO_MODELS } from "../../shared/models.ts";
-import type { Generation, ServerEvent } from "../../shared/types.ts";
+import type { EventsResponse, Generation } from "../../shared/types.ts";
 
 const u32 = (n: number): number[] => [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
 const str = (s: string): number[] => [...s].map((c) => c.charCodeAt(0));
@@ -111,9 +111,12 @@ function mockOpenRouter(): Promise<{ server: http.Server; base: string }> {
   });
 }
 
+/** Drain the change feed (what the browser polls) into `received` / `deleted`, then test `cond`. */
 const waitFor = async (cond: () => boolean, ms = 5000): Promise<void> => {
   const until = Date.now() + ms;
-  while (!cond()) {
+  for (;;) {
+    await drainEvents();
+    if (cond()) return;
     if (Date.now() > until) throw new Error("timed out waiting for condition");
     await new Promise((r) => setTimeout(r, 15));
   }
@@ -123,34 +126,41 @@ let mock: http.Server;
 let dataDir: string;
 let app: Hono;
 let jobs: typeof import("../jobs.ts");
-let events: typeof import("../events.ts");
 let dbmod: typeof import("../db.ts");
 const received: Generation[] = [];
 const deleted: string[] = [];
 const MAX_ACTIVE_JOBS = 4;
+let cursor: string | undefined;
+
+/** One client poll: everything that changed since the last cursor. Also what advances running video jobs. */
+async function drainEvents(): Promise<EventsResponse> {
+  const url = cursor ? `/api/events?since=${encodeURIComponent(cursor)}` : "/api/events";
+  const res = (await (await app.request(url)).json()) as EventsResponse;
+  cursor = res.cursor;
+  for (const e of res.events) {
+    if (e.type === "generation") received.push(e.generation);
+    if (e.type === "generation-deleted") deleted.push(e.id);
+  }
+  return res;
+}
 
 beforeAll(async () => {
   const m = await mockOpenRouter();
   mock = m.server;
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openhiggsfield-test-"));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfree-test-"));
   process.env.DATA_DIR = dataDir;
   process.env.OPENROUTER_API_KEY = "test-key";
   process.env.OPENROUTER_BASE_URL = m.base;
-  process.env.NODE_ENV = "test";
   process.env.MAX_ACTIVE_JOBS = String(MAX_ACTIVE_JOBS);
   const appMod = await import("../app.ts");
   app = appMod.createApp();
   jobs = await import("../jobs.ts");
-  events = await import("../events.ts");
   dbmod = await import("../db.ts");
-  events.subscribe((e: ServerEvent) => {
-    if (e.type === "generation") received.push(e.generation);
-    if (e.type === "generation-deleted") deleted.push(e.id);
-  });
+  const hello = await drainEvents();
+  expect(hello.events).toEqual([{ type: "hello", pendingJobs: 0 }]);
 });
 
 afterAll(() => {
-  jobs.stopPoller();
   dbmod.closeDatabase();
   mock.close();
   fs.rmSync(dataDir, { recursive: true, force: true });
@@ -250,7 +260,6 @@ describe("video pipeline", () => {
     expect(submit?.body).toMatchObject({ model: "bytedance/seedance-2.5", duration: 7, resolution: "720p" });
     expect(submit?.body).not.toHaveProperty("aspect_ratio");
     expect(submit?.body?.frame_images).toEqual([{ type: "image_url", image_url: { url: PNG_DATA_URL }, frame_type: "first_frame" }]);
-    expect(jobs.pollerRunning()).toBe(true);
   });
 
   it("polls until completed, streams the download to disk with the Bearer header and records cost", async () => {
@@ -274,8 +283,7 @@ describe("video pipeline", () => {
     expect(media.status).toBe(206);
     expect(media.headers.get("content-type")).toBe("video/mp4");
     expect(media.headers.get("content-length")).toBe("8");
-    await jobs.pollTick(); // nothing left → poller stops itself
-    expect(jobs.pollerRunning()).toBe(false);
+    await waitFor(() => received.some((x) => x.id === id && x.status === "completed")); // the feed carries the final record
   });
 
   it("surfaces the provider 400 body verbatim and keeps a failed record", async () => {
@@ -284,8 +292,7 @@ describe("video pipeline", () => {
     const body = (await res.json()) as { error: string; status: number; provider?: unknown };
     expect(body.error).toContain("Supported resolutions: 480p, 720p");
     expect(body.provider).toEqual({ error: { message: "Resolution 4K is not supported for this model. Supported resolutions: 480p, 720p", code: 400 } });
-    const failed = received.filter((g) => g.type === "video" && g.status === "failed").at(-1);
-    expect(failed?.error).toContain("Supported resolutions");
+    await waitFor(() => received.some((g) => g.type === "video" && g.status === "failed" && (g.error ?? "").includes("Supported resolutions")));
   });
 
   it("retries with the same inputs under a new id, and delete removes row + file", async () => {
@@ -302,12 +309,13 @@ describe("video pipeline", () => {
 
     const file = path.join(dataDir, "media", `${id}.mp4`);
     expect(fs.existsSync(file)).toBe(true);
+    await drainEvents();
     expect(deleted).not.toContain(id);
     const del = await app.request(`/api/generations/${id}`, { method: "DELETE" });
     expect(await del.json()).toEqual({ ok: true });
     expect(fs.existsSync(file)).toBe(false);
     expect((await app.request(`/api/generations/${id}`)).status).toBe(404);
-    expect(deleted).toContain(id); // generation-deleted published
+    await waitFor(() => deleted.includes(id)); // tombstone on the feed
     // The first frame upload is still referenced by the retried job → kept.
     const frame = (await getGen(g.id)).inputs?.firstFrame ?? "";
     expect(fs.existsSync(path.join(dataDir, "media", "uploads", path.basename(frame)))).toBe(true);
@@ -323,7 +331,7 @@ describe("video pipeline", () => {
     const fresh = ((await retry.json()) as { generations: Generation[] }).generations[0];
     expect(fresh?.id).not.toBe(g.id);
     expect((await app.request(`/api/generations/${g.id}`)).status).toBe(404);
-    expect(deleted).toContain(g.id);
+    await waitFor(() => deleted.includes(g.id));
     await waitFor(() => received.some((x) => x.id === fresh?.id && x.status === "failed"));
   });
 
@@ -348,14 +356,13 @@ describe("retry guards", () => {
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "Generation is still running", status: 409 });
     await app.request(`/api/generations/${g.id}`, { method: "DELETE" });
-    await jobs.pollTick(); // nothing left → poller stops
   });
 
   it("names the saved option the model no longer lists, and leaves the record alone", async () => {
     const repo = await import("../repo.ts");
     const ts = new Date().toISOString();
     // Seedance 2.5 lists 480p/720p today; pretend this record was made when 4K was still offered.
-    repo.insertGeneration({
+    await repo.insertGeneration({
       id: "gen_stale4k", type: "video", status: "completed", prompt: "p", model: "bytedance/seedance-2.5", modelName: "Seedance 2.5",
       params: { duration: 5, resolution: "4K" }, createdAt: ts, updatedAt: ts,
     });
@@ -373,7 +380,7 @@ describe("retry guards", () => {
   it("explains a model that left the catalog (a failed record is only replaced after a successful re-submit)", async () => {
     const repo = await import("../repo.ts");
     const ts = new Date().toISOString();
-    repo.insertGeneration({
+    await repo.insertGeneration({
       id: "gen_retired", type: "image", status: "failed", error: "boom", prompt: "p", model: "acme/retired-1", modelName: "Retired 1",
       params: { aspectRatio: "1:1", size: "1K" }, createdAt: ts, updatedAt: ts,
     });
@@ -383,6 +390,7 @@ describe("retry guards", () => {
       "Retired 1 (acme/retired-1) is no longer available. Generate a new one with a current model.",
     );
     expect((await app.request("/api/generations/gen_retired")).status).toBe(200);
+    await drainEvents();
     expect(deleted).not.toContain("gen_retired");
     await app.request("/api/generations/gen_retired", { method: "DELETE" });
   });
@@ -429,7 +437,6 @@ describe("active-job ceiling", () => {
     expect(batch.status).toBe(429);
     for (const g of running.slice(1)) await app.request(`/api/generations/${g.id}`, { method: "DELETE" });
     expect((await (await app.request("/api/health")).json()).pendingJobs).toBe(0);
-    await jobs.pollTick(); // nothing left → poller stops
   });
 
   it("re-checks capacity after the async input handling, so concurrent requests cannot overshoot", async () => {
@@ -447,8 +454,6 @@ describe("active-job ceiling", () => {
     const { items } = (await (await app.request("/api/generations?status=running")).json()) as { items: Generation[] };
     for (const g of items) await app.request(`/api/generations/${g.id}`, { method: "DELETE" });
     expect((await (await app.request("/api/health")).json()).pendingJobs).toBe(0);
-    await jobs.pollTick(); // nothing left → poller stops
-    expect(jobs.pollerRunning()).toBe(false);
   });
 
   it("removes a persisted reference when validation fails on a later input of the same request", async () => {
@@ -495,9 +500,7 @@ describe("poll error classification", () => {
     const res = await post("/api/generate/video", { prompt: "POLL_FOREIGN", model: "bytedance/seedance-2.5", duration: 5 });
     expect(res.status).toBe(502);
     expect(((await res.json()) as { error: string }).error).toBe("Refusing to send the API key to evil.example");
-    const failed = received.filter((g) => g.type === "video" && g.status === "failed").at(-1);
-    expect(failed?.error).toBe("Refusing to send the API key to evil.example");
-    await jobs.pollTick(); // nothing left → poller stops
+    await waitFor(() => received.some((g) => g.type === "video" && g.status === "failed" && g.error === "Refusing to send the API key to evil.example"));
   });
 });
 
@@ -521,7 +524,7 @@ describe("uploads shared between generations", () => {
     expect(fs.existsSync(file)).toBe(true); // b still references it
     await app.request(`/api/generations/${b.id}`, { method: "DELETE" });
     expect(fs.existsSync(file)).toBe(false); // last reference gone
-    expect(deleted).toEqual(expect.arrayContaining([a.id, b.id]));
+    await waitFor(() => deleted.includes(a.id) && deleted.includes(b.id));
   });
 });
 

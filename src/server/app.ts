@@ -15,22 +15,25 @@ import { modelsRoutes } from "./routes/models.ts";
 import { creditsRoutes, settingsRoutes } from "./routes/settings.ts";
 import { uploadRoutes } from "./routes/upload.ts";
 import { securityGuard } from "./security.ts";
-import { mountStatic } from "./static.ts";
 
+/**
+ * The API as one Hono app, mounted by the Next.js route handlers under `/api/*` and
+ * `/media/*`. Pages are Next's own; nothing here serves HTML.
+ */
 export function createApp(): Hono {
   const app = new Hono();
 
   app.use("*", async (c, next) => {
     const started = performance.now();
     await next();
-    // Browsers must trust our Content-Type on /media/* and static files, never sniff.
+    // Browsers must trust our Content-Type on /media/* and JSON, never sniff.
     c.res.headers.set("X-Content-Type-Options", "nosniff");
     const ms = Math.round(performance.now() - started);
     log.info(`${c.req.method} ${c.req.path} ${c.res.status} ${ms}ms`);
   });
 
   // Host / Origin / Content-Type guard, before every route (see security.ts).
-  app.use("*", securityGuard({ allowedHosts: config.allowedHosts }));
+  app.use("*", securityGuard({ allowedHosts: config.allowedHosts, trustHost: config.trustHost }));
 
   app.route("/api/health", healthRoutes);
   app.route("/api/settings", settingsRoutes);
@@ -41,8 +44,6 @@ export function createApp(): Hono {
   app.route("/api/upload", uploadRoutes);
   app.route("/api/events", eventsRoutes);
   app.route("/media", mediaRoutes);
-
-  mountStatic(app);
 
   app.notFound((c) => {
     const body: ApiError = { error: `Not found: ${c.req.method} ${c.req.path}`, status: 404 };

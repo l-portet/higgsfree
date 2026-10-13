@@ -16,21 +16,21 @@ const limit = bodyLimit({
 });
 
 export const generationsRoutes = new Hono()
-  .get("/", (c) => {
+  .get("/", async (c) => {
     const q = parse(listGenerationsSchema, c.req.query());
-    const { items, nextCursor } = listGenerations(q);
+    const { items, nextCursor } = await listGenerations(q);
     const res: ListGenerationsResponse = { items: items.map(toPublic) };
     if (nextCursor) res.nextCursor = nextCursor;
     return c.json(res);
   })
-  .get("/:id", (c) => {
-    const g = getGeneration(c.req.param("id"));
+  .get("/:id", async (c) => {
+    const g = await getGeneration(c.req.param("id"));
     if (!g) throw notFound("Generation not found");
     return c.json(toPublic(g));
   })
   .delete("/:id", async (c) => {
     const id = c.req.param("id");
-    const g = getGeneration(id);
+    const g = await getGeneration(id);
     if (!g) throw notFound("Generation not found");
     const removed = await removeGeneration(g);
     log.info(`generation ${id} deleted (${g.type}, ${g.status}, ${removed.uploads} orphaned upload(s) removed)`);

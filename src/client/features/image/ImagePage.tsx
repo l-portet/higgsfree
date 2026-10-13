@@ -63,10 +63,10 @@ function ImageEmptyState() {
       </div>
       <h1 className="text-display text-[28px] sm:text-[40px]">
         <span className="block text-fg">Start creating with</span>
-        <span className="block text-accent">Open Higgsfield</span>
+        <span className="block text-accent">higgsfree</span>
       </h1>
       <p className="mt-4 max-w-md text-lead">
-        Describe a scene, pick a model and hit Generate. Runs on your OpenRouter key; every image stays on this machine.
+        Describe a scene, pick a model and hit Generate. Runs on your OpenRouter key; every image stays in your own storage.
       </p>
     </div>
   );

@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+/* ---------- Design tokens (docs/DESIGN.md) ---------- */
+@theme {
+  --color-bg: #0a0a0a;
+  /* Each layer steps up 8 to 10 RGB points (10 > 20 > 28 > 37) so chips read as raised on the bar and rows on popovers. */
+  --color-surface: #141417;
+  --color-surface-2: #1c1c20;
+  --color-surface-3: #25252b;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-fg: #f5f5f5;
+  --color-fg-muted: #a1a1aa;
+  /* Tertiary text: 6.0:1 on surface, 5.0:1 on surface-3 (AA). */
+  --color-fg-subtle: #93939c;
+  /* Purely decorative (icons, dividers, chevrons), never for text. */
+  --color-fg-faint: #6b6b73;
+  --color-accent: #d4f53c;
+  --color-accent-hover: #c6e832;
+  --color-on-accent: #0a0a0a;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --shadow-popover: 0 16px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-bar: 0 12px 48px -12px rgba(0, 0, 0, 0.8);
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+  --animate-pop-in: pop-in 150ms var(--ease-out-quart);
+  --animate-pop-out: pop-out 120ms ease-in forwards;
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-fade-out: fade-out 120ms ease-in forwards;
+  --animate-slide-up: slide-up 200ms var(--ease-out-quart);
+
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pop-out {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.96); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Fonts come from next/font (self-hosted, no Google Fonts request at runtime); the variables are set on <html>. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-y: scroll;
+  }
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  img,
+  video {
+    display: block;
+  }
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  }
+  /* No default (blue) focus rings; a soft lime ring on keyboard focus only. */
+  :focus {
+    outline: none;
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #333338 transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #333338;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #43434a;
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+  kbd {
+    font-family: var(--font-sans);
+  }
+}
+
+/* ---------- Utilities ---------- */
+@utility skeleton {
+  background-color: var(--color-surface-2);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-surface-2) 0%,
+    var(--color-surface-3) 40%,
+    var(--color-surface-2) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* ---------- Typography scale (docs/DESIGN.md) ----------
+   One utility per kind of text. Add color / weight modifiers after it
+   (single-property utilities sort later, so `text-meta text-fg` wins). */
+@utility text-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+/* Page titles (h1). */
+@utility text-title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-fg);
+}
+
+/* Card, dialog and section headings. */
+@utility text-heading {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-fg);
+}
+
+/* Hero subline under a display heading. */
+@utility text-lead {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-fg-muted);
+}
+
+/* Uppercase section / field labels. The only place letter-spacing is used besides display. */
+@utility text-label {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-fg-subtle);
+}
+
+/* Default reading text (descriptions, prompts, dialog bodies). Color from context. */
+@utility text-body {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Secondary text: card meta, hints, tooltips, toast descriptions, errors. */
+@utility text-meta {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-fg-muted);
+}
+
+/* Tertiary text: captions, footers, keyboard hints. */
+@utility text-caption {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-fg-subtle);
+}
+
+/* Ids, slugs, paths, keys. Tabular so columns of digits line up. */
+@utility text-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Horizontal strips: fade the right edge so a cut-off card reads as "more to the right". */
+@utility edge-fade-x {
+  mask-image: linear-gradient(to right, black calc(100% - 56px), transparent);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility ring-focus {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

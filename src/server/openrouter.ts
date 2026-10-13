@@ -233,13 +233,13 @@ export const DOWNLOAD_IDLE_MS = 60_000;
 export const DOWNLOAD_MAX_MS = 30 * 60_000;
 
 /**
- * The content url is NOT public; it needs the Bearer header. The body is streamed
- * straight to `dest` (never buffered in memory); returns the byte count. On any
- * failure `dest` is removed. A whole-body deadline would restart a big clip from
- * zero on every poll tick, so the download is aborted only when it stalls
- * (`idleMs` without a chunk) or blows the generous overall cap (`maxMs`).
+ * The content url is NOT public; it needs the Bearer header. Returns the body as a
+ * stream (never buffered: a 4K clip must not sit in RAM) that fails when it stalls
+ * (`idleMs` without a chunk) or blows the generous overall cap (`maxMs`); a whole-body
+ * deadline would restart a big clip from zero on every poll tick. Every failure
+ * surfaces on the stream as a 502 `HttpError`.
  */
-export async function downloadVideo(key: string, url: string, dest: string, limits: DownloadLimits = {}): Promise<number> {
+export async function openVideoStream(key: string, url: string, limits: DownloadLimits = {}): Promise<ReadableStream<Uint8Array>> {
   const target = assertProviderOrigin(url);
   const idleMs = limits.idleMs ?? DOWNLOAD_IDLE_MS;
   const maxMs = limits.maxMs ?? DOWNLOAD_MAX_MS;
@@ -250,37 +250,64 @@ export async function downloadVideo(key: string, url: string, dest: string, limi
     clearTimeout(idle);
     idle = setTimeout(() => controller.abort(new Error(`no data received for ${Math.round(idleMs / 1000)} seconds`)), idleMs);
   };
-  const failure = (err: unknown): HttpError => new HttpError(502, `Video download failed: ${errorMessage(controller.signal.aborted ? controller.signal.reason : err)}`);
-  touch();
-  try {
-    let res: Response;
-    try {
-      res = await fetch(target, { headers: { Authorization: `Bearer ${key}` }, signal: controller.signal });
-    } catch (err) {
-      throw failure(err);
-    }
-    if (!res.ok) {
-      const body = await readBody(res).catch(() => undefined);
-      throw providerError(res.status, body, "Video download failed: ");
-    }
-    if (!res.body) throw new HttpError(502, "Video download failed: empty response body");
-    await fs.promises.mkdir(path.dirname(dest), { recursive: true });
-    const resetIdle = new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, ctl) {
-        touch();
-        ctl.enqueue(chunk);
-      },
-    });
-    try {
-      await pipeline(Readable.fromWeb(res.body.pipeThrough(resetIdle) as import("node:stream/web").ReadableStream), fs.createWriteStream(dest));
-      return (await fs.promises.stat(dest)).size;
-    } catch (err) {
-      await fs.promises.unlink(dest).catch(() => undefined);
-      throw failure(err);
-    }
-  } finally {
+  const stop = (): void => {
     clearTimeout(overall);
     clearTimeout(idle);
+  };
+  const failure = (err: unknown): HttpError => new HttpError(502, `Video download failed: ${errorMessage(controller.signal.aborted ? controller.signal.reason : err)}`);
+  touch();
+  let res: Response;
+  try {
+    res = await fetch(target, { headers: { Authorization: `Bearer ${key}` }, signal: controller.signal });
+  } catch (err) {
+    stop();
+    throw failure(err);
+  }
+  if (!res.ok) {
+    stop();
+    const body = await readBody(res).catch(() => undefined);
+    throw providerError(res.status, body, "Video download failed: ");
+  }
+  if (!res.body) {
+    stop();
+    throw new HttpError(502, "Video download failed: empty response body");
+  }
+  const reader = res.body.getReader();
+  return new ReadableStream<Uint8Array>({
+    async pull(ctl) {
+      let next: ReadableStreamReadResult<Uint8Array>;
+      try {
+        next = await reader.read();
+      } catch (err) {
+        stop();
+        throw failure(err);
+      }
+      if (next.done) {
+        stop();
+        ctl.close();
+        return;
+      }
+      touch();
+      ctl.enqueue(next.value);
+    },
+    cancel(reason) {
+      stop();
+      controller.abort(reason instanceof Error ? reason : new Error("download cancelled"));
+      reader.cancel(reason).catch(() => undefined);
+    },
+  });
+}
+
+/** `openVideoStream` piped to a file on disk; returns the byte count. On any failure `dest` is removed. */
+export async function downloadVideo(key: string, url: string, dest: string, limits: DownloadLimits = {}): Promise<number> {
+  const body = await openVideoStream(key, url, limits);
+  await fs.promises.mkdir(path.dirname(dest), { recursive: true });
+  try {
+    await pipeline(Readable.fromWeb(body as unknown as import("node:stream/web").ReadableStream<Uint8Array>), fs.createWriteStream(dest));
+    return (await fs.promises.stat(dest)).size;
+  } catch (err) {
+    await fs.promises.unlink(dest).catch(() => undefined);
+    throw err instanceof HttpError ? err : new HttpError(502, `Video download failed: ${errorMessage(err)}`);
   }
 }
 

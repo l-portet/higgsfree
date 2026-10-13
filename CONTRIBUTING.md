@@ -1,4 +1,4 @@
-# Contributing to Open Higgsfield
+# Contributing to higgsfree
 
 Thanks for helping. This is a small codebase with a few firm rules; read this once and you'll be
 productive quickly.
@@ -7,22 +7,27 @@ productive quickly.
 
 ```bash
 git clone <your fork>
-cd open-higgsfield
-pnpm install            # pnpm 11, Node >= 22.13 (needs node:sqlite)
-cp .env.example .env    # optional, the key can also be entered in Settings
-pnpm dev                # server :8787 + Vite :5173 (proxies /api and /media)
+cd higgsfree
+pnpm install                  # pnpm 11, Node >= 22
+cp .env.example .env.local    # optional, the key can also be entered in Settings
+pnpm dev                      # Next.js on :3000, API included; data in ./data
 ```
 
-Other scripts: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` (→ `dist/client`), `pnpm start`
-(production: serves `dist/client` from the server), `pnpm format` / `pnpm format:check` (Prettier).
+Other scripts: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` (production build, also emits
+`.next/standalone` for Docker), `pnpm start`, `pnpm format` / `pnpm format:check` (Prettier).
+`vercel env pull .env.local` after `vercel link` points local dev at a real Blob store and Turso database.
 
 ## Layout
 
 ```
 src/
+  app/      Next.js App Router: layout, one thin client page per route, error screens, and the
+            route handlers that mount the Hono API at /api/* and /media/*
   shared/   types.ts (client ⇄ server contract) · models.ts (the model catalog)
-  server/   Hono app, OpenRouter client, node:sqlite store, video poller, SSE
-  client/   React + Vite + Tailwind v4 (Radix primitives, zustand, react-router)
+  server/   Hono app, OpenRouter client, libSQL store (SQLite file or Turso), media store
+            (local disk or Vercel Blob), job advancement + change feed
+  client/   React + Tailwind v4 (Radix primitives, zustand); pages, components, stores
+public/     icons, manifest, sample stills
 docs/       API.md (endpoint contract) · DESIGN.md (visual spec) · MODELS.md (catalog)
 ```
 
@@ -38,8 +43,13 @@ an API, change the type first, then both sides. Keep `src/shared` dependency-fre
 - **Never log or return the API key.** See [SECURITY.md](SECURITY.md).
 - **Surface provider errors verbatim.** OpenRouter's 400 bodies list the supported values; users
   need to see them.
-- **No native dependencies.** `node:sqlite` and hand-rolled image header parsing are deliberate so
-  the app installs anywhere Node 22 runs, including Alpine containers.
+- **Nothing that compiles on install.** `@libsql/client` ships prebuilt bindings for the local
+  `file:` database and talks plain HTTP/WebSocket to Turso; image and MP4 headers are parsed by
+  hand. The app has to install and build anywhere Node 22 runs, including Vercel's build image.
+- **Nothing that needs a resident process.** On Vercel every request is its own function: no
+  in-memory state that must survive a request (caches are best-effort), no timers, no stream that
+  stays open. Work that outlives a response goes through `runInBackground` (`waitUntil`), and
+  anything two instances could both do takes the row's lease first (`claimGeneration`).
 - **Cost honesty.** Estimates in the UI come from `estCostUsd` / `estCostPerSecUsd` in the
   catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. If you change
   an estimate, say where the number came from.
@@ -62,7 +72,7 @@ the PR description.
   Formatting is checked locally only (CI does not run it yet, since the tree is not fully
   formatted); please keep the diff of your PR limited to the files you actually changed.
 - Small, focused PRs. One model addition or one feature per PR.
-- Commit messages: imperative mood, present tense (`Add Kling 3.0 Standard`, `Fix SSE reconnect`).
+- Commit messages: imperative mood, present tense (`Add Kling 3.0 Standard`, `Fix feed reconnect`).
 
 ## Before you open a PR
 
@@ -70,9 +80,9 @@ the PR description.
 pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
-CI runs the same four commands on Node 22 and 26, plus a Docker image build. Please also:
+CI runs the same four commands on Node 22 and 24, plus a Docker image build. Please also:
 
-- Describe what you tested manually (which model, which mode, dev or Docker).
+- Describe what you tested manually (which model, which mode, local storage or Blob + Turso).
 - Add screenshots for UI changes (dark theme, 1400px-wide content area).
 - Don't commit `data/`, `.env`, or generated media.
 

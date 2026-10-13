@@ -21,9 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 22 is the floor from `engines` (first release with node:sqlite); 26 is what the
-        # maintainer runs. node:sqlite has changed between majors, so both are exercised.
-        node: [22, 26]
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v4
 
@@ -48,17 +46,10 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Build client
+      - name: Build
         run: pnpm build
-
-      - name: Upload client bundle
-        if: matrix.node == 22
-        uses: actions/upload-artifact@v4
-        with:
-          name: client-dist
-          path: dist/client
-          retention-days: 7
-          if-no-files-found: error
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
 
   docker:
     name: Docker image (build only)
@@ -74,6 +65,6 @@ jobs:
         with:
           context: .
           push: false
-          tags: open-higgsfield:ci
+          tags: higgsfree:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

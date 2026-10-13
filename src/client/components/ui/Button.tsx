@@ -1,5 +1,5 @@
+import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
-import { Link, type LinkProps } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { Spinner } from "./Spinner";
 
@@ -76,7 +76,7 @@ export function Button({
   );
 }
 
-export interface LinkButtonProps extends LinkProps {
+export interface LinkButtonProps extends ComponentProps<typeof Link> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   leftIcon?: ReactNode;

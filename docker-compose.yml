@@ -1,39 +1,31 @@
-# Open Higgsfield: single-container deployment
+# higgsfree: single-container self-hosted deployment (not needed for Vercel)
 #
 #   cp .env.example .env      # optional: put OPENROUTER_API_KEY there (or use the Settings page)
 #   docker compose up -d
-#   open http://localhost:8787
+#   open http://localhost:3000
 #
 # Everything the app writes (SQLite DB + generated images/videos) lives in ./data.
 
 services:
-  open-higgsfield:
+  higgsfree:
     build: .
-    # Prefer a prebuilt image once one is published (GitHub user joymadhu49):
-    # image: ghcr.io/joymadhu49/open-higgsfield:latest
-    container_name: open-higgsfield
+    container_name: higgsfree
     restart: unless-stopped
-    # Run a tiny init as PID 1 so SIGTERM reaches the server's graceful shutdown and zombies are reaped.
     init: true
     ports:
       # The app has no login, so the port is published on the host's loopback only. Host port
-      # comes from PORT in .env (default 8787); the container always listens on 8787.
-      # To reach it from other machines, put a proxy with auth in front, or (private LAN /
-      # Tailscale only) drop the `127.0.0.1:` prefix and list the hostname in ALLOWED_HOSTS.
-      - "127.0.0.1:${PORT:-8787}:8787"
+      # comes from PORT in .env (default 3000); the container always listens on 3000.
+      - "127.0.0.1:${PORT:-3000}:3000"
     env_file:
       - path: .env
         required: false
     environment:
       # Fixed inside the container; overrides .env values that only make sense on the host.
       DATA_DIR: /data
-      PORT: 8787
-      HOST: 0.0.0.0
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
       # OPENROUTER_API_KEY: sk-or-v1-...        # or set it in .env / the in-app Settings page
-      # APP_URL: https://higgs.example.com      # attribution headers sent to OpenRouter
-      # APP_NAME: Open Higgsfield
+      # APP_URL: https://higgs.example.com      # attribution header + allowed hostname
+      # APP_NAME: higgsfree
     volumes:
       - ./data:/data
-    # The image runs as the unprivileged `node` user (uid 1000). On Linux hosts, if ./data
-    # is owned by another uid you can either `chown -R 1000:1000 ./data` or uncomment:
-    # user: "${UID:-1000}:${GID:-1000}"
