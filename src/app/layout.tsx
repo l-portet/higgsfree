@@ -1,0 +1,96 @@
+import { GoogleAnalytics } from "@next/third-parties/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Inter_Tight } from "next/font/google";
+import type { ReactNode } from "react";
+import Shell from "@/components/layout/Shell";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-inter", display: "swap" });
+const interTight = Inter_Tight({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-inter-tight", display: "swap" });
+
+const DESCRIPTION = "Open-source AI image and video studio powered by your OpenRouter key.";
+
+/** Absolute base for social-card urls: APP_URL, else the Vercel production domain, else local dev. */
+function siteUrl(): URL {
+  const explicit = process.env.APP_URL?.trim();
+  if (explicit) return new URL(explicit);
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  return new URL(vercel ? `https://${vercel}` : "http://localhost:3000");
+}
+
+export const metadata: Metadata = {
+  metadataBase: siteUrl(),
+  title: { default: "higgsfree", template: "%s · higgsfree" },
+  description: DESCRIPTION,
+  applicationName: "higgsfree",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: "higgsfree",
+    title: "higgsfree",
+    description: "Open-source AI image and video studio on your OpenRouter key.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "higgsfree" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "higgsfree",
+    description: "Open-source AI image and video studio on your OpenRouter key.",
+    images: ["/og-image.png"],
+  },
+};
+
+const GA_ID = "G-SCFQ6KQ6L0";
+/** Google tag endpoints, per https://developers.google.com/tag-platform/security/guides/csp (GA4). */
+const GA_SCRIPT = "https://*.googletagmanager.com";
+const GA_CONNECT = "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
+
+/**
+ * Production only (Next dev needs eval and websockets). The key lives in this browser, so the one
+ * thing worth locking down is where a script on this origin may send data: OpenRouter, plus the
+ * Google Analytics endpoints, and nothing else.
+ */
+const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' ${GA_SCRIPT}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' blob: data: ${GA_CONNECT}`,
+  "media-src 'self' blob:",
+  "font-src 'self'",
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${GA_CONNECT}`,
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "dark",
+  themeColor: "#0a0a0a",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en" className={`dark ${inter.variable} ${interTight.variable}`}>
+      {process.env.NODE_ENV === "production" ? (
+        <head>
+          <meta httpEquiv="Content-Security-Policy" content={CSP} />
+        </head>
+      ) : null}
+      <body>
+        <Shell>{children}</Shell>
+      </body>
+      {process.env.NODE_ENV === "production" ? <GoogleAnalytics gaId={GA_ID} /> : null}
+    </html>
+  );
+}

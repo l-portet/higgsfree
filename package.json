@@ -1,0 +1,58 @@
+{
+  "name": "higgsfree",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Open-source AI image & video studio powered by your OpenRouter API key. Runs entirely in the browser; deploys as a static site.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "serve out",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src"
+  },
+  "dependencies": {
+    "@next/third-parties": "^16.4.0",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "@zip.js/zip.js": "^2.23.0",
+    "clsx": "^2.1.1",
+    "idb": "^8.0.4",
+    "lucide-react": "^0.487.0",
+    "next": "^16.4.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^3.2.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "16.4.0",
+    "@tailwindcss/postcss": "^4.1.4",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^30.1.2",
+    "prettier": "^3.5.3",
+    "serve": "^14.2.6",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^3.1.1"
+  },
+  "packageManager": "pnpm@11.24.0"
+}

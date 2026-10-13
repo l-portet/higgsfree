@@ -1,0 +1,15 @@
+# higgsfree: single-container self-hosted deployment (not needed for Vercel or any static host)
+#
+#   docker compose up -d
+#   open http://localhost:3000
+#
+# The container only serves static files. Your key and your library live in your browser.
+
+services:
+  higgsfree:
+    build: .
+    container_name: higgsfree
+    restart: unless-stopped
+    ports:
+      # Host port comes from PORT (default 3000); nginx listens on 80 inside the container.
+      - "${PORT:-3000}:80"

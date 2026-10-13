@@ -1,0 +1,2896 @@
+{
+ "data": [
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1791300825,
+   "description": "Nano Banana 2.1 (Gemini Nano Banana 2.1) is Google's image generation and editin",
+   "id": "google/gemini-nano-banana-2.1",
+   "name": "Google: Nano Banana 2.1",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1791232017,
+   "description": "Hy Image 3.5 Preview is a unified image generation and editing model from Tencen",
+   "id": "tencent/hy-image-v3.5-preview",
+   "name": "Tencent: Hy Image 3.5 Preview",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "1:4",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9"
+     ]
+    },
+    "input_references": {
+     "max": 20,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "1.5K",
+      "2K",
+      "4K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    },
+    "size": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1790889880,
+   "description": "Seedream 5.0 Flash is an image generation and editing model from ByteDance Seed.",
+   "id": "bytedance-seed/seedream-5-0-flash",
+   "name": "ByteDance Seed: Seedream 5.0 Flash",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "9:19.5",
+      "19.5:9",
+      "9:20",
+      "20:9",
+      "9:21",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1790885807,
+   "description": "FLUX.3 Image is Black Forest Labs' flagship image generation and editing model. ",
+   "id": "black-forest-labs/flux-3-image",
+   "name": "Black Forest Labs: FLUX.3 Image",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "21:9",
+      "2:1",
+      "16:9",
+      "3:2",
+      "7:5",
+      "4:3",
+      "5:4",
+      "1:1",
+      "4:5",
+      "3:4",
+      "5:7",
+      "2:3",
+      "9:16",
+      "1:2",
+      "9:21",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "768",
+      "1K",
+      "1.5K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1790177946,
+   "description": "Recraft V4.1 Flash is a text-to-image model from Recraft, the speed and cost tie",
+   "id": "recraft/recraft-v4.1-flash",
+   "name": "Recraft: Recraft V4.1 Flash",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1788916368,
+   "description": "GPT Image 2.5 Sunburst is an image generation and editing model from OpenAI, pos",
+   "id": "openai/gpt-image-2.5-sunburst",
+   "name": "OpenAI: GPT Image 2.5 Sunburst",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1788916350,
+   "description": "GPT Image 2.5 Flare is an image generation and editing model from OpenAI, positi",
+   "id": "openai/gpt-image-2.5-flare",
+   "name": "OpenAI: GPT Image 2.5 Flare",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1788550742,
+   "description": "MAI-Image-2.6 is an image generation and editing model from Microsoft AI, the pr",
+   "id": "microsoft/mai-image-2.6",
+   "name": "Microsoft AI: MAI-Image-2.6",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 5,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1788550735,
+   "description": "MAI-Image-2.6 Flash is the lower-latency, lower-cost member of the [MAI-Image-2.",
+   "id": "microsoft/mai-image-2.6-flash",
+   "name": "Microsoft AI: MAI-Image-2.6 Flash",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 5,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1787764532,
+   "description": "Muse Image is an agentic image generation model from Meta that generates and edi",
+   "id": "meta/muse-image",
+   "name": "Meta: Muse Image",
+   "supported_parameters": {},
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1787742640,
+   "description": "Recraft V4 Styles Pro is a style-consistent image generation model from Recraft.",
+   "id": "recraft/recraft-v4-styles-pro",
+   "name": "Recraft: Recraft V4 Styles Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:1",
+      "1:2",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "5:4",
+      "4:5",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1787742635,
+   "description": "Recraft V4 Styles Vector is a style-consistent image generation model from Recra",
+   "id": "recraft/recraft-v4-styles-vector",
+   "name": "Recraft: Recraft V4 Styles Vector",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:1",
+      "1:2",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "5:4",
+      "4:5",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1787742628,
+   "description": "Recraft V4 Styles Pro Vector is a style-consistent image generation model from R",
+   "id": "recraft/recraft-v4-styles-pro-vector",
+   "name": "Recraft: Recraft V4 Styles Pro Vector",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:1",
+      "1:2",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "5:4",
+      "4:5",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1787742458,
+   "description": "Recraft V4 Styles is a style-consistent image generation model from Recraft. Eve",
+   "id": "recraft/recraft-v4-styles",
+   "name": "Recraft: Recraft V4 Styles",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:1",
+      "1:2",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "5:4",
+      "4:5",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1786650094,
+   "description": "Seedream 5.0 Lite is an image generation model from ByteDance Seed. It is suited",
+   "id": "bytedance-seed/seedream-5-0-lite",
+   "name": "ByteDance Seed: Seedream 5.0 Lite",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "9:19.5",
+      "19.5:9",
+      "9:20",
+      "20:9",
+      "9:21",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 4,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "2K",
+      "4K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1786578139,
+   "description": "Seedream 5.0 Pro is an image generation and editing model from ByteDance Seed. I",
+   "id": "bytedance-seed/seedream-5-0-pro",
+   "name": "ByteDance Seed: Seedream 5.0 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "9:19.5",
+      "19.5:9",
+      "9:20",
+      "20:9",
+      "9:21",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1786486044,
+   "description": "Grok Imagine Image 2.0 is an image generation and editing model from xAI. It is ",
+   "id": "x-ai/grok-imagine-image-2.0",
+   "name": "xAI: Grok Imagine Image 2.0",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "2:3",
+      "3:2",
+      "9:19.5",
+      "19.5:9",
+      "9:20",
+      "20:9",
+      "1:2",
+      "2:1",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 3,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "low",
+      "medium"
+     ]
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1785894548,
+   "description": "Qwen Image 3 Pro is an image generation and editing model from Qwen. It supports",
+   "id": "qwen/qwen-image-3-pro",
+   "name": "Qwen: Qwen Image 3 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "1:4",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9"
+     ]
+    },
+    "input_references": {
+     "max": 4,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1785894548,
+   "description": "Qwen Image 3 is a unified image generation and editing model from Qwen. It suppo",
+   "id": "qwen/qwen-image-3",
+   "name": "Qwen: Qwen Image 3",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "1:4",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9"
+     ]
+    },
+    "input_references": {
+     "max": 4,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1784827701,
+   "description": "Microsoft AI's MAI-Image-2.5 is a high-quality image generation model available ",
+   "id": "microsoft/mai-image-2.5-pro",
+   "name": "Microsoft AI: MAI-Image-2.5 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1784574931,
+   "description": "Krea 2 Large is Krea's high-capability image generation model, more than twice t",
+   "id": "krea/krea-2-large",
+   "name": "Krea: Krea 2 Large",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:2",
+      "16:9",
+      "4:5",
+      "2:3",
+      "9:16"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1784574928,
+   "description": "Krea 2 Medium is Krea's balanced, cost-efficient image generation model and a pr",
+   "id": "krea/krea-2-medium",
+   "name": "Krea: Krea 2 Medium",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:2",
+      "16:9",
+      "4:5",
+      "2:3",
+      "9:16"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1784574923,
+   "description": "Krea 2 Medium Turbo is a distilled, speed-focused variant of Krea 2 Medium from ",
+   "id": "krea/krea-2-medium-turbo",
+   "name": "Krea: Krea 2 Medium Turbo",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:2",
+      "16:9",
+      "4:5",
+      "2:3",
+      "9:16"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1782837225,
+   "description": "Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image) is Google's fastest, most cost-",
+   "id": "google/gemini-3.1-flash-lite-image",
+   "name": "Google: Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image)",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1782264714,
+   "description": "OpenAI's latest image generation model. Supports high-fidelity image generation ",
+   "id": "openai/gpt-image-2",
+   "name": "OpenAI: GPT Image 2",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1782264713,
+   "description": "A cost-efficient variant of GPT Image 1 for high-quality image generation at red",
+   "id": "openai/gpt-image-1-mini",
+   "name": "OpenAI: GPT Image 1 Mini",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1782264713,
+   "description": "OpenAI's GPT Image 1 generates and edits images via the dedicated Images API. Fe",
+   "id": "openai/gpt-image-1",
+   "name": "OpenAI: GPT Image 1",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1781754065,
+   "description": "Gemini 3.1 Flash Image, a.k.a. \"Nano Banana 2,\" is Google\u2019s latest state of the ",
+   "id": "google/gemini-3.1-flash-image",
+   "name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image)",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "512",
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1781754054,
+   "description": "Nano Banana Pro is Google\u2019s most advanced image-generation and editing model, bu",
+   "id": "google/gemini-3-pro-image",
+   "name": "Google: Nano Banana Pro (Gemini 3 Pro Image)",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1780584991,
+   "description": "Riverflow V2.5 Pro is the most powerful variant of Sourceful's Riverflow 2.5 lin",
+   "id": "sourceful/riverflow-v2.5-pro",
+   "name": "Sourceful: Riverflow V2.5 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "png",
+      "jpeg",
+      "webp"
+     ]
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1780584983,
+   "description": "Riverflow V2.5 Fast is the speed-optimized variant of Sourceful's Riverflow 2.5 ",
+   "id": "sourceful/riverflow-v2.5-fast",
+   "name": "Sourceful: Riverflow V2.5 Fast",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 4,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "jpeg"
+     ]
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1780424896,
+   "description": "Microsoft AI's MAI-Image-2.5 is a high-quality image generation model available ",
+   "id": "microsoft/mai-image-2.5",
+   "name": "Microsoft AI: MAI-Image-2.5",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1779117584,
+   "description": "Grok Imagine Image Quality is SpaceXAI's fast, high-fidelity image generation an",
+   "id": "x-ai/grok-imagine-image-quality",
+   "name": "SpaceXAI: Grok Imagine Image Quality",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "2:3",
+      "3:2",
+      "9:19.5",
+      "19.5:9",
+      "9:20",
+      "20:9",
+      "1:2",
+      "2:1",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 3,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707395,
+   "description": "Recraft V4.1 Pro Vector is the vector (SVG) variant of Recraft V4.1 Pro, tuned f",
+   "id": "recraft/recraft-v4.1-pro-vector",
+   "name": "Recraft: Recraft V4.1 Pro Vector",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707392,
+   "description": "Recraft V4.1 Vector is the vector (SVG) variant of Recraft V4.1, tuned for high ",
+   "id": "recraft/recraft-v4.1-vector",
+   "name": "Recraft: Recraft V4.1 Vector",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707389,
+   "description": "Recraft V4.1 Utility Pro is a general-purpose image generation model from Recraf",
+   "id": "recraft/recraft-v4.1-utility-pro",
+   "name": "Recraft: Recraft V4.1 Utility Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707387,
+   "description": "Recraft V4.1 Utility is a general-purpose image generation model from Recraft. I",
+   "id": "recraft/recraft-v4.1-utility",
+   "name": "Recraft: Recraft V4.1 Utility",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707384,
+   "description": "Recraft V4.1 Pro is an image generation model from Recraft tuned for high aesthe",
+   "id": "recraft/recraft-v4.1-pro",
+   "name": "Recraft: Recraft V4.1 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707381,
+   "description": "Recraft V4.1 is an image generation model from Recraft tuned for high aesthetics",
+   "id": "recraft/recraft-v4.1",
+   "name": "Recraft: Recraft V4.1",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707334,
+   "description": "Recraft V4 Pro Vector is the vector (SVG) variant of Recraft V4 Pro. It supports",
+   "id": "recraft/recraft-v4-pro-vector",
+   "name": "Recraft: Recraft V4 Pro Vector",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778707333,
+   "description": "Recraft V4 Vector is the vector (SVG) variant of Recraft V4. It supports text an",
+   "id": "recraft/recraft-v4-vector",
+   "name": "Recraft: Recraft V4 Vector",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778185441,
+   "description": "Recraft V4 Pro is an image generation model from Recraft. It supports text and i",
+   "id": "recraft/recraft-v4-pro",
+   "name": "Recraft: Recraft V4 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778185437,
+   "description": "Recraft V4 is an image generation model from Recraft. It supports text and image",
+   "id": "recraft/recraft-v4",
+   "name": "Recraft: Recraft V4",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1778185433,
+   "description": "Recraft V3 is an image generation model from Recraft. It supports text and image",
+   "id": "recraft/recraft-v3",
+   "name": "Recraft: Recraft V3",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 1,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 6,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text",
+     "file"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1776797528,
+   "description": "[GPT-5.4](https://openrouter.ai/openai/gpt-5.4) Image 2 combines OpenAI's GPT-5.",
+   "id": "openai/gpt-5.4-image-2",
+   "name": "OpenAI: GPT-5.4 Image 2",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1772119558,
+   "description": "Gemini 3.1 Flash Image Preview, a.k.a. \"Nano Banana 2,\" is Google\u2019s latest state",
+   "id": "google/gemini-3.1-flash-image-preview",
+   "name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "512",
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1770051427,
+   "description": "Riverflow V2 Pro is the most powerful variant of Sourceful's Riverflow 2.0 lineu",
+   "id": "sourceful/riverflow-v2-pro",
+   "name": "Sourceful: Riverflow V2 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 10,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1770051423,
+   "description": "Riverflow V2 Fast is the fastest variant of Sourceful's Riverflow 2.0 lineup, be",
+   "id": "sourceful/riverflow-v2-fast",
+   "name": "Sourceful: Riverflow V2 Fast",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 4,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1768429228,
+   "description": "FLUX.2 [klein] 4B is the fastest and most cost-effective model in the FLUX.2 fam",
+   "id": "black-forest-labs/flux.2-klein-4b",
+   "name": "Black Forest Labs: FLUX.2 Klein 4B",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 4,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "png",
+      "jpeg"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1766519506,
+   "description": "Seedream 4.5 is the latest in-house image generation model developed by ByteDanc",
+   "id": "bytedance-seed/seedream-4.5",
+   "name": "ByteDance Seed: Seedream 4.5",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "1:2",
+      "2:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "9:19.5",
+      "19.5:9",
+      "9:20",
+      "20:9",
+      "9:21",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1765857570,
+   "description": "FLUX.2 [max] is the new top-tier image model from Black Forest Labs, pushing ima",
+   "id": "black-forest-labs/flux.2-max",
+   "name": "Black Forest Labs: FLUX.2 Max",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 8,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "png",
+      "jpeg"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1764045987,
+   "description": "FLUX.2 [flex] excels at rendering complex text, typography, and fine details, an",
+   "id": "black-forest-labs/flux.2-flex",
+   "name": "Black Forest Labs: FLUX.2 Flex",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 8,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "png",
+      "jpeg"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "created": 1764030274,
+   "description": "A high-end image generation and editing model focused on frontier-level visual q",
+   "id": "black-forest-labs/flux.2-pro",
+   "name": "Black Forest Labs: FLUX.2 Pro",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16",
+      "21:9",
+      "auto"
+     ]
+    },
+    "input_references": {
+     "max": 8,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "png",
+      "jpeg"
+     ]
+    },
+    "seed": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1763653797,
+   "description": "Nano Banana Pro is Google\u2019s most advanced image-generation and editing model, bu",
+   "id": "google/gemini-3-pro-image-preview",
+   "name": "Google: Nano Banana Pro (Gemini 3 Pro Image Preview)",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 14,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    },
+    "resolution": {
+     "type": "enum",
+     "values": [
+      "1K",
+      "2K",
+      "4K"
+     ]
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "file",
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1760624583,
+   "description": "GPT-5 Image Mini combines OpenAI's advanced language capabilities, powered by [G",
+   "id": "openai/gpt-5-image-mini",
+   "name": "OpenAI: GPT-5 Image Mini",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text",
+     "file"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1760447986,
+   "description": "[GPT-5](https://openrouter.ai/openai/gpt-5) Image combines OpenAI's GPT-5 model ",
+   "id": "openai/gpt-5-image",
+   "name": "OpenAI: GPT-5 Image",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "transparent",
+      "opaque"
+     ]
+    },
+    "input_references": {
+     "max": 16,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 10,
+     "min": 1,
+     "type": "range"
+    },
+    "output_compression": {
+     "max": 100,
+     "min": 0,
+     "type": "range"
+    },
+    "quality": {
+     "type": "enum",
+     "values": [
+      "auto",
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   },
+   "supports_streaming": true
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "image",
+     "text"
+    ]
+   },
+   "created": 1759870431,
+   "description": "Gemini 2.5 Flash Image, a.k.a. \"Nano Banana,\" is now generally available. It is ",
+   "id": "google/gemini-2.5-flash-image",
+   "name": "Google: Nano Banana (Gemini 2.5 Flash Image)",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "21:9"
+     ]
+    },
+    "input_references": {
+     "max": 3,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  }
+ ]
+}

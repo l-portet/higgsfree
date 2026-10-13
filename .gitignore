@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+.cache/
+.eslintcache
+
+# Left over from the server version (SQLite database + media). Unused now; never commit it.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# Temp files
+*.tmp
+tmp/
+scratch/
+
+# Logs and reports
+*.log
+npm-debug.log*
+pnpm-debug.log*
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Vercel
+.vercel
