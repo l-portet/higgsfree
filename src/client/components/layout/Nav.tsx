@@ -1,94 +1,152 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clapperboard, House, Image, LayoutGrid, Settings, Wallet, type LucideIcon } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Heart, Image } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { iconButtonClasses } from "@/components/ui/iconButtonClasses";
+import { AssetsIcon, KeyIcon, VideoIcon } from "@/components/icons/nav";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import { formatUsd } from "@/lib/format";
 import { useSettings } from "@/store/settings";
+import { useUi } from "@/store/ui";
 
-const LINKS: { href: string; label: string; icon: LucideIcon; end?: boolean }[] = [
-  { href: "/", label: "Home", icon: House, end: true },
-  { href: "/image", label: "Image", icon: Image },
-  { href: "/video", label: "Video", icon: Clapperboard },
-  { href: "/assets", label: "Assets", icon: LayoutGrid },
+/** Each icon sits in a 16 px box; sizes are tuned so the drawn shapes match the mockup (14 px frames, a 12 px heart). */
+const TABS: { href: string; label: string; icon: ReactNode }[] = [
+  { href: "/image", label: "Image", icon: <Image size={17} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
+  { href: "/video", label: "Video", icon: <VideoIcon /> },
+  { href: "/assets", label: "Assets", icon: <AssetsIcon /> },
+  { href: "/favorites", label: "Favorites", icon: <Heart size={13} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
 ];
 
-/** Exact match for `end` links (Home), prefix match otherwise. */
-function isActive(pathname: string, href: string, end?: boolean): boolean {
-  if (end) return pathname === href;
+/** One floating box of the top bar: 46 px tall (1 px border, 4 px padding, 36 px tabs), chrome radius. */
+const BOX = "flex h-[46px] items-center rounded-chrome border border-border bg-surface shadow-float";
+const LABEL = "text-[13px] font-medium tracking-[-0.01em]";
+
+function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function CreditsPill() {
+function IconBox({ children }: { children: ReactNode }) {
+  return <span className="inline-flex size-4 shrink-0 items-center justify-center">{children}</span>;
+}
+
+/** "Add key" with a grey dot until a key is set; then the remaining credits with a lime dot. Opens the key dialog. */
+function KeyBox() {
+  const settings = useSettings((s) => s.settings);
   const credits = useSettings((s) => s.credits);
-  const hasKey = useSettings((s) => s.settings?.hasKey);
-  if (!hasKey || !credits) return null;
-  const low = credits.remaining < 1;
+  const openKeyDialog = useUi((s) => s.openKeyDialog);
+  const hasKey = Boolean(settings?.hasKey);
+  const label = hasKey ? (credits ? formatUsd(credits.remaining) : "Key") : "Add key";
+  const title = hasKey
+    ? credits
+      ? `${formatUsd(credits.remaining)} left on your OpenRouter key`
+      : "OpenRouter key set"
+    : "Add your OpenRouter key";
   return (
-    <Tooltip content={`${formatUsd(credits.used)} used of ${formatUsd(credits.total)} purchased`}>
-      <Link
-        href="/settings"
-        className={cn(
-          "mr-1 hidden h-8 items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 text-[13px] tabular-nums",
-          "text-fg-muted transition-colors duration-150 hover:border-border-strong hover:bg-surface-3 hover:text-fg min-[420px]:inline-flex",
-        )}
-        aria-label={`${formatUsd(credits.remaining)} credits left`}
+    <Tooltip content={title} side="bottom">
+      <button
+        type="button"
+        onClick={openKeyDialog}
+        aria-label={title}
+        className={cn(BOX, "group gap-2 px-[17px] text-fg-muted transition-colors duration-150 hover:text-fg")}
       >
-        <Wallet size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
-        <span className={cn("font-medium", low ? "text-danger" : "text-fg")}>{formatUsd(credits.remaining)}</span>
-        <span>left</span>
-      </Link>
+        <IconBox>
+          <KeyIcon className="text-fg-subtle transition-colors duration-150 group-hover:text-fg-muted" />
+        </IconBox>
+        <span className={cn(LABEL, "hidden tabular-nums sm:inline")}>{label}</span>
+        <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", hasKey ? "bg-accent" : "bg-fg-disabled")} />
+      </button>
     </Tooltip>
   );
 }
 
-/** Full-bleed app bar: the logo hugs the left edge and the controls the right edge; only content pages are capped at 1400px. */
+interface Indicator {
+  x: number;
+  width: number;
+  /** False until the first measure, so the indicator appears in place instead of sliding in from the edge. */
+  animate: boolean;
+}
+
+/**
+ * One raised box behind the active tab, measured from the tab itself so it slides (position and width)
+ * to the next tab on navigation. Hidden on views without a tab (Settings).
+ */
+function useIndicator(activeIndex: number) {
+  const tabs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicator, setIndicator] = useState<Indicator | null>(null);
+
+  useLayoutEffect(() => {
+    const el = activeIndex >= 0 ? tabs.current[activeIndex] : null;
+    if (!el) {
+      setIndicator(null);
+      return;
+    }
+    const measure = () =>
+      setIndicator((prev) => ({ x: el.offsetLeft, width: el.offsetWidth, animate: prev !== null }));
+    measure();
+    // Labels change width when the web font lands or collapse below `sm`: follow the tab.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [activeIndex]);
+
+  return { tabs, indicator };
+}
+
+/**
+ * The top bar: three floating boxes, centred. The logo (home), the four views (the active one raised,
+ * its icon in lime), and the key. Tab labels collapse to icons on phones.
+ */
 export function Nav() {
   const pathname = usePathname() ?? "/";
+  const activeIndex = TABS.findIndex((t) => isActive(pathname, t.href));
+  const { tabs, indicator } = useIndicator(activeIndex);
   return (
-    <header className="sticky top-0 z-40 h-14 border-b border-border bg-bg/80 backdrop-blur-md">
-      <div className="flex h-full items-center px-3 sm:px-5">
-        <Link href="/" className="mr-2 flex shrink-0 items-center rounded-sm px-1 sm:mr-6" aria-label="higgsfree home">
-          <Logo variant="lockup" size={24} wordmarkClassName="hidden sm:block" />
+    <header className="pointer-events-none fixed inset-x-0 top-3 z-40 flex justify-center px-3">
+      <div className="pointer-events-auto flex items-center gap-2">
+        {/* A 30 px tile in a 46 px box: its 7 px corners stay concentric with the box's 15 px at the 8 px inset. */}
+        <Link href="/image" aria-label="higgsfree home" className={cn(BOX, "w-[46px] justify-center transition-colors duration-150 hover:border-border-strong")}>
+          <Logo variant="mark" size={30} />
         </Link>
 
-        <nav aria-label="Primary" className="flex h-full items-center gap-0.5">
-          {LINKS.map(({ href, label, icon: Icon, end }) => {
-            const active = isActive(pathname, href, end);
+        <nav aria-label="Primary" className={cn(BOX, "relative gap-0.5 p-1")}>
+          <span
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute left-0 top-1 h-9 rounded-control border border-border-strong bg-surface-2 shadow-raised",
+              indicator?.animate && "transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]",
+              indicator ? "opacity-100" : "opacity-0",
+            )}
+            style={indicator ? { width: indicator.width, transform: `translateX(${indicator.x}px)` } : undefined}
+          />
+          {TABS.map(({ href, label, icon }, i) => {
+            const active = i === activeIndex;
             return (
               <Link
                 key={href}
                 href={href}
+                ref={(el) => {
+                  tabs.current[i] = el;
+                }}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex h-full items-center gap-1.5 px-2.5 text-[13px] font-medium text-fg-muted transition-colors duration-150 hover:text-fg sm:px-3",
-                  active &&
-                    "text-fg after:absolute after:inset-x-2.5 after:-bottom-px after:h-0.5 after:rounded-full after:bg-accent sm:after:inset-x-3",
+                  LABEL,
+                  "group relative flex h-9 items-center gap-2 rounded-control border border-transparent px-3 transition-colors duration-200",
+                  active ? "text-fg" : "text-fg-muted hover:text-fg",
                 )}
               >
-                <Icon size={17} className="sm:hidden" aria-hidden="true" />
+                <IconBox>
+                  <span className={cn("inline-flex transition-colors duration-200", active ? "text-accent" : "text-fg-subtle group-hover:text-fg-muted")}>
+                    {icon}
+                  </span>
+                </IconBox>
                 <span className="sr-only sm:not-sr-only">{label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Product surfaces only: the GitHub link lives in Settings > About. */}
-        <div className="ml-auto flex items-center gap-1">
-          <CreditsPill />
-          <Tooltip content="Settings" side="bottom">
-            <Link
-              href="/settings"
-              aria-label="Settings"
-              aria-current={isActive(pathname, "/settings") ? "page" : undefined}
-              className={iconButtonClasses("ghost", "md", false, isActive(pathname, "/settings") ? "bg-surface-2 text-fg" : undefined)}
-            >
-              <Settings size={17} aria-hidden="true" />
-            </Link>
-          </Tooltip>
-        </div>
+        <KeyBox />
       </div>
     </header>
   );

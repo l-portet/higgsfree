@@ -1,12 +1,13 @@
 import { memo, useRef, useState, type FocusEvent, type ReactNode } from "react";
-import { CircleAlert, Download, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
+import { CircleAlert, Download, Heart, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { cn } from "@/lib/cn";
-import { downloadFilename, downloadHref } from "@/lib/files";
+import { downloadFilename } from "@/lib/files";
 import { formatDims, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
 import { useGenerationActions } from "@/lib/actions";
 import { useElapsed, useMediaQuery, useNearViewport } from "@/lib/hooks";
 import { cardAspect } from "@/lib/masonry";
+import { useMediaUrl } from "@/lib/media-urls";
 import { isImageParams } from "@/lib/models";
 import { isPending } from "@/store/generations";
 import { OverlayBadge } from "@/components/ui/Badge";
@@ -41,6 +42,8 @@ export interface GenerationCardProps {
  * lives on an inner sizer (never combined with `min-height`, which would transfer to a min-width).
  * Failed cards have no aspect ratio; they grow with the error text from a `min-h`.
  *
+ * The output's object url resolves in an effect (`useMediaUrl`), so a completed card paints a quiet
+ * `bg-surface-2` box until it is there; the Download link appears with it.
  * Media loads only once the card is near the viewport (one shared observer), and the hover action
  * row with its tooltips is mounted only while the card is hovered or focused; on coarse pointers it
  * is always there, matching the always-visible overlay.
@@ -56,6 +59,8 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
   const [active, setActive] = useState(false);
   const actions = useGenerationActions(g, onReuse);
   const out = g.output;
+  // Hooks run on every render; `undefined` until the object url resolves (or when the file is gone).
+  const src = useMediaUrl(out?.id);
   const isVideo = g.type === "video";
   const failed = !pending && (g.status === "failed" || !out);
   // Stay mounted while the delete dialog is up so focus has a button to return to on close.
@@ -141,17 +146,17 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
       </div>
     );
   } else if (out) {
-    const filename = downloadFilename(g.id, out.mime, out.url);
+    const filename = downloadFilename(g.id, out.mime);
     // One truncating info badge instead of a wrapping row of tags (the lightbox has the full details).
     const info = [g.modelName, paramsLabel(g), g.costUsd !== undefined ? formatUsd(g.costUsd) : ""].filter(Boolean).join(" · ");
     const audio = isVideo && !isImageParams(g.params) && g.params.audio;
     body = (
       <>
         {isVideo ? (
-          // `src` waits for the viewport; `metadata` then paints the first frame as the poster.
+          // `src` waits for the viewport and the object url; `metadata` then paints the first frame as the poster.
           <video
             ref={videoRef}
-            src={near ? out.url : undefined}
+            src={near && src ? src : undefined}
             muted
             loop
             playsInline
@@ -159,14 +164,15 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
             className="absolute inset-0 size-full object-cover"
           />
         ) : (
+          // Hidden until the url is there so browsers don't paint the alt text in the box meanwhile.
           <img
-            src={out.url}
+            src={src}
             alt={g.prompt}
             width={out.width}
             height={out.height}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 size-full object-cover"
+            className={cn("absolute inset-0 size-full object-cover", !src && "invisible")}
             draggable={false}
           />
         )}
@@ -176,7 +182,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
             type="button"
             onClick={() => onOpen(g)}
             aria-label={`Open ${isVideo ? "video" : "image"}: ${g.prompt.slice(0, 80)}`}
-            className="absolute inset-0 size-full cursor-zoom-in rounded-lg"
+            className="absolute inset-0 size-full cursor-zoom-in rounded-card"
           />
         ) : null}
 
@@ -190,17 +196,31 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
             {showType ? <OverlayBadge className="mr-auto">{isVideo ? "Video" : "Image"}</OverlayBadge> : null}
             {showActions ? (
               <div className="pointer-events-auto ml-auto flex items-center gap-1">
-                <Tooltip content="Download">
-                  <a
-                    href={downloadHref(out.url)}
-                    download={filename}
-                    aria-label="Download"
-                    className={iconButtonClasses("overlay", "sm")}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Download aria-hidden="true" />
-                  </a>
-                </Tooltip>
+                <IconButton
+                  label={g.favorite ? "Remove from Favorites" : "Keep in Favorites"}
+                  size="sm"
+                  variant="overlay"
+                  aria-pressed={Boolean(g.favorite)}
+                  disabled={actions.keeping}
+                  onClick={() => void actions.toggleFavorite()}
+                  className={cn(g.favorite && "text-accent")}
+                >
+                  <Heart fill={g.favorite ? "currentColor" : "none"} />
+                </IconButton>
+                {src ? (
+                  // Object urls are same-origin, so `download` is honoured.
+                  <Tooltip content="Download">
+                    <a
+                      href={src}
+                      download={filename}
+                      aria-label="Download"
+                      className={iconButtonClasses("overlay", "sm")}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download aria-hidden="true" />
+                    </a>
+                  </Tooltip>
+                ) : null}
                 {!isVideo ? (
                   <IconButton label="Animate" size="sm" variant="overlay" onClick={actions.animate}>
                     <WandSparkles />
@@ -219,6 +239,12 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
             <OverlayBadge className="min-w-0 max-w-[calc(100%-16px)] tabular-nums">
               <span className="truncate">{info}</span>
             </OverlayBadge>
+            {g.favorite ? (
+              <OverlayBadge className="shrink-0 text-accent">
+                <Heart size={12} fill="currentColor" aria-hidden="true" />
+                <span className="sr-only">Kept</span>
+              </OverlayBadge>
+            ) : null}
             {audio ? (
               <OverlayBadge className="shrink-0">
                 <Volume2 size={12} aria-hidden="true" />
@@ -237,9 +263,11 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
       className={cn(
         // `self-start`: an element with `aspect-ratio` never stretched to the grid row; keep that now the ratio is on the sizer.
         // Completed cards are edge-to-edge media with no border; pending and failed cards keep one.
-        "group relative min-w-0 self-start overflow-hidden rounded-lg bg-surface transition-[border-color] duration-150",
+        "group relative min-w-0 self-start overflow-hidden rounded-card bg-surface transition-[border-color] duration-150",
         pending && "min-h-[168px] border border-border",
         failed && "border border-danger/25 hover:border-danger/40",
+        // Completed: the media box shows a quiet placeholder until the object url resolves.
+        !pending && !failed && "bg-surface-2",
         className,
       )}
       data-status={g.status}
@@ -254,7 +282,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
         open={actions.confirmDelete}
         onOpenChange={onConfirmOpenChange}
         title={`Delete this ${isVideo ? "video" : "image"}?`}
-        description="Removes the record and its file. This can't be undone."
+        description="Removes the record and its file from this browser. This can't be undone."
         confirmLabel="Delete"
         danger
         loading={actions.deleting}
@@ -266,5 +294,5 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
 
 /** Placeholder card for initial loading. */
 export function GenerationCardSkeleton({ aspect = "3 / 4" }: { aspect?: string }) {
-  return <div className="skeleton min-w-0 rounded-lg" style={{ aspectRatio: aspect }} aria-hidden="true" />;
+  return <div className="skeleton min-w-0 rounded-card" style={{ aspectRatio: aspect }} aria-hidden="true" />;
 }

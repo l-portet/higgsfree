@@ -1,11 +1,12 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, RefreshCw, RotateCcw, Trash2, WandSparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, RefreshCw, RotateCcw, Trash2, WandSparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { downloadFilename, downloadHref } from "@/lib/files";
+import { downloadFilename } from "@/lib/files";
 import { formatBytes, formatDateTime, formatDims, formatDurationMs, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
 import { useGenerationActions } from "@/lib/actions";
 import { copyText, useElapsed, useReturnFocus } from "@/lib/hooks";
+import { useMediaUrl } from "@/lib/media-urls";
 import { isImageParams, providerLabel } from "@/lib/models";
 import { isPending, useGenerations } from "@/store/generations";
 import { useUi } from "@/store/ui";
@@ -32,6 +33,8 @@ function Details({ g }: { g: Generation }) {
   const pending = isPending(g);
   const elapsed = useElapsed(g.createdAt, pending, g.completedAt);
   const out = g.output;
+  // Shares the lightbox's object url (ref-counted); the Download control waits for it.
+  const src = useMediaUrl(out?.id);
   const p = g.params;
   const image = isImageParams(p);
   const status: { label: string; variant: "neutral" | "accent" | "danger" } =
@@ -67,7 +70,7 @@ function Details({ g }: { g: Generation }) {
       </section>
 
       {g.error ? (
-        <section className="rounded-md border border-danger/25 bg-danger/5 p-3">
+        <section className="rounded-control border border-danger/25 bg-danger/5 p-3">
           <div className="mb-1 flex items-center gap-1.5 text-meta font-medium text-danger">
             <CircleAlert size={14} aria-hidden="true" />
             Provider error
@@ -107,20 +110,24 @@ function Details({ g }: { g: Generation }) {
         <section>
           <h3 className="mb-2 text-label">Inputs</h3>
           <div className="flex flex-wrap gap-2">
-            {g.inputs.firstFrame ? <InputThumb src={g.inputs.firstFrame} label="First frame" /> : null}
-            {g.inputs.lastFrame ? <InputThumb src={g.inputs.lastFrame} label="Last frame" /> : null}
-            {g.inputs.referenceImages?.map((src, i) => (
-              <InputThumb key={`${src}-${i}`} src={src} label={`Reference ${i + 1}`} />
+            {g.inputs.firstFrame ? <InputThumb id={g.inputs.firstFrame} label="First frame" /> : null}
+            {g.inputs.lastFrame ? <InputThumb id={g.inputs.lastFrame} label="Last frame" /> : null}
+            {g.inputs.referenceImages?.map((id, i) => (
+              <InputThumb key={`${id}-${i}`} id={id} label={`Reference ${i + 1}`} />
             ))}
           </div>
         </section>
       ) : null}
 
       <section className="mt-auto grid grid-cols-2 gap-2">
-        {out ? (
-          <AnchorButton href={downloadHref(out.url)} download={downloadFilename(g.id, out.mime, out.url)} leftIcon={<Download />}>
+        {out && src ? (
+          <AnchorButton href={src} download={downloadFilename(g.id, out.mime)} leftIcon={<Download />}>
             Download
           </AnchorButton>
+        ) : out ? (
+          <Button leftIcon={<Download />} disabled>
+            Download
+          </Button>
         ) : null}
         {out && g.type === "image" ? (
           <Button leftIcon={<WandSparkles />} onClick={actions.animate}>
@@ -130,6 +137,17 @@ function Details({ g }: { g: Generation }) {
         <Button leftIcon={<RotateCcw />} onClick={actions.reuse}>
           Reuse prompt
         </Button>
+        {g.status === "completed" ? (
+          <Button
+            leftIcon={<Heart fill={g.favorite ? "currentColor" : "none"} />}
+            aria-pressed={Boolean(g.favorite)}
+            loading={actions.keeping}
+            onClick={() => void actions.toggleFavorite()}
+            className={cn(g.favorite && "text-accent")}
+          >
+            {g.favorite ? "Kept" : "Keep"}
+          </Button>
+        ) : null}
         {g.status === "failed" ? (
           <Button leftIcon={<RefreshCw />} loading={actions.retrying} onClick={() => void actions.retry()}>
             Retry
@@ -144,7 +162,7 @@ function Details({ g }: { g: Generation }) {
         open={actions.confirmDelete}
         onOpenChange={actions.setConfirmDelete}
         title={`Delete this ${g.type}?`}
-        description="Removes the record and its file. This can't be undone."
+        description="Removes the record and its file from this browser. This can't be undone."
         confirmLabel="Delete"
         danger
         loading={actions.deleting}
@@ -154,11 +172,13 @@ function Details({ g }: { g: Generation }) {
   );
 }
 
-function InputThumb({ src, label }: { src: string; label: string }) {
+/** An input by media id; a quiet placeholder when the file is no longer in the library. */
+function InputThumb({ id, label }: { id: string; label: string }) {
+  const src = useMediaUrl(id);
   return (
     <figure className="w-16">
-      <div className="size-16 overflow-hidden rounded-[8px] border border-border bg-surface-2">
-        <img src={src} alt={label} className="size-full object-cover" loading="lazy" />
+      <div className="flex size-16 items-center justify-center overflow-hidden rounded-thumb border border-border bg-surface-2 text-fg-subtle">
+        {src ? <img src={src} alt={label} className="size-full object-cover" loading="lazy" /> : <ImageOff size={18} aria-label={`${label} not available`} />}
       </div>
       <figcaption className="mt-1 truncate text-center text-caption">{label}</figcaption>
     </figure>
@@ -168,6 +188,7 @@ function InputThumb({ src, label }: { src: string; label: string }) {
 function Media({ g }: { g: Generation }) {
   const pending = isPending(g);
   const out = g.output;
+  const src = useMediaUrl(out?.id);
   if (pending || !out) {
     return (
       <div className="flex max-h-full w-full max-w-[520px] flex-col items-center justify-center gap-3 p-8 text-center" style={{ aspectRatio: "4 / 3" }}>
@@ -188,8 +209,8 @@ function Media({ g }: { g: Generation }) {
   if (g.type === "video") {
     return (
       <video
-        key={out.url}
-        src={out.url}
+        key={out.id}
+        src={src}
         controls
         autoPlay
         loop
@@ -201,13 +222,14 @@ function Media({ g }: { g: Generation }) {
     );
   }
   return (
+    // Hidden until the url is there so the alt text never paints as a stand-in.
     <img
-      key={out.url}
-      src={out.url}
+      key={out.id}
+      src={src}
       alt={g.prompt}
       width={out.width}
       height={out.height}
-      className="max-h-full max-w-full select-none object-contain"
+      className={cn("max-h-full max-w-full select-none object-contain", !src && "invisible")}
       draggable={false}
     />
   );

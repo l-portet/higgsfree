@@ -16,19 +16,19 @@ export interface StepperProps {
   className?: string;
 }
 
-/** `− 1/4 +` pill control. */
+/** `− 1/4 +` control, a composer chip in shape: control radius outside, tag radius (10 − 4) on the buttons. */
 export function Stepper({ value, min, max, step = 1, onChange, label, format, disabled, className }: StepperProps) {
   const dec = () => onChange(Math.max(min, value - step));
   const inc = () => onChange(Math.min(max, value + step));
   const btn =
-    "inline-flex size-7 items-center justify-center rounded-full text-fg-muted transition-colors duration-150 " +
-    "hover:bg-surface-3 hover:text-fg disabled:opacity-40 disabled:pointer-events-none";
+    "inline-flex size-7 items-center justify-center rounded-tag text-fg-muted transition-colors duration-150 " +
+    "hover:bg-surface-3 hover:text-fg disabled:text-fg-faint disabled:pointer-events-none";
   return (
     <div
       role="group"
       aria-label={label}
       className={cn(
-        "inline-flex h-8 select-none items-center gap-0.5 rounded-full border border-border bg-surface-2 px-0.5",
+        "inline-flex h-9 select-none items-center gap-0.5 rounded-control border border-border-strong bg-surface-2 px-1",
         disabled && "opacity-50",
         className,
       )}
@@ -36,8 +36,15 @@ export function Stepper({ value, min, max, step = 1, onChange, label, format, di
       <button type="button" className={btn} onClick={dec} disabled={disabled || value <= min} aria-label={`Decrease ${label}`}>
         <Minus size={14} aria-hidden="true" />
       </button>
-      <span className="min-w-[30px] px-1 text-center text-[13px] font-medium tabular-nums text-fg" aria-live="polite">
-        {format ? format(value, max) : `${value}/${max}`}
+      <span className="min-w-[30px] px-0.5 text-center text-[13px] font-medium tabular-nums tracking-[-0.01em] text-fg" aria-live="polite">
+        {format ? (
+          format(value, max)
+        ) : (
+          <>
+            {value}
+            <span className="text-fg-subtle">/{max}</span>
+          </>
+        )}
       </span>
       <button type="button" className={btn} onClick={inc} disabled={disabled || value >= max} aria-label={`Increase ${label}`}>
         <Plus size={14} aria-hidden="true" />

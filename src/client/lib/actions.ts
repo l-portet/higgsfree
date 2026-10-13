@@ -1,4 +1,4 @@
-/** Actions shared by the generation card and the lightbox: delete, retry, animate, reuse prompt. */
+/** Actions shared by the generation card and the lightbox: delete, retry, keep (favorite), animate, reuse prompt. */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [keeping, setKeeping] = useState(false);
 
   const remove = async () => {
     setDeleting(true);
@@ -38,9 +39,23 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     }
   };
 
+  const toggleFavorite = async () => {
+    if (keeping) return;
+    setKeeping(true);
+    const next = !g.favorite;
+    try {
+      await useGenerations.getState().setFavorite(g.id, next);
+      toast.success(next ? "Kept in Favorites" : "Removed from Favorites");
+    } catch (err) {
+      toast.error("Couldn't update", { description: describeApiError(err) });
+    } finally {
+      setKeeping(false);
+    }
+  };
+
   const animate = () => {
     if (!g.output) return;
-    useUi.getState().setPendingFirstFrame(g.output.url);
+    useUi.getState().setPendingFirstFrame(g.output.id);
     useUi.getState().closeLightbox();
     router.push("/video");
   };
@@ -60,5 +75,5 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     router.push(g.type === "image" ? "/image" : "/video");
   };
 
-  return { confirmDelete, setConfirmDelete, deleting, retrying, remove, retry, animate, reuse };
+  return { confirmDelete, setConfirmDelete, deleting, retrying, keeping, remove, retry, toggleFavorite, animate, reuse };
 }

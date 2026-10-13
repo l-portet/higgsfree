@@ -1,12 +1,14 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { HomeFallback } from "@/components/layout/fallbacks";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { FeedFallback } from "@/components/layout/fallbacks";
 
-// Route-level code splitting, client-only: the pages read localStorage and the stores on first
-// render, so they are not server-rendered; the fallback is shaped like the page it stands in for.
-const HomePage = dynamic(() => import("@/features/home/HomePage"), { ssr: false, loading: () => <HomeFallback /> });
-
-export default function Page() {
-  return <HomePage />;
+/** The Image view is the front door. A static export has no server redirect, so `/` hops on the client. */
+export default function Home() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/image");
+  }, [router]);
+  return <FeedFallback />;
 }

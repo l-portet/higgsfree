@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import type { ReactNode } from "react";
@@ -46,6 +47,30 @@ export const metadata: Metadata = {
   },
 };
 
+const GA_ID = "G-SCFQ6KQ6L0";
+/** Google tag endpoints, per https://developers.google.com/tag-platform/security/guides/csp (GA4). */
+const GA_SCRIPT = "https://*.googletagmanager.com";
+const GA_CONNECT = "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
+
+/**
+ * Production only (Next dev needs eval and websockets). The key lives in this browser, so the one
+ * thing worth locking down is where a script on this origin may send data: OpenRouter, plus the
+ * Google Analytics endpoints, and nothing else.
+ */
+const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' ${GA_SCRIPT}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' blob: data: ${GA_CONNECT}`,
+  "media-src 'self' blob:",
+  "font-src 'self'",
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${GA_CONNECT}`,
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -57,9 +82,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${interTight.variable}`}>
+      {process.env.NODE_ENV === "production" ? (
+        <head>
+          <meta httpEquiv="Content-Security-Policy" content={CSP} />
+        </head>
+      ) : null}
       <body>
         <Shell>{children}</Shell>
       </body>
+      {process.env.NODE_ENV === "production" ? <GoogleAnalytics gaId={GA_ID} /> : null}
     </html>
   );
 }

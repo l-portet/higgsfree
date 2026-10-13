@@ -24,7 +24,7 @@ export const SelectableCard = memo(function SelectableCard({ generation: g, sele
   return (
     <div
       className={cn(
-        "relative min-w-0 self-start rounded-lg transition-shadow duration-150",
+        "relative min-w-0 self-start rounded-card transition-shadow duration-150",
         selected && "ring-2 ring-accent ring-offset-2 ring-offset-bg",
       )}
       data-selected={selected || undefined}
@@ -39,7 +39,7 @@ export const SelectableCard = memo(function SelectableCard({ generation: g, sele
         aria-label={`Select ${kind}: ${g.prompt.slice(0, 80) || g.modelName}`}
         onClick={onClick}
         className={cn(
-          "absolute inset-0 z-10 flex items-start justify-start rounded-lg p-2 text-left outline-none",
+          "absolute inset-0 z-10 flex items-start justify-start rounded-card p-2 text-left outline-none",
           "transition-colors duration-150",
           selected ? "bg-black/30" : "bg-black/0 hover:bg-black/20",
         )}

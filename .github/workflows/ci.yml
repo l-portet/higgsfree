@@ -51,6 +51,9 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
+      - name: Static export sanity
+        run: test -f out/index.html && test -f out/image.html && test -f out/404.html
+
   docker:
     name: Docker image (build only)
     runs-on: ubuntu-latest

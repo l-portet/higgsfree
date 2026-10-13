@@ -46,7 +46,7 @@ export function Tooltip({
             sideOffset={sideOffset}
             collisionPadding={8}
             className={cn(
-              "z-[60] max-w-[280px] rounded-[8px] border border-border-strong bg-surface-3 px-2.5 py-1.5",
+              "z-[60] max-w-[280px] rounded-button border border-border-strong bg-surface-3 px-2.5 py-1.5",
               "text-meta text-fg shadow-popover",
               "origin-[var(--radix-tooltip-content-transform-origin)] animate-pop-in data-[state=closed]:animate-pop-out",
               className,

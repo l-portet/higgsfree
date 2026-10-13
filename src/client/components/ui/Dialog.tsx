@@ -19,7 +19,7 @@ export function DialogPortal(props: ComponentProps<typeof DialogPrimitive.Portal
 }
 
 export const dialogOverlayClasses =
-  "fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] animate-fade-in data-[state=closed]:animate-fade-out";
+  "fixed inset-0 z-50 bg-black/50 backdrop-blur-md animate-fade-in data-[state=closed]:animate-fade-out";
 
 export function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return <DialogPrimitive.Overlay className={cn(dialogOverlayClasses, className)} {...props} />;
@@ -41,7 +41,7 @@ export function DialogContent({ size = "md", hideClose, className, children, ...
       <DialogPrimitive.Content
         className={cn(
           "fixed left-1/2 top-1/2 z-50 w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2",
-          "rounded-lg border border-border-strong bg-surface p-5 shadow-popover outline-none",
+          "rounded-panel border border-border-strong bg-surface p-5 shadow-popover outline-none",
           "animate-pop-in data-[state=closed]:animate-pop-out",
           SIZE[size],
           className,
@@ -51,7 +51,12 @@ export function DialogContent({ size = "md", hideClose, className, children, ...
         {children}
         {!hideClose ? (
           <DialogPrimitive.Close asChild>
-            <IconButton label="Close" size="sm" className="absolute right-3 top-3" tooltip={false}>
+            <IconButton
+              label="Close"
+              size="md"
+              className="absolute right-5 top-5 rounded-field border border-border bg-inset text-fg-muted hover:bg-surface-2 hover:text-fg"
+              tooltip={false}
+            >
               <X />
             </IconButton>
           </DialogPrimitive.Close>
@@ -62,12 +67,12 @@ export function DialogContent({ size = "md", hideClose, className, children, ...
 }
 
 export function DialogTitle({ className, ...props }: ComponentProps<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title className={cn("text-heading", className)} {...props} />;
+  return <DialogPrimitive.Title className={cn("pr-10 text-[16px] font-semibold leading-8 text-fg", className)} {...props} />;
 }
 
 export function DialogDescription({ className, ...props }: ComponentProps<typeof DialogPrimitive.Description>) {
   return (
-    <DialogPrimitive.Description className={cn("mt-1 text-body text-fg-muted", className)} {...props} />
+    <DialogPrimitive.Description className={cn("mt-1 pr-10 text-[13px] leading-[19px] text-fg-subtle", className)} {...props} />
   );
 }
 

@@ -30,7 +30,7 @@ export function PopoverContent({
         collisionPadding={collisionPadding}
         align={align}
         className={cn(
-          "z-50 rounded-md border border-border bg-surface-2 text-fg shadow-popover outline-none",
+          "z-50 rounded-popover border border-border-strong bg-surface-2 text-fg shadow-popover outline-none",
           "origin-[var(--radix-popover-content-transform-origin)] animate-pop-in data-[state=closed]:animate-pop-out",
           !flush && "p-1",
           className,
@@ -53,7 +53,7 @@ export function PopoverItem({ selected, className, type = "button", ...props }: 
       role="option"
       aria-selected={selected}
       className={cn(
-        "flex w-full items-center gap-2.5 rounded-[8px] px-2 py-2 text-left text-[13px] text-fg",
+        "flex w-full items-center gap-2.5 rounded-control px-2 py-2 text-left text-[13px] text-fg",
         "transition-colors duration-150 hover:bg-surface-3 focus-visible:bg-surface-3 focus-visible:outline-none",
         "aria-selected:bg-surface-3",
         "disabled:opacity-40 disabled:pointer-events-none",

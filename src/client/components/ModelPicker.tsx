@@ -45,7 +45,7 @@ const UNAVAILABLE_REASON = "Not listed by OpenRouter right now";
 
 function MiniChip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-[18px] items-center rounded-[5px] border border-border bg-surface-3 px-1.5 text-[10.5px] font-medium tabular-nums text-fg-muted">
+    <span className="inline-flex h-[18px] items-center rounded-field border border-border bg-surface-3 px-1.5 text-[10.5px] font-medium tabular-nums text-fg-muted">
       {children}
     </span>
   );
@@ -82,12 +82,12 @@ function ModelRow({ id, model, selected, highlighted, disabledReason, unavailabl
       onFocus={disabled ? onHover : undefined}
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[8px] px-2 py-2 text-left transition-colors duration-100",
+        "flex w-full items-center gap-3 rounded-control px-2 py-2 text-left transition-colors duration-100",
         "data-[highlighted]:bg-surface-3",
         disabled && "cursor-not-allowed opacity-40",
       )}
     >
-      <ProviderTile provider={model.provider} size={40} className="rounded-[10px]" tooltip={!tooltip && !disabled} />
+      <ProviderTile provider={model.provider} size={40} tooltip={!tooltip && !disabled} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className={cn("truncate text-[13px] font-medium", unavailable ? "text-fg-muted" : "text-fg")}>
@@ -278,7 +278,7 @@ export function ModelPicker(props: ModelPickerProps) {
           />
         </div>
 
-        <div id={listId} role="listbox" aria-label={`${kind} models`} className="min-h-0 flex-1 overflow-y-auto p-1.5">
+        <div id={listId} role="listbox" aria-label={`${kind} models`} className="min-h-0 flex-1 overflow-y-auto p-1">
           {flat.length === 0 ? (
             <p className="px-3 py-8 text-center text-body text-fg-muted">No models match “{query.trim()}”</p>
           ) : null}

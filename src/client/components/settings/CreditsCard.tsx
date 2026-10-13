@@ -24,7 +24,6 @@ export function CreditsCard() {
   const settings = useSettings((s) => s.settings);
   const credits = useSettings((s) => s.credits);
   const creditsError = useSettings((s) => s.creditsError);
-  const server = useSettings((s) => s.server);
   const refreshCredits = useSettings((s) => s.refreshCredits);
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -57,14 +56,14 @@ export function CreditsCard() {
       icon={<Wallet />}
       title="Credits"
       badge={low && credits ? <Badge variant="danger">Low</Badge> : null}
-      description="Balance and usage on the active key, cached for 30s."
+      description="Balance and usage on the active key, from OpenRouter."
       actions={
         <Button
           size="sm"
           variant="secondary"
           leftIcon={<RefreshCw />}
           loading={refreshing}
-          disabled={!hasKey || server === "offline"}
+          disabled={!hasKey}
           onClick={() => void onRefresh()}
         >
           Refresh
@@ -80,7 +79,7 @@ export function CreditsCard() {
       ) : !hasKey ? (
         <p className="text-body text-fg-muted">Add an OpenRouter key to see your balance.</p>
       ) : creditsError && !credits ? (
-        <div role="alert" className="flex items-start gap-2 rounded-md border border-danger/25 bg-danger/5 p-3 text-meta">
+        <div role="alert" className="flex items-start gap-2 rounded-control border border-danger/25 bg-danger/5 p-3 text-meta">
           <CircleAlert size={14} className="mt-0.5 shrink-0 text-danger" aria-hidden="true" />
           <span>{creditsError}</span>
         </div>

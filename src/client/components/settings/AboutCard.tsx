@@ -1,17 +1,10 @@
 import { BookOpen, ExternalLink, Github, Info } from "lucide-react";
-import type { SettingsResponse } from "@shared/types";
-import { cn } from "@/lib/cn";
 import { GITHUB_URL } from "@/lib/constants";
-import { useSettings, type ServerStatus } from "@/store/settings";
 import { Row, SettingsCard } from "./SettingsCard";
 
 const OPENROUTER_DOCS_URL = "https://openrouter.ai/docs";
-
-const STATUS: Record<ServerStatus, { label: string; dot: string }> = {
-  online: { label: "Online", dot: "bg-success" },
-  offline: { label: "Offline", dot: "bg-danger" },
-  unknown: { label: "Connecting…", dot: "bg-fg-faint" },
-};
+/** Inlined at build time; unset in dev. */
+const APP_VERSION = (process.env.NEXT_PUBLIC_APP_VERSION ?? "").trim() || "dev";
 
 function ExternalRow({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -28,22 +21,14 @@ function ExternalRow({ href, icon, children }: { href: string; icon: React.React
   );
 }
 
-export function AboutCard({ settings }: { settings: SettingsResponse | null }) {
-  const server = useSettings((s) => s.server);
-  const status = STATUS[server];
-
+export function AboutCard() {
   return (
-    <SettingsCard icon={<Info />} title="About" description="Open-source, self-hosted studio on your OpenRouter key.">
+    <SettingsCard icon={<Info />} title="About" description="Open-source studio on your OpenRouter key. Runs entirely in your browser.">
       <dl className="divide-y divide-border">
         <Row label="Version" mono>
-          {settings?.version ? `v${settings.version}` : "—"}
+          {`v${APP_VERSION}`}
         </Row>
-        <Row label="Server">
-          <span className="inline-flex items-center gap-1.5">
-            <span className={cn("size-1.5 rounded-full", status.dot)} aria-hidden="true" />
-            {status.label}
-          </span>
-        </Row>
+        <Row label="Data">This browser (IndexedDB)</Row>
         <Row label="License">MIT</Row>
       </dl>
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">

@@ -10,7 +10,9 @@ export interface Draft {
   prompt: string;
   model?: string;
   params?: ImageParams | VideoParams;
+  /** Media ids (reference / edit images). */
   referenceImages?: string[];
+  /** Media ids (image-to-video anchor frames). */
   firstFrame?: string;
   lastFrame?: string;
 }
@@ -21,6 +23,11 @@ export interface LightboxState {
 }
 
 interface UiState {
+  /** The "API key" dialog behind the Add key pill. */
+  keyDialog: boolean;
+  openKeyDialog: () => void;
+  closeKeyDialog: () => void;
+
   lightbox: LightboxState | null;
   openLightbox: (ids: string[], index: number) => void;
   closeLightbox: () => void;
@@ -28,9 +35,9 @@ interface UiState {
   /** Keep the lightbox list in sync when items are removed. */
   lightboxSetIds: (ids: string[]) => void;
 
-  /** `/media/...` url of an image handed to the video page as first frame. */
+  /** The media id of an image handed to the video composer as first frame. */
   pendingFirstFrame: string | null;
-  setPendingFirstFrame: (url: string | null) => void;
+  setPendingFirstFrame: (id: string | null) => void;
   consumePendingFirstFrame: () => string | null;
 
   draft: Draft | null;
@@ -39,6 +46,10 @@ interface UiState {
 }
 
 export const useUi = create<UiState>()((set, get) => ({
+  keyDialog: false,
+  openKeyDialog: () => set({ keyDialog: true }),
+  closeKeyDialog: () => set({ keyDialog: false }),
+
   lightbox: null,
   openLightbox: (ids, index) => {
     if (ids.length === 0) return;
@@ -61,11 +72,11 @@ export const useUi = create<UiState>()((set, get) => ({
   },
 
   pendingFirstFrame: null,
-  setPendingFirstFrame: (url) => set({ pendingFirstFrame: url }),
+  setPendingFirstFrame: (id) => set({ pendingFirstFrame: id }),
   consumePendingFirstFrame: () => {
-    const url = get().pendingFirstFrame;
-    if (url) set({ pendingFirstFrame: null });
-    return url;
+    const id = get().pendingFirstFrame;
+    if (id) set({ pendingFirstFrame: null });
+    return id;
   },
 
   draft: null,

@@ -62,8 +62,8 @@ export function SelectionBar({
         role="toolbar"
         aria-label="Selection actions"
         className={cn(
-          "pointer-events-auto flex w-full max-w-[960px] flex-wrap items-center gap-2 rounded-2xl border border-border-strong",
-          "bg-surface/90 px-3 py-2.5 shadow-bar backdrop-blur-xl animate-slide-up",
+          "pointer-events-auto flex w-full max-w-[940px] flex-wrap items-center gap-2 rounded-dock border border-border",
+          "bg-surface p-3 shadow-float animate-slide-up",
         )}
       >
         <span className="min-w-[88px] text-body font-medium tabular-nums text-fg" aria-live="polite">

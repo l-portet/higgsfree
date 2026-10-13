@@ -124,7 +124,7 @@ export function AssetsToolbar({
             </Kbd>
           )
         }
-        className="w-full sm:ml-auto sm:w-[260px] [&_input]:h-8 [&_input]:rounded-full"
+        className="w-full sm:ml-auto sm:w-[260px] [&_input]:h-9 [&_input]:rounded-control"
       />
     </div>
   );

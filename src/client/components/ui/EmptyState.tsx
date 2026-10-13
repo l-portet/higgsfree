@@ -13,7 +13,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-16 text-center", className)}>
       {icon ? (
-        <div className="mb-4 flex size-11 items-center justify-center rounded-md border border-border bg-surface-2 text-fg-muted [&_svg]:size-5">
+        <div className="mb-4 flex size-11 items-center justify-center rounded-control border border-border bg-surface-2 text-fg-muted [&_svg]:size-5">
           {icon}
         </div>
       ) : null}

@@ -9,47 +9,63 @@ productive quickly.
 git clone <your fork>
 cd higgsfree
 pnpm install                  # pnpm 11, Node >= 22
-cp .env.example .env.local    # optional, the key can also be entered in Settings
-pnpm dev                      # Next.js on :3000, API included; data in ./data
+pnpm dev                      # Next.js on :3000; paste a key behind Add key
 ```
 
-Other scripts: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` (production build, also emits
-`.next/standalone` for Docker), `pnpm start`, `pnpm format` / `pnpm format:check` (Prettier).
-`vercel env pull .env.local` after `vercel link` points local dev at a real Blob store and Turso database.
+There is no server, database or secret to set up: the key and the library live in the browser.
+`cp .env.example .env.local` only matters if you want to change one of the three build-time values
+(site url for social cards, OpenRouter base url for a proxy, app name for `X-Title`).
+
+Other scripts: `pnpm typecheck`, `pnpm lint`, `pnpm test` (vitest), `pnpm build` (static export to
+`out/`), `pnpm preview` (serves `out/`), `pnpm format` / `pnpm format:check` (Prettier).
 
 ## Layout
 
 ```
 src/
-  app/      Next.js App Router: layout, one thin client page per route, error screens, and the
-            route handlers that mount the Hono API at /api/* and /media/*
-  shared/   types.ts (client ⇄ server contract) · models.ts (the model catalog)
-  server/   Hono app, OpenRouter client, libSQL store (SQLite file or Turso), media store
-            (local disk or Vercel Blob), job advancement + change feed
-  client/   React + Tailwind v4 (Radix primitives, zustand); pages, components, stores
-public/     icons, manifest, sample stills
-docs/       API.md (endpoint contract) · DESIGN.md (visual spec) · MODELS.md (catalog)
+  app/        Next.js App Router: the root layout (metadata, fonts, the production CSP), one thin
+              client page per route, the error screens, and `/` redirecting to `/image` on the client
+  shared/     types.ts (the UI ⇄ data-layer contract) · models.ts (the model catalog)
+  client/
+    lib/
+      openrouter.ts   the OpenRouter client: headers, origin check, errors, the live model list
+      payloads.ts     pure request-body builders (the verified shapes from docs/OPENROUTER.md)
+      catalog.ts      curated catalog merged with OpenRouter's live video and image catalogs
+      settings.ts     the key and the default models in localStorage
+      db/             IndexedDB (idb): schema, generations, media
+      engine/         job lifecycle: image batches, video submit / poll / download, Web Locks, steward
+      archive/        library export / import as a zip (zip.js)
+      media-urls.ts   ref-counted object urls for media in the library
+      live.ts         the change feed: every write is broadcast to the other tabs
+    __tests__/        setup (Node + fake-indexeddb), the mock OpenRouter, the engine integration test
+    features/         one folder per view · components/ composer, ui, settings · store/ zustand
+public/       icons, manifest, sample stills
+docker/       nginx.conf for the static image
+docs/         OPENROUTER.md (integration rules) · DESIGN.md (visual spec) · MODELS.md (catalog)
 ```
 
-`src/shared/types.ts` is the single source of truth for request/response shapes. If you change
-an API, change the type first, then both sides. Keep `src/shared` dependency-free.
+`src/shared/types.ts` is the single source of truth for the shapes the UI and the data layer exchange.
+If you change one, change the type first, then both sides. Keep `src/shared` dependency-free.
 
 ## Rules of the road
 
-- **Match `docs/API.md` and `docs/DESIGN.md`.** They encode verified OpenRouter behaviour
+- **Nothing that needs a server.** The site must build with `output: "export"`: no route handlers, no
+  server actions, no `headers()` / `cookies()` / `redirect()` on the server, no `redirects` / `rewrites` /
+  `headers` in `next.config.ts`, no proxy or middleware; `next/image` stays `unoptimized`. Anything that
+  needs a runtime runs in the browser. CI checks that `out/` contains the expected pages.
+- **The key goes to one place.** Never log the key or store it anywhere but `higgsfree.apiKey`, and never
+  send it to an origin other than OpenRouter's (`assertProviderOrigin`). See [SECURITY.md](SECURITY.md).
+- **Match `docs/OPENROUTER.md` and `docs/DESIGN.md`.** They encode verified OpenRouter behaviour
   (HTTP 202 on video submit, `frame_images` for i2v, downloading results with the Bearer header,
   etc.) and the visual language. Don't "simplify" the integration rules. They were learned the
   hard way. If you find one is wrong, fix the doc in the same PR.
-- **Never log or return the API key.** See [SECURITY.md](SECURITY.md).
 - **Surface provider errors verbatim.** OpenRouter's 400 bodies list the supported values; users
   need to see them.
-- **Nothing that compiles on install.** `@libsql/client` ships prebuilt bindings for the local
-  `file:` database and talks plain HTTP/WebSocket to Turso; image and MP4 headers are parsed by
-  hand. The app has to install and build anywhere Node 22 runs, including Vercel's build image.
-- **Nothing that needs a resident process.** On Vercel every request is its own function: no
-  in-memory state that must survive a request (caches are best-effort), no timers, no stream that
-  stays open. Work that outlives a response goes through `runInBackground` (`waitUntil`), and
-  anything two instances could both do takes the row's lease first (`claimGeneration`).
+- **Write to IndexedDB first, then publish.** Every status change lands in the database before it goes
+  out over the BroadcastChannel, so a tab that missed an event can always re-read the truth. Anything two
+  tabs could both do takes the job's Web Lock first (`tryWithJobLock`).
+- **Nothing that compiles on install.** Image and MP4 headers are parsed by hand; the zip is zip.js on the
+  main thread. The app has to install and build anywhere Node 22 runs, including Vercel's build image.
 - **Cost honesty.** Estimates in the UI come from `estCostUsd` / `estCostPerSecUsd` in the
   catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. If you change
   an estimate, say where the number came from.
@@ -80,11 +96,12 @@ the PR description.
 pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
-CI runs the same four commands on Node 22 and 24, plus a Docker image build. Please also:
+CI runs the same four commands on Node 22 and 24, checks that `out/` contains the expected pages, and
+builds the Docker image. Please also:
 
-- Describe what you tested manually (which model, which mode, local storage or Blob + Turso).
+- Describe what you tested manually (which model, which mode, which browser).
 - Add screenshots for UI changes (dark theme, 1400px-wide content area).
-- Don't commit `data/`, `.env`, or generated media.
+- Don't commit `.env*` files (other than `.env.example`), `out/`, or generated media.
 
 ## Reporting bugs / requesting models
 

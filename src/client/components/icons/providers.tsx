@@ -33,6 +33,6 @@ function Mark({ d, size = 18, className }: ProviderMarkProps & { d: string }) {
 
 /** Logo for a provider slug, or `null` when there is none. */
 export function ProviderLogo({ provider, ...props }: ProviderLogoProps) {
-  if (!hasProviderLogo(provider)) return null;
-  return <Mark d={PROVIDER_MARKS[provider]} {...props} />;
+  const d = hasProviderLogo(provider) ? PROVIDER_MARKS[provider] : undefined;
+  return d ? <Mark d={d} {...props} /> : null;
 }

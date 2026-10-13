@@ -8,24 +8,16 @@ import { StorageCard } from "@/components/settings/StorageCard";
 
 export default function SettingsPage() {
   const settings = useSettings((s) => s.settings);
-  const server = useSettings((s) => s.server);
 
   return (
     <Page className="max-w-[760px] pb-16">
-      <PageHeader
-        title="Settings"
-        description={
-          server === "offline" && !settings
-            ? "Server unreachable. Settings load again once it is back."
-            : "Your OpenRouter key, default models and storage."
-        }
-      />
+      <PageHeader title="Settings" description="Your OpenRouter key, default models and the library in this browser." />
       <div className="flex flex-col gap-4">
         <ApiKeyCard settings={settings} />
         <CreditsCard />
         <DefaultsCard settings={settings} />
-        <StorageCard settings={settings} />
-        <AboutCard settings={settings} />
+        <StorageCard />
+        <AboutCard />
       </div>
     </Page>
   );

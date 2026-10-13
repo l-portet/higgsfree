@@ -39,6 +39,7 @@ function ModelField({
           icon={<ProviderTile provider={provider} size={18} className="-ml-0.5" />}
           label={name}
           chevron
+          strong
           aria-label={`${label}: ${name}`}
           className="max-w-full"
         />
@@ -53,23 +54,22 @@ function ModelField({
 
 export function DefaultsCard({ settings }: { settings: SettingsResponse | null }) {
   const save = useSettings((s) => s.save);
-  const server = useSettings((s) => s.server);
   const [imageModel, setImageModel] = useState<string>(settings?.defaults.imageModel ?? "");
   const [videoModel, setVideoModel] = useState<string>(settings?.defaults.videoModel ?? "");
   const [saving, setSaving] = useState(false);
-  /** Set once the user picks a model; until then local state mirrors the server. */
+  /** Set once the user picks a model; until then local state mirrors the saved defaults. */
   const edited = useRef(false);
 
-  const serverImage = settings?.defaults.imageModel;
-  const serverVideo = settings?.defaults.videoModel;
-  const dirty = Boolean(settings) && (imageModel !== serverImage || videoModel !== serverVideo);
+  const savedImage = settings?.defaults.imageModel;
+  const savedVideo = settings?.defaults.videoModel;
+  const dirty = Boolean(settings) && (imageModel !== savedImage || videoModel !== savedVideo);
 
-  // Follow server values (initial load, saves from elsewhere) until the user makes local edits.
+  // Follow the saved values (initial load, saves from elsewhere, another tab) until the user makes local edits.
   useEffect(() => {
-    if (edited.current || serverImage === undefined || serverVideo === undefined) return;
-    setImageModel(serverImage);
-    setVideoModel(serverVideo);
-  }, [serverImage, serverVideo]);
+    if (edited.current || savedImage === undefined || savedVideo === undefined) return;
+    setImageModel(savedImage);
+    setVideoModel(savedVideo);
+  }, [savedImage, savedVideo]);
 
   const pickImage = (id: string) => {
     edited.current = true;
@@ -117,9 +117,9 @@ export function DefaultsCard({ settings }: { settings: SettingsResponse | null }
             size="sm"
             variant="primary"
             loading={saving}
-            aria-disabled={!dirty || server === "offline" ? true : undefined}
+            aria-disabled={!dirty ? true : undefined}
             onClick={() => {
-              if (!dirty || server === "offline") return;
+              if (!dirty) return;
               void onSave();
             }}
           >

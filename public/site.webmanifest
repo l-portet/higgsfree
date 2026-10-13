@@ -2,7 +2,7 @@
   "name": "higgsfree",
   "short_name": "higgsfree",
   "description": "Open-source AI image and video studio powered by your OpenRouter key.",
-  "start_url": "/",
+  "start_url": "/image",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",

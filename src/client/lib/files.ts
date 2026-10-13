@@ -1,4 +1,4 @@
-/** File helpers for reference images: validation, data URLs, paste / drop extraction. */
+/** File helpers for reference images: validation, dimensions, paste / drop extraction, download names. */
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 export const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
@@ -13,15 +13,6 @@ export function validateImageFile(file: File): string | null {
   if (!isAcceptedImage(file)) return `${file.name || "File"} isn't a PNG, JPG or WebP image`;
   if (file.size > MAX_IMAGE_BYTES) return `${file.name || "Image"} is over 25 MB`;
   return null;
-}
-
-export function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error("Couldn't read file"));
-    reader.readAsDataURL(file);
-  });
 }
 
 export function readImageDimensions(src: string): Promise<{ width: number; height: number }> {
@@ -122,26 +113,7 @@ export function extensionForMime(mime: string | undefined): string {
   }
 }
 
-/**
- * Href for a Download link. Same-origin urls download as-is; a Blob store url is cross-origin, where
- * browsers ignore the `download` attribute, so it gets `?download=1` and the store answers with
- * `Content-Disposition: attachment`.
- */
-export function downloadHref(url: string): string {
-  if (!/^https?:\/\//i.test(url)) return url;
-  try {
-    const u = new URL(url);
-    if (typeof location !== "undefined" && u.origin === location.origin) return url;
-    u.searchParams.set("download", "1");
-    return u.toString();
-  } catch {
-    return url;
-  }
-}
-
 /** Filename for the Download action. */
-export function downloadFilename(id: string, mime: string | undefined, url?: string): string {
-  const fromUrl = url?.split("/").pop()?.split("?")[0];
-  const ext = fromUrl?.includes(".") ? fromUrl.split(".").pop() : extensionForMime(mime);
-  return `higgsfree-${id}.${ext ?? "bin"}`;
+export function downloadFilename(id: string, mime: string | undefined): string {
+  return `higgsfree-${id}.${extensionForMime(mime)}`;
 }

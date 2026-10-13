@@ -1,6 +1,6 @@
 /**
- * Shared types: the single source of truth for the client ⇄ server contract.
- * Both `src/server` and `src/client` import from here. Keep it dependency-free.
+ * Shared types: the single source of truth for the UI ⇄ data-layer contract.
+ * Everything runs in the browser; records live in IndexedDB. Keep it dependency-free.
  */
 
 export type GenerationType = "image" | "video";
@@ -10,13 +10,13 @@ export type ImageAspectRatio =
   | "auto" | "1:1" | "3:4" | "4:3" | "2:3" | "3:2" | "9:16" | "16:9" | "5:4" | "4:5" | "21:9";
 export type ImageSize = "1K" | "2K" | "4K";
 
-export type VideoAspectRatio = "21:9" | "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
+export type VideoAspectRatio = "21:9" | "16:9" | "3:2" | "4:3" | "1:1" | "3:4" | "2:3" | "9:16" | "9:21";
 export type VideoResolution = "480p" | "720p" | "768p" | "1080p" | "2K" | "4K";
 
-/** A stored media file served from `/media/:file`. */
+/** A file in the local media store. */
 export interface MediaRef {
-  /** Public URL path, e.g. `/media/gen_abc123.png` */
-  url: string;
+  /** Media id in this browser's library (`gen_abc.png`, `gen_abc.mp4`, `up_xyz.jpg`); resolve with `useMediaUrl`. */
+  id: string;
   mime: string;
   bytes: number;
   width?: number;
@@ -38,9 +38,9 @@ export interface VideoParams {
 }
 
 export interface GenerationInputs {
-  /** Reference / edit images (public `/media/...` urls). */
+  /** Reference / edit images (media ids). */
   referenceImages?: string[];
-  /** Image-to-video anchor frames (public `/media/...` urls). */
+  /** Image-to-video anchor frames (media ids; an upload, or another record's output). */
   firstFrame?: string;
   lastFrame?: string;
 }
@@ -57,7 +57,7 @@ export interface Generation {
   params: ImageParams | VideoParams;
   inputs?: GenerationInputs;
   output?: MediaRef;
-  /** Provider / server error, surfaced verbatim when possible. */
+  /** Provider or app error, surfaced verbatim when possible. */
   error?: string;
   /** Actual cost reported by OpenRouter (`usage.cost`), when available. */
   costUsd?: number;
@@ -67,6 +67,8 @@ export interface Generation {
   batchId?: string;
   /** Position within the batch (0-based). */
   batchIndex?: number;
+  /** Kept by the user (the heart on a card); only present when true. */
+  favorite?: boolean;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -77,7 +79,8 @@ export interface Generation {
 
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
-  | "black-forest-labs" | "runway" | "krea" | "heygen" | "openrouter";
+  | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
+  | "meta" | "sourceful" | "tencent" | "openrouter";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -88,8 +91,12 @@ export interface ImageModel {
   name: string;
   provider: ModelProvider;
   description: string;
-  /** Which OpenRouter endpoint serves this model. */
-  endpoint: "chat" | "images";
+  /**
+   * Which OpenRouter endpoint serves this model: `chat` (chat completions with `image_config`),
+   * `images` (the OpenAI-style `/images/generations`), or `native` (`POST /api/v1/images`, whose
+   * options come straight from OpenRouter's image catalog).
+   */
+  endpoint: "chat" | "images" | "native";
   featured: boolean;
   badges: ModelBadge[];
   caps: {
@@ -102,10 +109,12 @@ export interface ImageModel {
   sizes: ImageSize[];
   /** Rough USD per image by size, shown as "~$0.13" before generating. */
   estCostUsd: Partial<Record<ImageSize, number>>;
-  /** Whether `image_config.image_size` is honored. */
+  /** Whether the size choice is sent (`image_config.image_size` on chat, `resolution` on native). */
   supportsImageSize: boolean;
   /** True when this exact slug + payload shape has been verified end-to-end. */
   verified: boolean;
+  /** Listed by OpenRouter but not in the curated catalog: options from OpenRouter, not tested here. */
+  discovered?: boolean;
 }
 
 export interface VideoModel {
@@ -142,8 +151,8 @@ export interface VideoModel {
   /** Not selectable in the UI (video-to-video, avatar models, etc.). */
   hidden?: boolean;
   /**
-   * Synthesized from OpenRouter's live video list because the slug is not in the
-   * curated catalog: conservative caps, no resolution list, no price.
+   * Listed by OpenRouter but not in the curated catalog: options and price come from
+   * OpenRouter's video catalog, quirks (faces, references, i2v aspect) are unknown.
    */
   discovered?: boolean;
 }
@@ -153,7 +162,7 @@ export type CatalogModel = ImageModel | VideoModel;
 export interface ModelsResponse {
   image: ImageModel[];
   video: VideoModel[];
-  /** Live availability snapshot from OpenRouter, if the server could fetch it. */
+  /** Live availability from OpenRouter's public catalogs (fetched with or without a key). */
   live?: {
     checkedAt: string;
     /** Slugs currently listed by OpenRouter (image + video endpoints). */
@@ -170,7 +179,7 @@ export interface ImageGenerateRequest {
   size: ImageSize;
   /** 1–4 images generated in parallel. */
   count: number;
-  /** Uploaded media urls (`/media/...`) or data URLs. */
+  /** Media ids of stored uploads (see `upload`). */
   referenceImages?: string[];
 }
 
@@ -181,7 +190,7 @@ export interface VideoGenerateRequest {
   aspectRatio?: VideoAspectRatio;
   resolution?: VideoResolution;
   audio?: boolean;
-  /** Uploaded media url or data URL. */
+  /** Media ids: a stored upload, or an image record's output. */
   firstFrame?: string;
   lastFrame?: string;
   /** Style / character references (no frame lock). */
@@ -195,6 +204,8 @@ export interface GenerateResponse {
 export interface ListGenerationsQuery {
   type?: GenerationType;
   status?: GenerationStatus;
+  /** Only kept (hearted) runs. */
+  favorite?: boolean;
   limit?: number;
   /** Opaque cursor (createdAt of the last item). */
   cursor?: string;
@@ -205,30 +216,27 @@ export interface ListGenerationsResponse {
   nextCursor?: string;
 }
 
+/** The fields the UI may change on an existing record. */
+export interface UpdateGenerationRequest {
+  favorite?: boolean;
+}
+
 export interface UploadResponse {
   media: MediaRef;
 }
-
-export type StorageKind = "local" | "blob";
 
 export interface SettingsResponse {
   hasKey: boolean;
   /** e.g. `sk-or-v1-…a1b2` */
   keyMasked?: string;
-  keySource: "env" | "db" | null;
   defaults: {
     imageModel: string;
     videoModel: string;
   };
-  /** Where media live: files under `DATA_DIR` (`local`) or a Vercel Blob store (`blob`). Decides how the browser uploads. */
-  storage: StorageKind;
-  /** Human label for that place: the data directory, or the blob store. */
-  dataDir: string;
-  version: string;
 }
 
 export interface UpdateSettingsRequest {
-  /** Pass a new key, or `""` to clear the DB-stored key. */
+  /** Pass a new key, or `""` to clear the stored key. */
   apiKey?: string;
   defaults?: Partial<SettingsResponse["defaults"]>;
 }
@@ -243,33 +251,32 @@ export interface CreditsResponse {
   key?: { label?: string; limit?: number | null; usage?: number; isFreeTier?: boolean };
 }
 
-export interface HealthResponse {
-  ok: true;
-  version: string;
-  hasKey: boolean;
-  pendingJobs: number;
-  storage: StorageKind;
+/** Per-type counts for the Library card. */
+export interface TypeStats {
+  count: number;
+  completed: number;
+  bytes: number;
 }
 
-/** Change-feed events served by `GET /api/events`. */
-export type ServerEvent =
+export interface StorageStats {
+  image: TypeStats;
+  video: TypeStats;
+  uploads: { count: number; bytes: number };
+}
+
+/** Change-feed events: every local write dispatches one, and other tabs receive it over a BroadcastChannel. */
+export type ChangeEvent =
   | { type: "generation"; generation: Generation }
-  /** A record was removed (explicit DELETE, or a failed record replaced by a retry). */
+  /** A record was removed (explicit delete, or a failed record replaced by a retry). */
   | { type: "generation-deleted"; id: string }
-  /** First answer of a session (no cursor yet). */
-  | { type: "hello"; pendingJobs: number };
-
-/** `GET /api/events?since=<cursor>`: everything that changed since the cursor, polled by the client. */
-export interface EventsResponse {
-  /** Pass back as `since` on the next call. */
-  cursor: string;
-  pendingJobs: number;
-  events: ServerEvent[];
-}
+  /** The feed is up (library opened). */
+  | { type: "hello"; pendingJobs: number }
+  /** The whole library changed underneath (import, clear): drop everything and refetch. */
+  | { type: "reset" };
 
 export interface ApiError {
   error: string;
-  /** HTTP status echoed for convenience. */
+  /** HTTP-like status (OpenRouter's own, or 0 when nothing answered). */
   status: number;
   /** Raw provider body when OpenRouter returned one (helps read "supported values" messages). */
   provider?: unknown;

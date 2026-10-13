@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/ui/Dialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { Code, FieldLabel, Row, SettingsCard } from "./SettingsCard";
+import { FieldLabel, Row, SettingsCard } from "./SettingsCard";
 
 const KEYS_URL = "https://openrouter.ai/keys";
 
@@ -21,7 +21,7 @@ type TestState = { kind: "ok"; result: CreditsResponse; keyMasked?: string } | {
 function KeyTestResult({ state }: { state: NonNullable<TestState> }) {
   if (state.kind === "error") {
     return (
-      <div role="alert" className="mt-4 rounded-md border border-danger/25 bg-danger/5 p-3">
+      <div role="alert" className="mt-4 rounded-control border border-danger/25 bg-danger/5 p-3">
         <div className="mb-1 flex items-center gap-1.5 text-meta font-medium text-danger">
           <CircleAlert size={14} aria-hidden="true" />
           Connection failed
@@ -33,7 +33,7 @@ function KeyTestResult({ state }: { state: NonNullable<TestState> }) {
   const r = state.result;
   const limit = r.key?.limit;
   return (
-    <div role="status" className="mt-4 rounded-md border border-success/25 bg-success/5 p-3">
+    <div role="status" className="mt-4 rounded-control border border-success/25 bg-success/5 p-3">
       <div className="mb-1 flex items-center gap-1.5 text-meta font-medium text-success">
         <CheckCircle2 size={14} aria-hidden="true" />
         Connected to OpenRouter
@@ -79,7 +79,6 @@ function GetKeyLink() {
 }
 
 export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) {
-  const server = useSettings((s) => s.server);
   const save = useSettings((s) => s.save);
   const [value, setValue] = useState("");
   const [reveal, setReveal] = useState(false);
@@ -91,14 +90,13 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
   const inputId = useId();
   const hintId = useId();
 
-  const fromEnv = settings?.keySource === "env";
   const hasKey = Boolean(settings?.hasKey);
   const trimmed = value.trim();
 
   // A different active key invalidates the last test result.
   useEffect(() => {
     setTest(null);
-  }, [settings?.keyMasked, settings?.keySource]);
+  }, [settings?.keyMasked]);
 
   const onSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -147,54 +145,17 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
     }
   };
 
-  const badge = !settings ? null : fromEnv ? (
-    <Badge variant="neutral">From env</Badge>
-  ) : hasKey ? (
-    <Badge variant="new">Connected</Badge>
-  ) : (
-    <Badge variant="neutral">Not set</Badge>
-  );
+  const badge = !settings ? null : hasKey ? <Badge variant="new">Connected</Badge> : <Badge variant="neutral">Not set</Badge>;
 
-  const canTest = server !== "offline" && (Boolean(trimmed) || hasKey);
+  const canTest = Boolean(trimmed) || hasKey;
 
   return (
-    <SettingsCard
-      icon={<KeyRound />}
-      title="OpenRouter key"
-      badge={badge}
-      description="Stays on the server and is only sent to openrouter.ai."
-    >
+    <SettingsCard icon={<KeyRound />} title="OpenRouter key" badge={badge} description="Stays in this browser and is only ever sent to openrouter.ai.">
       {!settings ? (
         <div className="flex flex-col gap-3" aria-busy="true">
           <Skeleton className="h-9 w-full" />
           <Skeleton className="h-9 w-40" />
         </div>
-      ) : fromEnv ? (
-        <>
-          <div className="rounded-md border border-border bg-surface-2 p-3">
-            <p className="text-body text-fg">
-              Set by the <Code>OPENROUTER_API_KEY</Code> environment variable.
-            </p>
-            <p className="mt-1 text-meta">
-              Read-only here. Change it where the environment is set (<Code>.env</Code> locally, the project&apos;s environment
-              variables on Vercel); it overrides any key saved in the app.
-            </p>
-            <dl className="mt-2 divide-y divide-border">
-              <Row label="Active key" mono>
-                {settings.keyMasked}
-              </Row>
-            </dl>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button variant="secondary" leftIcon={<PlugZap />} loading={testing} disabled={!canTest} onClick={() => void onTest()}>
-              Test connection
-            </Button>
-            <span className="ml-auto">
-              <GetKeyLink />
-            </span>
-          </div>
-          {test ? <KeyTestResult state={test} /> : null}
-        </>
       ) : (
         <form onSubmit={(e) => void onSave(e)} aria-describedby={hintId}>
           <FieldLabel htmlFor={inputId}>{hasKey ? "Replace key" : "Key"}</FieldLabel>
@@ -223,18 +184,16 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
           <p id={hintId} className="mt-2 text-meta">
             {hasKey ? (
               <>
-                Using <span className="text-mono text-fg">{settings.keyMasked}</span>, stored in the app database. The full
-                key is never shown again.
+                Using <span className="text-mono text-fg">{settings.keyMasked}</span>. Stored in this browser only. Use a dedicated key with a
+                spend limit.
               </>
             ) : (
-              <>
-                Stored in the app database. Or set <Code>OPENROUTER_API_KEY</Code> in the environment.
-              </>
+              <>No key yet. Generate stays off until one is saved here.</>
             )}
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button type="submit" variant="primary" loading={saving} disabled={!trimmed || server === "offline"}>
+            <Button type="submit" variant="primary" loading={saving} disabled={!trimmed}>
               Save
             </Button>
             <Button
@@ -253,7 +212,6 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
                 leftIcon={<Trash2 />}
                 className="text-danger hover:bg-danger/10 hover:text-danger"
                 onClick={() => setConfirmRemove(true)}
-                disabled={server === "offline"}
               >
                 Remove key
               </Button>
@@ -269,7 +227,7 @@ export function ApiKeyCard({ settings }: { settings: SettingsResponse | null }) 
             open={confirmRemove}
             onOpenChange={(o) => !removing && setConfirmRemove(o)}
             title="Remove the saved key?"
-            description="Generating stops until you add a key again. Your generations and media are kept."
+            description="Generating stops until you add a key again. Your library is kept."
             confirmLabel="Remove key"
             danger
             loading={removing}

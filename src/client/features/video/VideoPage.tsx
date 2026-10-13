@@ -1,57 +1,102 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import type { VideoGenerateRequest } from "@shared/types";
-import * as api from "@/lib/api";
-import { describeApiError } from "@/lib/api";
-import { useGenerations, usePage } from "@/store/generations";
-import { useSettings } from "@/store/settings";
+import { useCallback, useEffect, useMemo } from "react";
+import { CircleAlert } from "lucide-react";
+import type { Generation } from "@shared/types";
+import { VIDEO_EXAMPLES } from "@/lib/examples";
+import { cardAspectRatio, skeletonItems, type MasonryItem } from "@/lib/masonry";
+import { useGenerationList, useGenerations, useListState, usePage, usePendingGenerations } from "@/store/generations";
+import { useUi } from "@/store/ui";
 import { Page } from "@/components/layout/Page";
-import { VideoPanel } from "@/components/video/VideoPanel";
-import { VideoCanvas, type CanvasTab } from "@/components/video/VideoCanvas";
+import { Button } from "@/components/ui/Button";
+import { EmptyFeed } from "@/components/EmptyFeed";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { GenerationCard, GenerationCardSkeleton } from "@/components/GenerationCard";
+import { MasonryGrid } from "@/components/MasonryGrid";
 
-const CANVAS_ID = "video-canvas";
+const SKELETON_ASPECTS = ["16 / 9", "9 / 16", "16 / 9", "1 / 1", "16 / 9", "16 / 9"];
+const SKELETON_ITEMS = skeletonItems(SKELETON_ASPECTS, (a) => <GenerationCardSkeleton aspect={a} />);
 
-/** Two-column video studio: sticky settings panel on the left, History / How it works canvas on the right. */
+function RenderingStatus() {
+  const pending = usePendingGenerations("video");
+  if (pending.length === 0) return null;
+  return (
+    <p className="mb-4 inline-flex items-center gap-1.5 text-meta tabular-nums" aria-live="polite">
+      <span className="relative flex size-2" aria-hidden="true">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent/60" />
+        <span className="relative inline-flex size-2 rounded-full bg-accent" />
+      </span>
+      {pending.length} rendering · usually 2–5 min
+    </p>
+  );
+}
+
+/** The video feed: clips newest first (hover to preview), or the empty state with example shots. */
 export default function VideoPage() {
+  const items = useGenerationList("video");
   const page = usePage({ type: "video" });
   const fetchPage = useGenerations((s) => s.fetchPage);
-  const server = useSettings((s) => s.server);
-  const [tab, setTab] = useState<CanvasTab>("history");
 
+  // Fetch when there is nothing yet (on mount, and again after the store's `reset`). A failed load waits for "Try again".
   useEffect(() => {
-    void fetchPage({ type: "video" });
-  }, [fetchPage]);
+    if (!page.loaded && !page.loading && !page.error) void fetchPage({ type: "video" });
+  }, [page.loaded, page.loading, page.error, fetchPage]);
 
-  // First load failed while the server was down → fetch once it's back.
-  useEffect(() => {
-    if (server === "online" && !page.loaded && !page.loading) void fetchPage({ type: "video" });
-  }, [server, page.loaded, page.loading, fetchPage]);
+  const ids = useMemo(() => items.map((g) => g.id), [items]);
+  const openAt = useCallback((g: Generation) => useUi.getState().openLightbox(ids, Math.max(0, ids.indexOf(g.id))), [ids]);
+  const cards = useMemo<MasonryItem[]>(
+    () =>
+      items.map((g) => ({
+        key: g.id,
+        aspect: cardAspectRatio(g),
+        render: () => <GenerationCard generation={g} onOpen={openAt} />,
+      })),
+    [items, openAt],
+  );
 
-  const handleSubmit = async (req: VideoGenerateRequest) => {
-    try {
-      const res = await api.generateVideo(req);
-      useGenerations.getState().upsert(res.generations);
-      setTab("history");
-      const name = res.generations[0]?.modelName ?? "the model";
-      toast.success(`Rendering with ${name}…`, { description: "Usually 2–5 min. You can keep working in the app meanwhile." });
-      // On stacked layouts the canvas sits below the panel: bring the new card into view.
-      if (window.matchMedia("(max-width: 767px)").matches) {
-        document.getElementById(CANVAS_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    } catch (err) {
-      toast.error("Generation failed", { description: describeApiError(err) });
-    }
-  };
+  const hasItems = items.length > 0;
+  const { initialLoading, loadFailed, showEmpty } = useListState(page, hasItems);
 
   return (
     <Page className="flex flex-1 flex-col">
-      <div className="grid flex-1 gap-4 md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-5 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-6">
-        <VideoPanel
-          onSubmit={handleSubmit}
-          className="-m-0.5 p-0.5 md:sticky md:top-20 md:max-h-[calc(100dvh-104px)] md:overflow-y-auto md:overscroll-contain"
+      {initialLoading ? <MasonryGrid items={SKELETON_ITEMS} aria-busy="true" aria-label="Loading videos" /> : null}
+
+      {loadFailed ? (
+        <EmptyState
+          icon={<CircleAlert />}
+          title="Couldn't load your videos"
+          description={page.error}
+          action={
+            <Button onClick={() => void fetchPage({ type: "video" })} loading={page.loading}>
+              Try again
+            </Button>
+          }
+          className="flex-1"
         />
-        <VideoCanvas id={CANVAS_ID} tab={tab} onTabChange={setTab} className="min-h-[420px] scroll-mt-20" />
-      </div>
+      ) : null}
+
+      {showEmpty ? (
+        <div className="flex flex-1 items-center justify-center py-8">
+          <EmptyFeed
+            title="Your video runs land here"
+            description="Describe the shot below, pick a model, press Generate. Every finished run lands in your library."
+            examples={VIDEO_EXAMPLES}
+            onExample={(prompt) => useUi.getState().setDraft({ type: "video", prompt })}
+          />
+        </div>
+      ) : null}
+
+      {hasItems ? (
+        <>
+          <RenderingStatus />
+          <MasonryGrid items={cards} />
+          {page.nextCursor ? (
+            <div className="mt-8 flex justify-center">
+              <Button variant="secondary" loading={page.loading} onClick={() => void fetchPage({ type: "video", more: true })}>
+                Load more
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : null}
     </Page>
   );
 }

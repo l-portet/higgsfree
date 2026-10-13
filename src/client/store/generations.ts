@@ -7,8 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import type { Generation, GenerationStatus, GenerationType, ListGenerationsQuery } from "@shared/types";
 import * as api from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
-import { nudgeEvents, subscribeEvents, subscribeEventStatus } from "@/lib/live";
-import { useSettings } from "@/store/settings";
+import { subscribeEvents, subscribeEventStatus } from "@/lib/live";
 import { useUi } from "@/store/ui";
 
 export type ListKey = string;
@@ -22,8 +21,11 @@ export interface PageState {
 
 const EMPTY_PAGE: PageState = { loading: false, loaded: false };
 
-export function listKey(q: Pick<ListGenerationsQuery, "type" | "status">): ListKey {
-  return `${q.type ?? "all"}:${q.status ?? "any"}`;
+/** The filters a list is keyed by (paging state is per key). */
+export type ListQuery = Pick<ListGenerationsQuery, "type" | "status" | "favorite">;
+
+export function listKey(q: ListQuery): ListKey {
+  return `${q.type ?? "all"}:${q.status ?? "any"}${q.favorite ? ":kept" : ""}`;
 }
 
 export function isPending(g: Pick<Generation, "status">): boolean {
@@ -46,12 +48,16 @@ interface GenerationsState {
   upsert: (items: Generation | Generation[]) => void;
   /** Drop a record locally (also pulls it out of an open lightbox). */
   remove: (id: string) => void;
+  /** The library was replaced or cleared: forget everything (pages refetch on their own). */
+  reset: () => void;
   /** Fetch the first page (or the next one with `more: true`) for a list. */
   fetchPage: (q: ListGenerationsQuery & { more?: boolean }) => Promise<void>;
   /** Re-fetch every locally pending/running record (whenever the live feed (re)connects). */
   refreshPending: () => Promise<void>;
   deleteGeneration: (id: string) => Promise<void>;
   retryGeneration: (id: string) => Promise<Generation[]>;
+  /** Flip the heart: optimistic locally, the stored record wins once the write lands. */
+  setFavorite: (id: string, favorite: boolean) => Promise<void>;
 }
 
 export const useGenerations = create<GenerationsState>()((set, get) => ({
@@ -67,7 +73,7 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
       let changedOrder = false;
       for (const g of list) {
         const prev = byId[g.id];
-        // A stale REST list response can arrive after a fresher record from the feed; never let it win
+        // A stale list page can arrive after a fresher record from the feed; never let it win
         // (an equal timestamp is the same write: the feed re-sends recent rows on purpose).
         if (prev && prev.updatedAt >= g.updatedAt) continue;
         if (!prev) changedOrder = true;
@@ -80,8 +86,6 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
         : s.ids;
       return { byId, ids };
     });
-    // New work in flight: poll fast right away instead of waiting for the idle interval.
-    if (list.some(isPending)) nudgeEvents();
   },
 
   remove: (id) => {
@@ -93,6 +97,11 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
     });
     const lb = useUi.getState().lightbox;
     if (lb?.ids.includes(id)) useUi.getState().lightboxSetIds(lb.ids.filter((x) => x !== id));
+  },
+
+  reset: () => {
+    set({ byId: {}, ids: [], pages: {} });
+    useUi.getState().closeLightbox();
   },
 
   fetchPage: async ({ more, ...q }) => {
@@ -134,10 +143,24 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
     try {
       await api.deleteGeneration(id);
     } catch (err) {
-      // Already gone on the server (deleted from another tab / replaced by a retry); drop it locally too.
+      // Already gone (deleted from another tab, or replaced by a retry); drop it locally too.
       if (!(err instanceof ApiClientError && err.status === 404)) throw err;
     }
     get().remove(id);
+  },
+
+  setFavorite: async (id, favorite) => {
+    const prev = get().byId[id];
+    if (!prev) return;
+    const { favorite: _was, ...rest } = prev;
+    const optimistic: Generation = favorite ? { ...rest, favorite: true } : rest;
+    set((s) => ({ byId: { ...s.byId, [id]: optimistic } }));
+    try {
+      get().upsert(await api.updateGeneration(id, { favorite }));
+    } catch (err) {
+      set((s) => (s.byId[id] === optimistic ? { byId: { ...s.byId, [id]: prev } } : s));
+      throw err;
+    }
   },
 
   retryGeneration: async (id) => {
@@ -150,7 +173,7 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
     if (wasFailed && next && lb?.ids.includes(id)) {
       useUi.getState().lightboxSetIds(lb.ids.map((x) => (x === id ? next : x)));
     }
-    // The server also leaves a `generation-deleted` tombstone for a replaced failure; removing here is a harmless double.
+    // The feed also announces the replaced id; removing here is a harmless double.
     if (wasFailed) get().remove(id);
     return res.generations;
   },
@@ -189,15 +212,29 @@ export function usePendingGenerations(type?: GenerationType): Generation[] {
   );
 }
 
-export function usePage(q: Pick<ListGenerationsQuery, "type" | "status">): PageState {
+export function usePage(q: ListQuery): PageState {
   const key = listKey(q);
   return useGenerations((s) => s.pages[key] ?? EMPTY_PAGE);
+}
+
+/** Every kept (hearted) record in the store, newest first. */
+export function useFavoriteList(): Generation[] {
+  return useGenerations(
+    useShallow((s) => {
+      const out: Generation[] = [];
+      for (const id of s.ids) {
+        const g = s.byId[id];
+        if (g?.favorite) out.push(g);
+      }
+      return out;
+    }),
+  );
 }
 
 export interface ListState {
   /** First fetch in flight and nothing to show yet → skeletons. */
   initialLoading: boolean;
-  /** First fetch failed while the server was reachable → "Try again". */
+  /** First fetch failed → "Try again". */
   loadFailed: boolean;
   /** Nothing to show and nothing more to wait for → empty state. */
   showEmpty: boolean;
@@ -205,10 +242,9 @@ export interface ListState {
 
 /** Which of skeleton / error / empty a list page should render (lists render whenever `hasItems`). */
 export function useListState(page: PageState, hasItems: boolean): ListState {
-  const server = useSettings((s) => s.server);
   const initialLoading = !hasItems && !page.loaded && page.loading;
-  const loadFailed = !hasItems && !page.loaded && !page.loading && Boolean(page.error) && server !== "offline";
-  const showEmpty = !hasItems && !initialLoading && !loadFailed && (page.loaded || server === "offline" || Boolean(page.error));
+  const loadFailed = !hasItems && !page.loaded && !page.loading && Boolean(page.error);
+  const showEmpty = !hasItems && !initialLoading && !loadFailed && page.loaded;
   return { initialLoading, loadFailed, showEmpty };
 }
 
@@ -218,9 +254,10 @@ subscribeEvents((ev) => {
   const s = useGenerations.getState();
   if (ev.type === "generation") s.upsert(ev.generation);
   else if (ev.type === "generation-deleted") s.remove(ev.id);
+  else if (ev.type === "reset") s.reset();
 });
 
-// On every open, not only reconnects: pages fetch their lists before the first poll, so a record
+// On every open, not only reconnects: pages fetch their lists before the feed is up, so a record
 // that completed in that gap has no event to deliver it.
 subscribeEventStatus((status) => {
   if (status === "open") void useGenerations.getState().refreshPending();

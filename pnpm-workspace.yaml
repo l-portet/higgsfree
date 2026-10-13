@@ -6,7 +6,6 @@ verifyDepsBeforeRun: false
 
 allowBuilds:
   esbuild: true
-  libsql: true
   "@tailwindcss/oxide": true
   sharp: true
   unrs-resolver: true

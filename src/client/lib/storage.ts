@@ -36,13 +36,24 @@ export function writeJson(key: string, value: unknown): void {
   }
 }
 
-/** Remove every key this app wrote (`higgsfree.*`). Used by the route error screen. */
-export function clearAppStorage(): void {
+export function removeKey(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Remove every key this app wrote (`higgsfree.*`) except `keep`. Used by the route error
+ * screen, which must not throw away the API key or the default models with the UI preferences.
+ */
+export function clearAppStorage(keep: readonly string[] = []): void {
   try {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith(STORAGE_PREFIX)) keys.push(k);
+      if (k && k.startsWith(STORAGE_PREFIX) && !keep.includes(k)) keys.push(k);
     }
     for (const k of keys) localStorage.removeItem(k);
   } catch {

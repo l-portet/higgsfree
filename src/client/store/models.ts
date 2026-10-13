@@ -1,6 +1,6 @@
 /**
- * Model catalog store. Seeds from the shared static catalog so the UI works
- * even when the API server is down; `/api/models` adds live availability.
+ * Model catalog store. Seeds from the curated catalog so the UI works right away; `getModels()`
+ * swaps in OpenRouter's live catalog (options, prices, newly listed models), with or without a key.
  */
 import { create } from "zustand";
 import type { ImageModel, ModelsResponse, VideoModel } from "@shared/types";

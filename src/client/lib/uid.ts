@@ -7,7 +7,7 @@ export function uid(): string {
 
 const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 
-/** `size` url-safe characters (same alphabet as the server's nanoid), for direct upload file names. */
+/** `size` url-safe characters (nanoid's alphabet), for generation, batch and media ids. */
 export function shortId(size = 12): string {
   const bytes = new Uint8Array(size);
   if (typeof crypto !== "undefined" && "getRandomValues" in crypto) crypto.getRandomValues(bytes);

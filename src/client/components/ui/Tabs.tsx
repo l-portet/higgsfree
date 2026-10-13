@@ -17,7 +17,7 @@ export function TabsList({ variant = "segmented", className, ...props }: TabsLis
       data-variant={variant}
       className={cn(
         "group/tabs flex",
-        variant === "segmented" && "w-fit gap-0.5 rounded-[10px] border border-border bg-surface-2 p-1",
+        variant === "segmented" && "w-fit gap-0.5 rounded-control border border-border bg-surface-2 p-1",
         variant === "underline" && "gap-5 border-b border-border",
         className,
       )}
@@ -34,7 +34,7 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
         "transition-colors duration-150 hover:text-fg data-[state=active]:text-fg disabled:opacity-50 disabled:pointer-events-none",
         // segmented
         "group-data-[variant=segmented]/tabs:h-8 group-data-[variant=segmented]/tabs:flex-1 group-data-[variant=segmented]/tabs:justify-center",
-        "group-data-[variant=segmented]/tabs:rounded-[7px] group-data-[variant=segmented]/tabs:px-3",
+        "group-data-[variant=segmented]/tabs:rounded-tag group-data-[variant=segmented]/tabs:px-3",
         "group-data-[variant=segmented]/tabs:data-[state=active]:bg-surface-3",
         // underline
         "group-data-[variant=underline]/tabs:h-9 group-data-[variant=underline]/tabs:px-0.5",

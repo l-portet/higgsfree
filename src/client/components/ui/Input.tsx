@@ -16,7 +16,7 @@ export function Input({ leftIcon, rightSlot, invalid, className, ...props }: Inp
       <input
         aria-invalid={invalid || undefined}
         className={cn(
-          "h-9 w-full rounded-sm border border-border bg-surface-2 px-3 text-[13px] text-fg placeholder:text-fg-subtle",
+          "h-9 w-full rounded-field border border-border bg-inset px-3 text-[13px] text-fg placeholder:text-fg-subtle",
           "transition-colors duration-150 outline-none hover:border-border-strong",
           "focus:border-border-strong focus:ring-2 focus:ring-accent/40",
           "aria-[invalid=true]:border-danger/50 aria-[invalid=true]:focus:ring-danger/30",

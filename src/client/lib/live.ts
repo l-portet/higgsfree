@@ -1,47 +1,34 @@
 /**
- * Live updates by polling `GET /api/events` with the cursor from the previous answer.
- * There is no server-side stream: on Vercel a request is not a long-lived process, and
- * each poll is also what advances running video jobs. Fast while jobs are active, slow
- * when idle, slower in background tabs, exponential backoff while the server is
- * unreachable, and an immediate poll when a tab becomes visible again.
- *
- * The surface (`connectEvents`, `subscribeEvents`, `subscribeEventStatus`) is the one
- * the old SSE client had, so the stores and the shell are unchanged.
+ * Live updates without a server: every local write publishes a `ChangeEvent`, and a
+ * BroadcastChannel carries it to the other tabs of this browser. The surface
+ * (`connectEvents`, `subscribeEvents`, `subscribeEventStatus`) is the one the old
+ * polling client had, so the stores and the shell are unchanged.
  */
-import type { ServerEvent } from "@shared/types";
-import * as api from "@/lib/api";
+import type { ChangeEvent } from "@shared/types";
+import { countActive } from "./db/generations";
+import { getDb } from "./db/index";
+import { errorMessage, log } from "./log";
 
 export type EventStatus = "connecting" | "open" | "closed";
-type EventListener = (event: ServerEvent) => void;
+type EventListener = (event: ChangeEvent) => void;
 type StatusListener = (status: EventStatus) => void;
 
-export const ACTIVE_INTERVAL_MS = 2_500;
-export const IDLE_INTERVAL_MS = 20_000;
-export const HIDDEN_INTERVAL_MS = 60_000;
-const MIN_BACKOFF_MS = 1_000;
-const MAX_BACKOFF_MS = 30_000;
+export const CHANNEL_NAME = "higgsfree:events";
 
 const listeners = new Set<EventListener>();
 const statusListeners = new Set<StatusListener>();
 
 let status: EventStatus = "closed";
-let wanted = false;
-let inFlight = false;
-let cursor: string | undefined;
-let attempt = 0;
-let timer: ReturnType<typeof setTimeout> | null = null;
-/** Active jobs as counted by the server on the last poll. */
-let pendingJobs = 0;
-/** Stay fast until then, set when a page just submitted something the server may not count yet. */
-let busyUntil = 0;
+let connecting = false;
+let channel: BroadcastChannel | undefined;
 
-function setStatus(next: EventStatus) {
+function setStatus(next: EventStatus): void {
   if (status === next) return;
   status = next;
   for (const fn of statusListeners) fn(next);
 }
 
-function dispatch(event: ServerEvent) {
+function dispatch(event: ChangeEvent): void {
   for (const fn of listeners) {
     try {
       fn(event);
@@ -51,51 +38,53 @@ function dispatch(event: ServerEvent) {
   }
 }
 
-function clearTimer() {
-  if (timer) clearTimeout(timer);
-  timer = null;
+function isChangeEvent(v: unknown): v is ChangeEvent {
+  return typeof v === "object" && v !== null && typeof (v as { type?: unknown }).type === "string";
 }
 
-function nextDelay(): number {
-  if (status === "closed") return Math.min(MAX_BACKOFF_MS, MIN_BACKOFF_MS * 2 ** attempt) + Math.random() * 400;
-  if (typeof document !== "undefined" && document.visibilityState === "hidden") return HIDDEN_INTERVAL_MS;
-  return pendingJobs > 0 || Date.now() < busyUntil ? ACTIVE_INTERVAL_MS : IDLE_INTERVAL_MS;
-}
-
-function schedule(ms = nextDelay()) {
-  if (!wanted) return;
-  clearTimer();
-  timer = setTimeout(() => {
-    timer = null;
-    void poll();
-  }, ms);
-}
-
-async function poll(): Promise<void> {
-  if (!wanted || inFlight) return;
-  inFlight = true;
-  try {
-    const res = await api.getEvents(cursor);
-    cursor = res.cursor;
-    pendingJobs = res.pendingJobs;
-    attempt = 0;
-    setStatus("open");
-    for (const ev of res.events) dispatch(ev);
-  } catch {
-    attempt = Math.min(attempt + 1, 6);
-    setStatus("closed");
-  } finally {
-    inFlight = false;
-    schedule();
-  }
-}
-
-/** Start (idempotent). */
+/** Open the library and join the channel (idempotent). `closed` means IndexedDB is unavailable. */
 export function connectEvents(): void {
-  wanted = true;
-  if (inFlight || timer) return;
+  if (status === "open" || connecting) return;
+  connecting = true;
   setStatus("connecting");
-  void poll();
+  void (async () => {
+    try {
+      await getDb();
+    } catch (err) {
+      connecting = false;
+      setStatus("closed");
+      log.warn(`library unavailable: ${errorMessage(err)}`);
+      return;
+    }
+    if (!channel && typeof BroadcastChannel !== "undefined") {
+      channel = new BroadcastChannel(CHANNEL_NAME);
+      channel.onmessage = (e: MessageEvent<unknown>) => {
+        if (isChangeEvent(e.data)) dispatch(e.data); // from another tab: dispatch, never re-broadcast
+      };
+    }
+    connecting = false;
+    setStatus("open");
+    const pendingJobs = await countActive().catch(() => 0);
+    dispatch({ type: "hello", pendingJobs });
+  })();
+}
+
+/** Tests: leave the channel and forget the status. */
+export function disconnectEvents(): void {
+  channel?.close();
+  channel = undefined;
+  connecting = false;
+  setStatus("closed");
+}
+
+/** Tell this tab and every other one about a write. */
+export function publish(event: ChangeEvent): void {
+  dispatch(event);
+  try {
+    channel?.postMessage(event);
+  } catch (err) {
+    log.warn(`broadcast failed: ${errorMessage(err)}`);
+  }
 }
 
 export function subscribeEvents(fn: EventListener): () => void {
@@ -105,26 +94,11 @@ export function subscribeEvents(fn: EventListener): () => void {
   };
 }
 
-/** Subscribe to connection status; fires immediately with the current value. */
+/** Subscribe to the feed status; fires immediately with the current value. */
 export function subscribeEventStatus(fn: StatusListener): () => void {
   statusListeners.add(fn);
   fn(status);
   return () => {
     statusListeners.delete(fn);
   };
-}
-
-/** Something was just submitted: poll now and keep polling fast for a while. */
-export function nudgeEvents(busyMs = 15_000): void {
-  busyUntil = Math.max(busyUntil, Date.now() + busyMs);
-  if (wanted && !inFlight) schedule(0);
-}
-
-if (typeof document !== "undefined") {
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && wanted && !inFlight) {
-      attempt = 0;
-      schedule(0);
-    }
-  });
 }

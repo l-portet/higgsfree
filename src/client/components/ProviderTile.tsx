@@ -24,7 +24,7 @@ export function ProviderTile({ provider, size = 36, tooltip = false, className }
       className={cn(
         "inline-flex shrink-0 select-none items-center justify-center border border-border bg-surface-3 font-semibold",
         logo ? "text-fg" : "text-fg-muted",
-        size >= 32 ? "rounded-[9px]" : "rounded-[5px]",
+        size >= 32 ? "rounded-control" : "rounded-field",
         className,
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}

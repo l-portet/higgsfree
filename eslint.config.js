@@ -5,7 +5,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: [".next/**", "dist/**", "node_modules/**", "data/**", "next-env.d.ts"] },
+  { ignores: [".next/**", "out/**", "dist/**", "node_modules/**", "next-env.d.ts"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -35,7 +35,7 @@ export default tseslint.config(
     rules: {
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
-      // Generated media are dynamic, uncached URLs (Blob store or the media route): next/image buys nothing here.
+      // Generated media are blob: object urls from IndexedDB: next/image buys nothing here.
       "@next/next/no-img-element": "off",
     },
   },

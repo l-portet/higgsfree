@@ -2,32 +2,51 @@
 
 /* ---------- Design tokens (docs/DESIGN.md) ---------- */
 @theme {
-  --color-bg: #0a0a0a;
-  /* Each layer steps up 8 to 10 RGB points (10 > 20 > 28 > 37) so chips read as raised on the bar and rows on popovers. */
-  --color-surface: #141417;
-  --color-surface-2: #1c1c20;
-  --color-surface-3: #25252b;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
-  --color-fg: #f5f5f5;
-  --color-fg-muted: #a1a1aa;
-  /* Tertiary text: 6.0:1 on surface, 5.0:1 on surface-3 (AA). */
-  --color-fg-subtle: #93939c;
-  /* Purely decorative (icons, dividers, chevrons), never for text. */
-  --color-fg-faint: #6b6b73;
-  --color-accent: #d4f53c;
-  --color-accent-hover: #c6e832;
-  --color-on-accent: #0a0a0a;
+  --color-bg: #0a0a0b;
+  /* Chrome (nav pills, composer, dialogs) and what sits on it; each layer steps up ~8 RGB points (27 > 35 > 44). */
+  --color-surface: #1b1d1f;
+  --color-surface-2: #232629;
+  --color-surface-3: #2c3033;
+  /* Quiet cards straight on the page background (example prompts): barely lifted. */
+  --color-panel: #101012;
+  /* Fields inside chrome sit below it. */
+  --color-inset: #151719;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.11);
+  --color-fg: #edefef;
+  --color-fg-muted: #a9aeaf;
+  /* Tertiary text (placeholders, sublines, inactive nav icons): 6.4:1 on bg, 4.6:1 on surface-2 (AA); use fg-muted on surface-3. */
+  --color-fg-subtle: #888e90;
+  /* Not-ready controls and the "no key" dot. */
+  --color-fg-disabled: #7e8486;
+  /* Purely decorative (option-chip icons, dividers, chevrons), never for text. */
+  --color-fg-faint: #676c6e;
+  --color-accent: #defd5d;
+  --color-accent-hover: #d2f24c;
+  --color-on-accent: #141a05;
   --color-danger: #f87171;
   --color-success: #4ade80;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* Corner radii, measured from the design mockups. Use these names, never raw values: nested surfaces
+     stay concentric (inner radius = outer radius − inset), e.g. top bar 15 − 5 px padding = tab 10. */
+  --radius-badge: 4px; /* NEW / PRO model badges */
+  --radius-field: 5px; /* text inputs, icon buttons inside dialogs, code chips, small provider tiles */
+  --radius-tag: 6px; /* shortcut badges, overlay badges, stepper buttons (10 − 4) */
+  --radius-thumb: 7px; /* thumbnails inside cards and the composer */
+  --radius-button: 8px; /* text buttons, tooltips, skeletons */
+  --radius-control: 10px; /* chips, steppers, Generate, the + button, nav tabs, menu rows, notices */
+  --radius-card: 13px; /* cards on the page: example prompts, generation cards */
+  --radius-popover: 14px; /* popovers and menus (rows inside: control, 4 px inset) */
+  --radius-chrome: 15px; /* top bar boxes (tabs inside: control, 5 px inset; logo tile: 7, 8 px inset) */
+  --radius-panel: 18px; /* dialogs, settings sections */
+  --radius-dock: 24px; /* the composer and the selection bar */
 
   --shadow-popover: 0 16px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
   --shadow-bar: 0 12px 48px -12px rgba(0, 0, 0, 0.8);
+  /* Floating chrome (top bar boxes, composer): a hairline of top light inside, a soft drop outside. */
+  --shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 0 0 1px rgba(0, 0, 0, 0.25), 0 6px 18px -6px rgba(0, 0, 0, 0.65);
+  /* The raised (active) tab inside the top bar. */
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.3);
 
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 
@@ -111,10 +130,10 @@
   :focus {
     outline: none;
   }
+  /* The outline follows each element's own radius; never set a radius here. */
   :focus-visible {
     outline: 2px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
     outline-offset: 2px;
-    border-radius: 6px;
   }
   /* Scrollbars */
   * {
@@ -168,7 +187,7 @@
   line-height: 0.95;
 }
 
-/* Page titles (h1). */
+/* Page titles and dialog titles (h1). */
 @utility text-title {
   font-size: 20px;
   font-weight: 600;

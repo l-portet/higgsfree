@@ -17,7 +17,7 @@ export interface SettingsCardProps {
 export function SettingsCard({ icon, title, badge, description, actions, children, className }: SettingsCardProps) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className={cn("rounded-xl border border-border bg-surface p-5", className)}>
+    <section aria-labelledby={id} className={cn("rounded-panel border border-border bg-surface p-5", className)}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export function Row({ label, children, mono, className }: { label: ReactNode; ch
 export function Code({ className, ...props }: ComponentProps<"code">) {
   return (
     <code
-      className={cn("rounded-[5px] bg-surface-3 px-1 py-0.5 font-mono text-[11px] text-fg-muted", className)}
+      className={cn("rounded-field bg-surface-3 px-1 py-0.5 font-mono text-[11px] text-fg-muted", className)}
       {...props}
     />
   );

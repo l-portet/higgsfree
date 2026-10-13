@@ -8,33 +8,44 @@ export interface ChipProps extends ComponentProps<"button"> {
   label: ReactNode;
   chevron?: boolean;
   active?: boolean;
+  /** `accent`: the active state is a lime tint (toggles like Sound); `neutral`: a raised surface (filters, open pickers). */
+  tone?: "neutral" | "accent";
+  /** Full-strength label and icon, for the one chip that names the thing (the model). Option chips are muted with a dim icon. */
+  strong?: boolean;
   size?: "sm" | "md";
 }
 
-/** Prompt-bar control pill: icon + label + optional chevron. Works as a Radix `asChild` trigger. */
-export function Chip({ icon, label, chevron = false, active, size = "md", className, type = "button", ...props }: ChipProps) {
+/** Composer control: icon + label + optional chevron, control radius. Works as a Radix `asChild` trigger. */
+export function Chip({ icon, label, chevron = false, active, tone = "neutral", strong = false, size = "md", className, type = "button", ...props }: ChipProps) {
+  const lit = tone === "accent" && active;
   return (
     <button
       type={type}
       data-active={active || undefined}
+      data-tone={tone}
       className={cn(
-        "inline-flex max-w-full select-none items-center gap-1.5 rounded-full border border-border bg-surface-2 text-fg",
-        "font-medium transition-[background-color,border-color,color,opacity] duration-150 ease-out",
-        "hover:border-border-strong hover:bg-surface-3",
-        "data-[active=true]:border-border-strong data-[active=true]:bg-surface-3",
-        "data-[state=open]:border-border-strong data-[state=open]:bg-surface-3",
+        "group/chip inline-flex max-w-full select-none items-center gap-2 border border-border-strong bg-surface-2 font-medium tracking-[-0.01em]",
+        "transition-[background-color,border-color,color,opacity] duration-150 ease-out",
+        "hover:bg-surface-3 hover:text-fg data-[state=open]:bg-surface-3 data-[state=open]:text-fg",
         "disabled:opacity-50 disabled:pointer-events-none",
-        size === "md" ? "h-9 px-3 text-[13px]" : "h-7 px-2 text-[12px]",
+        strong ? "text-fg" : "text-fg-muted",
+        tone === "neutral" && "data-[active=true]:bg-surface-3 data-[active=true]:text-fg",
+        tone === "accent" && "data-[active=true]:border-accent/40 data-[active=true]:bg-accent/15 data-[active=true]:text-accent data-[active=true]:hover:bg-accent/20",
+        size === "md" ? "h-9 rounded-control px-3 text-[13px]" : "h-7 rounded-button px-2 text-[12px]",
         className,
       )}
       {...props}
     >
-      {icon ? <span className="inline-flex shrink-0 items-center text-fg-muted [&_svg]:size-4">{icon}</span> : null}
+      {icon ? (
+        <span className={cn("inline-flex shrink-0 items-center [&_svg]:size-4", lit ? "text-accent" : strong ? "text-fg" : "text-fg-faint group-hover/chip:text-fg-muted")}>
+          {icon}
+        </span>
+      ) : null}
       <span className="truncate">{label}</span>
       {chevron ? (
         <ChevronDown
           size={14}
-          className="-mr-0.5 shrink-0 text-fg-faint transition-transform duration-150 [[data-state=open]_&]:rotate-180"
+          className="-mr-0.5 shrink-0 text-fg-subtle transition-transform duration-150 [[data-state=open]_&]:rotate-180"
           aria-hidden="true"
         />
       ) : null}
@@ -48,8 +59,8 @@ export function StaticChip({ icon, label, title, size = "md", className }: { ico
     <Tooltip content={title}>
       <span
         className={cn(
-          "inline-flex max-w-full select-none items-center gap-1.5 rounded-full border border-border bg-surface-2/60 font-medium text-fg-muted",
-          size === "md" ? "h-9 px-3 text-[13px]" : "h-7 px-2 text-[12px]",
+          "inline-flex max-w-full select-none items-center gap-2 border border-border bg-surface-2/60 font-medium tracking-[-0.01em] text-fg-subtle",
+          size === "md" ? "h-9 rounded-control px-3 text-[13px]" : "h-7 rounded-button px-2 text-[12px]",
           className,
         )}
       >

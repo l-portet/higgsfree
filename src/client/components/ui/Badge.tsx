@@ -24,7 +24,7 @@ export function Badge({ variant = "neutral", className, children, ...props }: Ba
   return (
     <span
       className={cn(
-        "inline-flex h-4 shrink-0 items-center rounded-[4px] px-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.04em]",
+        "inline-flex h-4 shrink-0 items-center rounded-badge px-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.04em]",
         VARIANT[variant],
         className,
       )}
@@ -40,7 +40,7 @@ export function OverlayBadge({ className, ...props }: ComponentProps<"span">) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center rounded-[6px] bg-black/55 px-1.5 text-[11px] font-medium leading-none text-white/90 backdrop-blur-sm",
+        "inline-flex h-5 items-center rounded-tag bg-black/55 px-1.5 text-[11px] font-medium leading-none text-white/90 backdrop-blur-sm",
         className,
       )}
       {...props}

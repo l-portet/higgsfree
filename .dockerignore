@@ -1,10 +1,7 @@
 node_modules
 .next
+out
 .vercel
-data
-*.sqlite
-*.sqlite-wal
-*.sqlite-shm
 .env
 .env.*
 !.env.example

@@ -56,7 +56,7 @@ export function Textarea({
       className={cn(
         "block w-full resize-none bg-transparent text-fg placeholder:text-fg-subtle outline-none",
         !unstyled &&
-          "rounded-sm border border-border bg-surface-2 px-3 py-2 text-[13px] leading-5 transition-colors duration-150 " +
+          "rounded-field border border-border bg-inset px-3 py-2 text-[13px] leading-5 transition-colors duration-150 " +
             "hover:border-border-strong focus:border-border-strong focus:ring-2 focus:ring-accent/40",
         className,
       )}

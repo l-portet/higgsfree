@@ -3,17 +3,19 @@ import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 import { CircleAlert, Clapperboard, Image as ImageIcon, LayoutGrid, SearchX, SquareCheck } from "lucide-react";
 import type { Generation } from "@shared/types";
-import { downloadFilename, downloadHref } from "@/lib/files";
+import { downloadFilename } from "@/lib/files";
 import { formatBytes, pluralize } from "@/lib/format";
 import { cardAspectRatio, skeletonItems, type MasonryItem } from "@/lib/masonry";
+import { downloadMedia } from "@/lib/media-urls";
 import { readJson, writeJson } from "@/lib/storage";
 import { describeApiError } from "@/lib/api";
+import { useComposer } from "@/store/composer";
 import { listKey, useGenerations, useListState, type PageState } from "@/store/generations";
-import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
-import { Page, PageHeader } from "@/components/layout/Page";
+import { Page } from "@/components/layout/Page";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/Dialog";
+import { EmptyFeed } from "@/components/EmptyFeed";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GenerationCard, GenerationCardSkeleton } from "@/components/GenerationCard";
 import { MasonryGrid } from "@/components/MasonryGrid";
@@ -58,7 +60,7 @@ function useAssetList(type: TypeFilter, status: StatusFilter): Generation[] {
   );
 }
 
-/** Merged paging state for the (1–2) API queries behind the current filter. */
+/** Merged paging state for the (1–2) list queries behind the current filter. */
 function useMergedPage(type: TypeFilter, status: StatusFilter): PageState {
   const queries = useMemo(() => queriesFor(type, status), [type, status]);
   const pages = useGenerations(useShallow((s) => queries.map((q) => s.pages[listKey(q)] ?? EMPTY_PAGE)));
@@ -78,21 +80,19 @@ function isEditable(target: EventTarget | null): boolean {
   return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable;
 }
 
-function triggerDownload(g: Generation): boolean {
+async function triggerDownload(g: Generation): Promise<boolean> {
   const out = g.output;
   if (!out) return false;
-  const a = document.createElement("a");
-  a.href = downloadHref(out.url);
-  a.download = downloadFilename(g.id, out.mime, out.url);
-  a.rel = "noopener";
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  await downloadMedia(out.id, downloadFilename(g.id, out.mime));
   return true;
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** True when there is nothing at all (no filter narrowing an existing library down to zero). */
+function showEmptyAll(status: StatusFilter, type: TypeFilter, hasItems: boolean, page: PageState): boolean {
+  return status === "any" && type === "all" && !hasItems && page.loaded;
+}
 
 export default function AssetsPage() {
   const persisted = useMemo(() => readJson<Persisted>(STORAGE_KEY, {}), []);
@@ -104,26 +104,21 @@ export default function AssetsPage() {
   const items = useAssetList(type, status);
   const page = useMergedPage(type, status);
   const fetchPage = useGenerations((s) => s.fetchPage);
-  const server = useSettings((s) => s.server);
-  const queryKey = `${type}:${status}`;
 
   useEffect(() => {
     writeJson(STORAGE_KEY, { type } satisfies Persisted);
   }, [type]);
 
-  // Fetch (or refresh) the first page of every query behind the current filter.
+  // Fetch the first page of every query behind the current filter that has nothing yet (on mount, when the
+  // filter changes, and again after the store's `reset`). A failed query waits for "Try again".
   useEffect(() => {
-    for (const q of queriesFor(type, status)) void fetchPage(q);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryKey, fetchPage]);
-
-  // First load failed while the server was down → fetch once it's back.
-  useEffect(() => {
-    if (server === "online" && !page.loaded && !page.loading) {
-      for (const q of queriesFor(type, status)) void fetchPage(q);
+    if (page.loaded || page.loading || page.error) return;
+    const { pages } = useGenerations.getState();
+    for (const q of queriesFor(type, status)) {
+      const p = pages[listKey(q)];
+      if (!p?.loaded && !p?.loading && !p?.error) void fetchPage(q);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [server, page.loaded, page.loading, queryKey, fetchPage]);
+  }, [type, status, page.loaded, page.loading, page.error, fetchPage]);
 
   const loadMore = () => {
     for (const q of queriesFor(type, status)) void fetchPage({ ...q, more: true });
@@ -171,6 +166,13 @@ export default function AssetsPage() {
     setSelected(new Set());
     lastToggled.current = null;
   }, []);
+
+  // The selection bar takes the composer's spot at the bottom edge.
+  const setComposerHidden = useComposer((s) => s.setHidden);
+  useEffect(() => {
+    setComposerHidden(selecting);
+    return () => setComposerHidden(false);
+  }, [selecting, setComposerHidden]);
 
   // Keep the selection a subset of what's on screen.
   useEffect(() => {
@@ -239,7 +241,7 @@ export default function AssetsPage() {
     try {
       let n = 0;
       for (const g of downloadable) {
-        if (triggerDownload(g)) n++;
+        if (await triggerDownload(g)) n++;
         if (n < downloadable.length) await sleep(DOWNLOAD_GAP_MS);
       }
       toast.success(`Downloading ${pluralize(n, "file")}`, {
@@ -359,55 +361,42 @@ export default function AssetsPage() {
         />
       );
     }
-    return (
-      <EmptyState
-        icon={<LayoutGrid />}
-        title="Your library is empty"
-        description="Everything you generate is stored on this machine and shows up here."
-        action={
-          <div className="flex flex-wrap justify-center gap-2">
-            <LinkButton href="/image" variant="primary" leftIcon={<ImageIcon />}>
-              Create image
-            </LinkButton>
-            <LinkButton href="/video" variant="secondary" leftIcon={<Clapperboard />}>
-              Create video
-            </LinkButton>
-          </div>
-        }
-        className="flex-1"
-      />
-    );
+    return <EmptyFeed title="Nothing generated yet" description="Image and video runs both land in this grid, with their prompt, options and cost." />;
   })();
 
-  return (
-    <Page className={selecting ? "flex flex-1 flex-col pb-32 sm:pb-28" : "flex flex-1 flex-col pb-16"}>
-      <PageHeader
-        title="Assets"
-        description={<span className="tabular-nums">{countLabel}</span>}
-        className="mb-4"
-        actions={
-          <Button
-            variant={selecting ? "primary" : "secondary"}
-            leftIcon={<SquareCheck />}
-            aria-pressed={selecting}
-            onClick={() => (selecting ? exitSelection() : setSelecting(true))}
-            disabled={!hasItems && !selecting}
-          >
-            {selecting ? "Done" : "Select"}
-          </Button>
-        }
-      />
+  // The whole library is empty: just the empty state, no toolbar to filter nothing with.
+  const bare = showEmptyAll(status, type, hasItems, page);
 
-      <AssetsToolbar
-        type={type}
-        onTypeChange={setType}
-        status={status}
-        onStatusChange={setStatus}
-        query={query}
-        onQueryChange={setQuery}
-        searchRef={searchRef}
-        className="mb-5"
-      />
+  return (
+    <Page className={selecting ? "flex flex-1 flex-col pb-32 sm:pb-28" : "flex flex-1 flex-col"}>
+      {!bare ? (
+        <>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-meta tabular-nums">{countLabel}</p>
+            <Button
+              size="sm"
+              variant={selecting ? "primary" : "secondary"}
+              leftIcon={<SquareCheck />}
+              aria-pressed={selecting}
+              onClick={() => (selecting ? exitSelection() : setSelecting(true))}
+              disabled={!hasItems && !selecting}
+            >
+              {selecting ? "Done" : "Select"}
+            </Button>
+          </div>
+
+          <AssetsToolbar
+            type={type}
+            onTypeChange={setType}
+            status={status}
+            onStatusChange={setStatus}
+            query={query}
+            onQueryChange={setQuery}
+            searchRef={searchRef}
+            className="mb-5"
+          />
+        </>
+      ) : null}
 
       {initialLoading ? <MasonryGrid items={SKELETON_ITEMS} aria-busy="true" aria-label="Loading assets" /> : null}
 
@@ -425,7 +414,7 @@ export default function AssetsPage() {
         />
       ) : null}
 
-      {showEmpty ? <div className="flex flex-1 items-center justify-center">{emptyState}</div> : null}
+      {showEmpty ? <div className="flex flex-1 items-center justify-center py-8">{emptyState}</div> : null}
 
       {noMatches ? (
         <EmptyState
@@ -473,7 +462,7 @@ export default function AssetsPage() {
         open={confirmDelete}
         onOpenChange={(o) => !deleting && setConfirmDelete(o)}
         title={`Delete ${pluralize(selectedItems.length, "item")}?`}
-        description="Removes the records and their files. This can't be undone."
+        description="Removes the records and their files from this browser. This can't be undone."
         confirmLabel={`Delete ${selectedItems.length}`}
         danger
         loading={deleting}

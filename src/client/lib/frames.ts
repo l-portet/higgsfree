@@ -1,75 +1,48 @@
 /**
- * Image-input upload state shared by the prompt bar (reference images) and the
- * video panel (frames / style references): preview immediately from a data URL,
- * upload in the background, fall back to the data URL when the upload can't finish.
+ * Image inputs attached in the composers (reference images, first / last frames). A frame is a
+ * media id in the local library: storing a file is one IndexedDB write, so there is no preview
+ * data URL and no upload-in-flight state. Thumbnails resolve the id with `useMediaUrl`.
  */
 import { toast } from "sonner";
 import * as api from "@/lib/api";
-import { ApiClientError, describeApiError } from "@/lib/api";
-import { fileToDataUrl, readImageDimensions, validateImageFile } from "@/lib/files";
+import { describeApiError } from "@/lib/api";
+import { validateImageFile } from "@/lib/files";
 import { uid } from "@/lib/uid";
 
 export interface Frame {
   id: string;
   name: string;
-  /** Preview source: a data URL while uploading, the `/media/...` url once stored. */
-  src: string;
-  /** Uploaded `/media/...` url once the upload finished. */
-  url?: string;
+  /** Media id in the library (`up_xyz.jpg`, `gen_abc.png`). */
+  mediaId: string;
   width?: number;
   height?: number;
-  uploading: boolean;
 }
 
-/** Wrap an already-stored `/media/...` url (Animate hand-off, Reuse prompt). */
-export function frameFromUrl(url: string): Frame {
-  return { id: uid(), name: url.split("/").pop() ?? "image", src: url, url, uploading: false };
+/** Wrap an already-stored media id (Animate hand-off, Reuse prompt). */
+export function frameFromMedia(mediaId: string, name = "image"): Frame {
+  return { id: uid(), name, mediaId };
 }
 
-/** Value sent to the API: the uploaded url, or the data URL when the upload didn't finish. */
+/** Value sent with a generate request. */
 export function frameInput(f: Frame): string {
-  return f.url ?? f.src;
+  return f.mediaId;
 }
 
 /**
- * Validate + read a file into a preview-ready `Frame` (`uploading: true`), then upload it in the
- * background. `onSettled` receives the same frame (same id) once the upload finished or failed;
- * on success its `src` is swapped to the `/media` url so the (up to 25 MB) data URL can be freed.
- * Resolves `null` when the file was rejected (a toast explains why).
+ * Validate and store the file in the library. Resolves `null` (after a toast) when the file was
+ * rejected or could not be stored (unsupported type, over the limit, storage full).
  */
-export async function loadFrame(file: File, onSettled: (frame: Frame) => void): Promise<Frame | null> {
+export async function loadFrame(file: File): Promise<Frame | null> {
   const problem = validateImageFile(file);
   if (problem) {
     toast.error(problem);
     return null;
   }
-  let src: string;
   try {
-    src = await fileToDataUrl(file);
-  } catch {
-    toast.error(`Couldn't read ${file.name}`);
+    const res = await api.upload(file);
+    return { id: uid(), name: file.name, mediaId: res.media.id, width: res.media.width, height: res.media.height };
+  } catch (err) {
+    toast.error("Couldn't store the image", { description: describeApiError(err) });
     return null;
   }
-  const dims = await readImageDimensions(src).catch(() => undefined);
-  const frame: Frame = { id: uid(), name: file.name, src, width: dims?.width, height: dims?.height, uploading: true };
-
-  api
-    .upload(file)
-    .then((res) => {
-      onSettled({
-        ...frame,
-        src: res.media.url,
-        url: res.media.url,
-        width: res.media.width ?? frame.width,
-        height: res.media.height ?? frame.height,
-        uploading: false,
-      });
-    })
-    .catch((err: unknown) => {
-      // The generate endpoint accepts data URLs too: keep the image, just skip the upload.
-      onSettled({ ...frame, uploading: false });
-      if (!(err instanceof ApiClientError && err.offline)) toast.error(describeApiError(err));
-    });
-
-  return frame;
 }

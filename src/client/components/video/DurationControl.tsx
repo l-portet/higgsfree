@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
-import { Check, Timer } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import type { VideoModel } from "@shared/types";
 import { allowedDurations } from "@shared/models";
 import { cn } from "@/lib/cn";
@@ -15,8 +15,10 @@ export interface DurationControlProps {
   onChange: (duration: number) => void;
   /** Cost estimate for a given duration at the current resolution. */
   estimateFor: (duration: number) => number | undefined;
-  /** Chevron on the trigger chip (default true; off in the fixed three-cell row). */
+  /** Chevron on the trigger chip (default true). */
   chevron?: boolean;
+  /** Where the popover opens (default `top`: the control lives in the bottom dock). */
+  side?: "top" | "bottom";
   className?: string;
 }
 
@@ -32,7 +34,7 @@ function presets(list: number[]): number[] {
 }
 
 /** `[⏱ 5s ˅]` chip → popover. Explicit options render as a list; ranges get a stepper + slider. */
-export function DurationControl({ model, value, onChange, estimateFor, chevron = true, className }: DurationControlProps) {
+export function DurationControl({ model, value, onChange, estimateFor, chevron = true, side = "top", className }: DurationControlProps) {
   const [open, setOpen] = useState(false);
   const list = allowedDurations(model);
   const isRange = !("options" in model.durations);
@@ -45,14 +47,14 @@ export function DurationControl({ model, value, onChange, estimateFor, chevron =
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Chip
-          icon={<Timer size={15} />}
+          icon={<Clock size={15} />}
           label={formatSeconds(value)}
           chevron={chevron}
           aria-label={`Duration: ${formatSeconds(value)}`}
           className={cn("tabular-nums", className)}
         />
       </PopoverTrigger>
-      <PopoverContent side="bottom" align="start" className={cn(isRange ? "w-[264px]" : "w-[220px]")}>
+      <PopoverContent side={side} align="start" className={cn(isRange ? "w-[264px]" : "w-[220px]")}>
         {isRange ? (
           <div className="flex flex-col gap-3 p-2">
             <div className="flex items-center justify-between">
@@ -102,7 +104,7 @@ export function DurationControl({ model, value, onChange, estimateFor, chevron =
                   onClick={() => onChange(d)}
                   aria-pressed={d === value}
                   className={cn(
-                    "h-6 rounded-full border px-2 text-[11px] font-medium tabular-nums transition-colors duration-150",
+                    "h-6 rounded-tag border px-2 text-[11px] font-medium tabular-nums transition-colors duration-150",
                     d === value
                       ? "border-accent/60 bg-accent/10 text-fg"
                       : "border-border bg-surface-3 text-fg-muted hover:border-border-strong hover:text-fg",

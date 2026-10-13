@@ -1,0 +1,55 @@
+/** Request validation against the catalog entry, plus the plain limits the old zod schemas enforced. */
+import type { ImageGenerateRequest, ImageModel, VideoGenerateRequest, VideoModel } from "@shared/types";
+import { badRequest, UnsupportedOptionError } from "./errors";
+import { isMediaId } from "./media-ids";
+
+export const MAX_PROMPT_CHARS = 8000;
+export const MAX_IMAGE_COUNT = 4;
+export const MAX_REFERENCE_IMAGES = 8;
+
+function assertMediaIds(ids: readonly (string | undefined)[], label: string): void {
+  for (const id of ids) if (id !== undefined && !isMediaId(id)) throw badRequest(`${label} must be a stored image`);
+}
+
+export function validateImageRequest(model: ImageModel, req: ImageGenerateRequest): void {
+  if (!req.prompt.trim()) throw badRequest("Prompt is required");
+  if (req.prompt.length > MAX_PROMPT_CHARS) throw badRequest(`Prompt is longer than ${MAX_PROMPT_CHARS} characters`);
+  if (!Number.isInteger(req.count) || req.count < 1 || req.count > MAX_IMAGE_COUNT) throw badRequest(`count must be between 1 and ${MAX_IMAGE_COUNT}`);
+  // `auto` means "don't send an aspect ratio" and is valid for every model.
+  if (req.aspectRatio !== "auto" && !model.aspectRatios.includes(req.aspectRatio)) {
+    throw new UnsupportedOptionError(model.name, "aspect ratio", req.aspectRatio, model.aspectRatios);
+  }
+  if (!model.sizes.includes(req.size)) throw new UnsupportedOptionError(model.name, "size", req.size, model.sizes);
+  const refs = req.referenceImages ?? [];
+  if (refs.length > MAX_REFERENCE_IMAGES) throw badRequest(`At most ${MAX_REFERENCE_IMAGES} reference images`);
+  assertMediaIds(refs, "referenceImages");
+  if (refs.length > 0 && !model.caps.imageToImage) throw badRequest(`${model.name} does not accept reference images`);
+  if (refs.length === 0 && !model.caps.textToImage) throw badRequest(`${model.name} needs at least one reference image`);
+  if (refs.length > model.caps.maxReferenceImages) {
+    throw badRequest(`${model.name} accepts at most ${model.caps.maxReferenceImages} reference image(s)`);
+  }
+}
+
+export function validateVideoRequest(model: VideoModel, req: VideoGenerateRequest, prompt: string): void {
+  if (prompt.length > MAX_PROMPT_CHARS) throw badRequest(`Prompt is longer than ${MAX_PROMPT_CHARS} characters`);
+  if (!(req.duration > 0) || req.duration > 120) throw badRequest("duration must be between 1 and 120 seconds");
+  const refs = req.references ?? [];
+  if (refs.length > MAX_REFERENCE_IMAGES) throw badRequest(`At most ${MAX_REFERENCE_IMAGES} references`);
+  assertMediaIds([req.firstFrame, req.lastFrame, ...refs], "Frames and references");
+  const hasFrames = Boolean(req.firstFrame || req.lastFrame);
+  if (hasFrames && !model.caps.imageToVideo) throw badRequest(`${model.name} does not support image-to-video`);
+  if (!hasFrames && !model.caps.textToVideo) throw badRequest(`${model.name} is image-to-video only. Add a first frame.`);
+  if (req.lastFrame && !model.caps.lastFrame) throw badRequest(`${model.name} does not support a last-frame anchor`);
+  if (refs.length > 0 && model.caps.references === false) throw badRequest(`${model.name} does not accept style references`);
+  if (!hasFrames && !prompt) throw badRequest("Prompt is required for text-to-video");
+  // aspect_ratio is dropped on i2v for `omitAspectRatioOnI2v` models, so only validate it when it will be sent.
+  const aspectUsed = req.aspectRatio !== undefined && !(model.omitAspectRatioOnI2v && hasFrames);
+  if (aspectUsed && req.aspectRatio && !model.aspectRatios.includes(req.aspectRatio)) {
+    throw new UnsupportedOptionError(model.name, "aspect ratio", req.aspectRatio, model.aspectRatios);
+  }
+  if (req.resolution !== undefined && !model.resolutions.includes(req.resolution)) {
+    // Discovered models list no resolutions at all: the provider picks, so there is nothing to allow.
+    if (model.resolutions.length === 0) throw badRequest(`${model.name} does not accept a resolution. Leave it unset.`);
+    throw new UnsupportedOptionError(model.name, "resolution", req.resolution, model.resolutions);
+  }
+}

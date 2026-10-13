@@ -8,7 +8,7 @@ dist/
 .cache/
 .eslintcache
 
-# Runtime data (SQLite DB + generated media). Keep out of git.
+# Left over from the server version (SQLite database + media). Unused now; never commit it.
 data/
 *.sqlite
 *.sqlite-wal
@@ -20,8 +20,7 @@ data/
 !.env.example
 *.local
 
-# Temp files written during downloads/uploads
-*.part
+# Temp files
 *.tmp
 tmp/
 scratch/

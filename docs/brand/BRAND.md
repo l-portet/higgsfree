@@ -52,7 +52,8 @@ all-caps display headings (`text-display`), where it is set in caps with the res
 - Minimum tile size 16 px. Minimum lockup height 20 px (type 12.5 px); below that use the tile alone.
 - Clear space around the tile and the lockup: half a tile on every side. `lockup-dark.svg` has
   16 units of padding baked in because the panel itself is the boundary.
-- Nav: lockup at 24 px, wordmark hidden below the `sm` breakpoint (640 px), tile always visible.
+- Top bar: the tile alone at 30 px, centred in a 46 px box with 15 px corners, so the tile's 7 px corners stay
+  concentric at the 8 px inset. No wordmark in the app chrome.
 - README and social: `lockup-dark.svg` at 300 px wide; `og-image.png` 1200 x 630.
 
 ## Colour

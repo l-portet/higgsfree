@@ -17,9 +17,9 @@ const VARIANT: Record<IconButtonVariant, string> = {
 };
 
 const SIZE: Record<IconButtonSize, string> = {
-  sm: "size-7 rounded-[7px] [&_svg]:size-3.5",
-  md: "size-8 rounded-sm [&_svg]:size-4",
-  lg: "size-9 rounded-sm [&_svg]:size-[18px]",
+  sm: "size-7 rounded-button [&_svg]:size-3.5",
+  md: "size-8 rounded-button [&_svg]:size-4",
+  lg: "size-9 rounded-control [&_svg]:size-[18px]",
 };
 
 export function iconButtonClasses(

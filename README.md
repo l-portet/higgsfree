@@ -4,7 +4,7 @@
 
 <h1 align="center">higgsfree</h1>
 
-<p align="center">Open-source AI image and video studio. Runs on your own OpenRouter key. Next.js, one-click on Vercel, or self-hosted.</p>
+<p align="center">Open-source AI image and video studio. Runs on your own OpenRouter key, entirely in your browser. A Next.js static site: one click on Vercel, or any host that serves files.</p>
 
 <p align="center">
   <a href="https://github.com/l-portet/higgsfree/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/l-portet/higgsfree/actions/workflows/ci.yml/badge.svg"></a>
@@ -19,7 +19,8 @@
 - **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more. Reference images, batches of four, 1K to 4K.
 - **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, Sora 2 Pro, Hailuo 3, Wan 3.0 and more. First and last frame, style references, native audio.
 - **Assets**: every generation with its prompt, settings and real cost. Search, download, reuse, animate an image into a video.
-- **Your key, your storage**: one OpenRouter key for every provider, billed at provider price. Media and history live in storage you own: a folder on your machine, or your own Vercel Blob store and Turso database.
+- **Favorites**: press the heart on any run to keep it in one place.
+- **Your key, your browser**: one OpenRouter key for every provider, billed at provider price. The key stays in this browser's localStorage, the library (every generation and its file) in its IndexedDB, and you can export it all as a zip any time. No account, no server, nothing in between.
 
 ## Quick start (local)
 
@@ -32,116 +33,83 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000 and paste your key in **Settings**. Or put it in a `.env.local` file first:
+Open http://localhost:3000 and paste your key behind **Add key** (top right). That's it: there is no server to run, no database and no environment variable to set.
 
-```bash
-cp .env.example .env.local   # set OPENROUTER_API_KEY
-```
+## Deploy anywhere
 
-With no storage configured, everything (a SQLite database and the generated media) goes to `./data`. Nothing else to install.
+`pnpm build` writes a static site to `out/` (one HTML file per route plus the assets). Copy it to any static host:
 
-## Deploy to Vercel
+- **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new). Nothing to configure: Vercel runs the build and serves `out/`. The checked-in `vercel.json` only adds the `X-Content-Type-Options: nosniff` header.
+- **Netlify, Cloudflare Pages, GitHub Pages**: build command `pnpm build`, publish directory `out`.
+- **S3, nginx, any file server**: upload `out/`. Clean urls (`/image`) need the host to fall back to `image.html`; `docker/nginx.conf` shows the rule.
 
-The app is a Next.js project; the API lives in route handlers and runs on Node.js functions. Vercel's filesystem is read-only, so media go to a **Vercel Blob** store and records to a **Turso** (libSQL) database. Both come from the Vercel dashboard or CLI and inject their environment variables into the project:
-
-```bash
-vercel link                                      # or import the repo at vercel.com/new
-vercel blob create-store higgsfree-media         # a *public* store → BLOB_READ_WRITE_TOKEN
-vercel integration add tursocloud/database       # → TURSO_DATABASE_URL + TURSO_AUTH_TOKEN
-vercel env add OPENROUTER_API_KEY production     # optional; the Settings page works too
-vercel deploy --prod                             # or push to the connected Git repo
-```
-
-Then **turn on Deployment Protection** (Project → Settings → Deployment Protection → Vercel Authentication, free on every plan). The app has no login of its own, and anyone who can open it can spend your credits. See [Access control](#access-control).
-
-`vercel env pull .env.local` makes `pnpm dev` use the same Blob store and database as the deployment.
-
-Notes:
-
-- The blob store must be **public**: the browser loads generated images and videos straight from it.
-- Uploads go from the browser directly to Blob (Vercel functions cap request bodies at 4.5 MB; the 25 MB reference-image limit still applies).
-- Image generation finishes in the background of the request that started it, inside the function's `maxDuration` (300 s on Hobby, raise to 800 on Pro in `src/app/api/[[...route]]/route.ts`). Video jobs are polled whenever a tab is open: the browser asks for updates every few seconds and each of those requests moves running jobs along, so a clip is picked up as soon as you look at the app again.
-- Custom domains need no configuration: on Vercel the app trusts the hostname it was reached on.
+The host never sees your key or your library: the browser talks to OpenRouter directly and keeps everything else on your machine. [SECURITY.md](SECURITY.md) spells out what a hosted copy can and cannot see.
 
 ## Configuration
 
+All optional, all read by `next build` only and inlined into the static site (see `.env.example`).
+
 | Variable | Default | What it does |
 |---|---|---|
-| `OPENROUTER_API_KEY` | | Your key. Optional if you enter it in Settings. The env var wins when both exist. |
-| `BLOB_READ_WRITE_TOKEN` | | Vercel Blob token (public store). When set, media are stored there instead of `DATA_DIR`. Required on Vercel. |
-| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | | Turso / libSQL database. When unset, a SQLite file under `DATA_DIR` is used. Required on Vercel. |
-| `DATA_DIR` | `./data` | Local storage: the SQLite database and generated media. Keep it persistent. |
-| `ALLOWED_HOSTS` | | Extra hostnames allowed to open the app, comma-separated (LAN IP, Tailscale name). `*` disables the check. Not needed on Vercel. |
-| `MAX_ACTIVE_JOBS` | `8` | Maximum generations running at once. |
-| `APP_URL`, `APP_NAME` | | Sent to OpenRouter for attribution and used for social cards. The host of `APP_URL` is always an allowed hostname. On Vercel `APP_URL` defaults to the production domain. |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai` | Where OpenRouter calls go. Only for proxies and the integration tests. |
+| `APP_URL` | `http://localhost:3000` | Public url of the site, for social-card metadata. On Vercel it defaults to the production domain. |
+| `NEXT_PUBLIC_OPENROUTER_BASE_URL` | `https://openrouter.ai` | Where OpenRouter calls go. Proxies only; the key and the Content-Security-Policy follow it. |
+| `NEXT_PUBLIC_APP_NAME` | `higgsfree` | Sent to OpenRouter as `X-Title` for app attribution. |
 
-## Access control
+## Your data
 
-There is no login. Anyone who can reach the app can spend your credits, so put something in front of it:
+Everything lives in the browser profile you use the app in:
 
-- **On Vercel**: Deployment Protection. *Vercel Authentication* limits access to members of your Vercel team (free). *Password Protection* (Pro) or *Vercel Passport* (Enterprise) are the alternatives for people outside the team.
-- **Self-hosted**: keep it on `localhost`, a private network (LAN, Tailscale), or behind a reverse proxy that adds authentication. The Docker Compose file publishes the port on the host's loopback only.
+- **The key** is in localStorage (`higgsfree.apiKey`) and is only ever sent to openrouter.ai. **Remove key** in the key dialog or Settings deletes it.
+- **The library** (records, generated images and clips, reference images) is in IndexedDB (database `higgsfree`). Media are displayed through object urls; nothing is uploaded anywhere.
 
-The server also enforces the browser's same-origin rules (`Host`, `Origin` and `Content-Type` checks), so a random website cannot drive the API from a visitor's browser. Details in [SECURITY.md](SECURITY.md).
+What follows from that:
 
-### Behind a reverse proxy (self-hosted)
-
-The server checks the `Host` header it receives (never `X-Forwarded-*`), so the proxy has to pass the browser's `Host` through and that hostname has to be allowed:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name studio.example.com;
-    # ... your auth (auth_basic, oauth2-proxy, ...) and TLS here ...
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;            # keep the browser's Host header
-        proxy_http_version 1.1;
-    }
-}
-```
-
-```bash
-ALLOWED_HOSTS=studio.example.com   # or set APP_URL=https://studio.example.com
-```
-
-Caddy and Traefik forward `Host` unchanged by default.
+- Clearing site data, a private window or another browser profile means an empty library and no key. The same url in two browsers is two separate libraries.
+- Browsers may evict site data when disk space runs low. After the first completed generation the app asks the browser for persistent storage; **Protect** in Settings › Library asks again if it was declined. Safari clears site data after 7 days without a visit unless the app is added to the Home Screen or Dock.
+- Settings › Library shows usage against the browser's quota, counts and sizes, and has **Export library…** (a zip with every generation, its file and the reference images; streamed to a save dialog on Chromium, a plain download elsewhere), **Import…** (the same zip, into this or any other browser; records already present are skipped) and **Delete everything**. Export regularly.
+- When the quota is full, a generation that finished is marked failed with its cost (OpenRouter has already charged). Export, delete older runs and retry.
+- This is a clean break from the previous server-based version: a `data/` directory, a Blob store or a Turso database is not migrated.
 
 ## Models
 
-11 image models and 25 video models with their real limits (sizes, durations, resolutions, audio). Full list in [docs/MODELS.md](docs/MODELS.md). To add one, edit `src/shared/models.ts`.
+Curated: 11 image models and 26 video models with their real limits (sizes, durations, resolutions, audio). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
-New video models OpenRouter lists show up on their own within 10 minutes (the live model list is cached that long) as unverified entries with conservative limits and no price estimate; the real cost is recorded on the result.
+The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Models OpenRouter stops listing leave the picker.
 
 Cost estimates are shown before you generate; the actual cost reported by OpenRouter is saved with each result.
 
 ## How it works
 
-Next.js (App Router) with a React client and a [Hono](https://hono.dev) API mounted under `/api/*` as a route handler. Records live in libSQL (a SQLite file locally, Turso on Vercel); media in a folder locally or in Vercel Blob. No native build steps.
+Next.js (App Router) with `output: "export"`: `next build` writes plain HTML, CSS and JS, and there is no server code at all. The pages are thin shells; the React client does everything.
 
-Image requests go to OpenRouter's chat and image endpoints and keep running after the response (`waitUntil`). Video jobs are submitted to `/api/v1/videos`; the browser polls `GET /api/events` every few seconds for changes, and each poll also polls OpenRouter for running clips (one request at a time per job, with a lease in the database) and streams finished clips into storage without buffering them. Results reach every open tab through the same change feed.
+- **OpenRouter** is called straight from the browser with your key (`src/client/lib/openrouter.ts`, request bodies in `payloads.ts`). OpenRouter allows cross-origin requests on every endpoint the app uses. Provider errors are kept verbatim so the supported values show on the card. The rules are in [docs/OPENROUTER.md](docs/OPENROUTER.md).
+- **Storage** is IndexedDB: a `generations` store for the records and a `media` store for the Blobs (`gen_abc.png`, `gen_abc.mp4`, `up_xyz.jpg`), shown through object urls.
+- **Image jobs** are N parallel calls in the tab that submitted them. A call cannot be resumed: if that tab closes, the job is lost (OpenRouter still charges) and the next visit marks it failed as "Interrupted…" with a Retry button. The tab warns before unloading while images are in flight.
+- **Video jobs** are submitted to `/api/v1/videos`, then polled every 6 seconds by whichever open tab holds the job's Web Lock. The finished clip is downloaded with the key straight into IndexedDB. A steward in every tab adopts video jobs nobody is driving, so closing and reopening the app resumes polling. Jobs only advance while a tab is open; nothing runs when the site is closed.
+- At most 8 generations are active at once per browser.
+- **Tabs** stay in sync over a BroadcastChannel: every write to IndexedDB is published to the other open tabs.
+- **Export** is a zip (`manifest.json`, `generations.json`, `media/<id>`) written with zip.js; import reads the same format.
 
 ## Self-hosting with Docker
 
-The image runs the standalone Next.js server with local storage in a `/data` volume:
+The image is `nginx:alpine` serving `out/`. No volumes, no environment: the container holds nothing of yours.
 
 ```bash
-cp .env.example .env   # set OPENROUTER_API_KEY
-docker compose up -d   # http://localhost:3000, data in ./data
+docker compose up -d   # http://localhost:3000 (set PORT to change the host port)
 ```
 
 ## Development
 
 ```bash
-pnpm dev        # Next.js on :3000 (API included)
-pnpm test       # vitest
+pnpm dev        # Next.js dev server on :3000
+pnpm build      # static export to out/
+pnpm preview    # serve out/ locally
+pnpm test       # vitest in Node with fake-indexeddb; the engine runs against a mocked OpenRouter
 pnpm typecheck
 pnpm lint
-pnpm build      # production build (also emits .next/standalone for Docker)
 ```
 
-Docs: [API](docs/API.md), [design](docs/DESIGN.md), [models](docs/MODELS.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md).
+Docs: [OpenRouter integration](docs/OPENROUTER.md), [models](docs/MODELS.md), [design](docs/DESIGN.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md).
 
 ## Brand assets
 
