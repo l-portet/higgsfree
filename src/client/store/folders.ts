@@ -1,5 +1,5 @@
 /**
- * Favorites folders: the list (sorted by name), what each tile shows (count, cover), and the
+ * Favorites folders: the list (newest first), what each tile shows (count, cover), and the
  * destination the heart files into by default: the last one picked, remembered in localStorage.
  */
 import { create } from "zustand";
@@ -15,7 +15,7 @@ const SUMMARY_DEBOUNCE_MS = 200;
 
 interface FoldersState {
   byId: Record<string, Folder>;
-  /** Sorted by name. */
+  /** Newest first. */
   ids: string[];
   /** By folder id; refreshed whenever records change. */
   summaries: Record<string, FolderSummary>;
@@ -139,7 +139,7 @@ export const useFolders = create<FoldersState>()((set, get) => ({
 
 // ---------- Selectors / hooks ----------
 
-/** Every folder, sorted by name. */
+/** Every folder, newest first. */
 export function useFolderList(): Folder[] {
   return useFolders(
     useShallow((s) => {

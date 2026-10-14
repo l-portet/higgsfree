@@ -106,7 +106,7 @@ export interface FolderSummary {
 }
 
 export interface FoldersResponse {
-  /** Sorted by name. */
+  /** Newest first. */
   folders: Folder[];
   /** By folder id. */
   summaries: Record<string, FolderSummary>;

@@ -166,7 +166,7 @@ export async function retryGeneration(id: string): Promise<GenerateResponse> {
 
 // ---------- favorites folders ----------
 
-/** Every folder, sorted by name, with what its tile shows (count and the newest records for the cover). */
+/** Every folder, newest first, with what its tile shows (count and the newest records for the cover). */
 export async function listFolders(): Promise<FoldersResponse> {
   const folders = (await readFolders()).sort(compareFolders);
   const summaries: Record<string, FolderSummary> = {};

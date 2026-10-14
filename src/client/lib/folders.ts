@@ -23,7 +23,8 @@ export function normalizeFolderName(name: string): string {
 /** Names compare case-insensitively: "travel" is the same folder as "Travel". */
 export const folderNameKey = (name: string): string => normalizeFolderName(name).toLocaleLowerCase();
 
-/** Tiles sort by name, digits in numeric order ("Set 2" before "Set 10"); the id breaks ties. */
+/** Newest first (by creation: a rename does not move a folder); the id breaks ties. */
 export function compareFolders(a: Folder, b: Folder): number {
-  return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }) || (a.id < b.id ? -1 : 1);
+  if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+  return a.id < b.id ? 1 : -1;
 }

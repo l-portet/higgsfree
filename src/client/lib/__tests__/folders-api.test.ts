@@ -1,5 +1,5 @@
 /** The folder API: cleaned unique names, filing records through `updateGeneration`, delete, and the change feed. */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChangeEvent, Generation } from "@shared/types";
 import * as api from "@/lib/api";
 import { insertGenerations, toStored } from "@/lib/db/generations";
@@ -33,22 +33,34 @@ beforeEach(async () => {
 afterEach(() => unsubscribe());
 
 describe("folders", () => {
-  it("creates folders with cleaned, unique names and lists them sorted", async () => {
+  it("creates folders with cleaned, unique names and lists them newest first", async () => {
+    // A minute between folders, so the order never rests on two creations in the same millisecond.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T09:00:00Z"));
     const travel = await api.createFolder({ name: "  Travel   shots " });
     expect(travel.name).toBe("Travel shots");
     expect(travel.id).toMatch(/^fld_/);
     await expect(api.createFolder({ name: "   " })).rejects.toMatchObject({ status: 400 });
     await expect(api.createFolder({ name: "travel SHOTS" })).rejects.toMatchObject({ status: 409 });
+    vi.setSystemTime(new Date("2026-10-15T09:01:00Z"));
     const set10 = await api.createFolder({ name: "Set 10" });
+    vi.setSystemTime(new Date("2026-10-15T09:02:00Z"));
     const set2 = await api.createFolder({ name: "Set 2" });
     const { folders, summaries } = await api.listFolders();
     expect(folders.map((f) => f.id)).toEqual([set2.id, set10.id, travel.id]);
     expect(summaries[travel.id]).toEqual({ count: 0, newest: [] });
-    expect(events.filter((e) => e.type === "folder")).toHaveLength(3);
+    // A rename does not move a folder.
+    vi.setSystemTime(new Date("2026-10-15T09:03:00Z"));
+    await api.renameFolder(travel.id, { name: "Aaa first by name" });
+    expect((await api.listFolders()).folders.map((f) => f.id)).toEqual([set2.id, set10.id, travel.id]);
+    expect(events.filter((e) => e.type === "folder")).toHaveLength(4);
   });
 
   it("renames, refusing a name another folder has", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T09:00:00Z"));
     const a = await api.createFolder({ name: "A" });
+    vi.setSystemTime(new Date("2026-10-15T09:01:00Z"));
     await api.createFolder({ name: "B" });
     await expect(api.renameFolder(a.id, { name: "b" })).rejects.toMatchObject({ status: 409 });
     await expect(api.renameFolder("fld_nope000000", { name: "C" })).rejects.toMatchObject({ status: 404 });
@@ -56,7 +68,7 @@ describe("folders", () => {
     const renamed = await api.renameFolder(a.id, { name: "A2" });
     expect(renamed).toMatchObject({ id: a.id, name: "A2", createdAt: a.createdAt });
     expect(Date.parse(renamed.updatedAt)).toBeGreaterThanOrEqual(Date.parse(a.updatedAt));
-    expect((await api.listFolders()).folders.map((f) => f.name)).toEqual(["A2", "B"]);
+    expect((await api.listFolders()).folders.map((f) => f.name)).toEqual(["B", "A2"]);
     expect(events.filter((e) => e.type === "folder")).toHaveLength(3);
   });
 

@@ -183,7 +183,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   run and press its heart to keep it here." A header line ("12 kept · 2 folders") carries New folder on the right.
 - **Folders** take the first positions of the grid as square tiles (`rounded-card`, `surface-2`, 1 px `border`): a
   cover made of the folder's newest runs (one, a split, one big and two small, or a 2 × 2), the name with a folder
-  glyph and the count over a bottom gradient, Rename / Delete as overlay icon buttons on hover. Tiles sort by name.
+  glyph and the count over a bottom gradient, Rename / Delete as overlay icon buttons on hover. Tiles show newest first (a rename keeps the place).
   Clicking one opens the folder at `?folder=<id>` (so Back returns to All): a header with ← All, the name, the count,
   Rename and Delete, then only that folder's runs, paged on their own. A run is in at most one folder, and a filed run
   shows only inside it: All holds the folders and the kept runs in no folder. The header count totals both. Deleting
