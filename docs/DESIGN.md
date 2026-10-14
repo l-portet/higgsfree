@@ -160,9 +160,8 @@ There is no page chrome: the app is four views under one floating nav, with one 
   ratio, resolution and Sound: [Follow video ˅] / [Follow image ˅], with the reference video's limit (30 s / 10 s)
   in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
 
-- **AI Prompt Editor**: in the video composer, right of the prompt on row 1, a plain text button (ghost: no border
-  or fill, `fg-subtle`, a `surface-2` hover) as tall as the prompt's first line (33 px), with a sparkle and "Prompt
-  Editor" (the sparkle alone below `sm`); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px): the prompt on the left in an
+- **AI Prompt Editor**: in the video composer, a sparkle square under the `+` (same 33 px `rounded-control` button,
+  6 px below it; tooltip "Prompt Editor: rewrite with AI, preview a frame"); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px): the prompt on the left in an
   editable field seeded from the composer, a "change" field with Rewrite (Write when the prompt is empty) and four
   quick changes as small chips (More cinematic, Add camera motion, More detail, Make it shorter); GPT-6 Luna's
   rewrite streams into the field, with Undo and a line naming the model and the real cost. On the right, a preview
