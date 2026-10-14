@@ -1,7 +1,8 @@
 # higgsfree design spec
 
 Derived from a live walkthrough of higgsfield.ai (Aug 2026). The goal is a faithful, *professional-minimal* interpretation:
-Vercel/Linear dark discipline with Higgsfield's single lime accent. No neon, no glows, no gamer aesthetics.
+Vercel/Linear dark discipline with a single accent: blue `#5da8fd`, which each page load reaches from Higgsfield's lime.
+No neon, no glows, no gamer aesthetics.
 
 ## Tokens (Tailwind v4 `@theme` in `src/app/globals.css`)
 ```
@@ -18,9 +19,9 @@ Vercel/Linear dark discipline with Higgsfield's single lime accent. No neon, no 
 --color-fg-subtle:  #888e90   tertiary text: placeholders, sublines, inactive nav icons (6.4:1 on bg, 4.6:1 on surface-2)
 --color-fg-disabled: #7e8486  not-ready Generate, the "no key" dot
 --color-fg-faint:   #676c6e   decorative only: option-chip icons, dividers, dashed borders (never text)
---color-accent:     #defd5d   lime: Generate, the active tab's icon, the Sound toggle, the kept heart, NEW badge
---color-accent-hover: #d2f24c
---color-on-accent:  #141a05
+--color-accent:     #defd5d → #5da8fd   lime at load, then blue (Accent on load): Generate, the active tab's icon, the Sound toggle, the kept heart, NEW badge
+--color-accent-hover: #d2f24c → #4b9cf6
+--color-on-accent:  #141a05 → #04152b
 --color-danger:     #f87171
 --color-warning:    #fbbf24   amber: the composer's provider notice (a model whose provider has no key)
 --color-success:    #4ade80
@@ -48,19 +49,20 @@ values or Tailwind's default scale. Nested surfaces stay concentric: inner radiu
 The global `:focus-visible` outline follows each element's own radius; nothing may set a radius on focus.
 The chrome (nav, composer, dialogs) is one lifted grey (`surface`), and everything on it steps up ~8 RGB points per
 layer (27 → 35 → 44) so chips read as raised on the bar and the selected row as raised in a popover. Quiet cards
-on the page itself (`panel`) are barely lifted. Lime is reserved for Generate, the active tab's icon, an on toggle,
-the kept heart and the NEW badge. The logo keeps its own lime (`#d0f81e`, docs/brand/BRAND.md); the UI does not use it.
+on the page itself (`panel`) are barely lifted. The accent is reserved for Generate, the active tab's icon, an on toggle,
+the kept heart and the NEW badge. The logo's tile is the same blue (`#5da8fd`, docs/brand/BRAND.md); on load it sweeps
+there from the old brand lime (`#d0f81e`) with the accent.
 
 Rules that follow from the tokens:
 - **Not-ready Generate.** A primary button that is `aria-disabled` (empty prompt, no key) rests on `surface-2` with
-  `fg-subtle` text and a `border-strong` edge and ignores hover; it turns lime only once the action is possible.
-  `disabled` (loading) keeps the lime at 50 % opacity. Never show a half-transparent lime button as a resting state.
-  Generate carries the shortcut as a badge (`⌘↵`, `Ctrl↵` elsewhere) on a slightly darker lime.
-- **Toggles.** An on toggle chip (Sound) is a lime tint: `border-accent/45`, `bg-accent/15`, lime text and icon.
+  `fg-subtle` text and a `border-strong` edge and ignores hover; it turns to the accent only once the action is possible.
+  `disabled` (loading) keeps the accent at 50 % opacity. Never show a half-transparent accent button as a resting state.
+  Generate carries the shortcut as a badge (`⌘↵`, `Ctrl↵` elsewhere) on a slightly darker accent.
+- **Toggles.** An on toggle chip (Sound) is an accent tint: `border-accent/45`, `bg-accent/15`, accent text and icon.
 - **Card badges.** Completed media cards have no border (edge-to-edge media, `rounded-lg`); the hover overlay shows
   one truncating info badge, `"{model} · {params} · {cost}"`, plus an audio glyph badge, never a wrapping row of
   tags. Pending and failed cards keep their border. In mixed lists the Image / Video type badge sits top-left.
-- **NEW badge.** Solid lime (`bg-accent text-on-accent`), 16 px, 10 px bold uppercase, 4 px radius. PRO / FAST /
+- **NEW badge.** Solid accent (`bg-accent text-on-accent`), 16 px, 10 px bold uppercase, 4 px radius. PRO / FAST /
   BETA stay neutral on `surface-3`.
 
 Fonts: `Inter` for UI (Google Fonts, `font-feature-settings: "cv11","ss01"`), `Inter Tight` 800 for display headings
@@ -101,9 +103,9 @@ There is no page chrome: the app is four views under one floating nav, with one 
     4 px padded box. Labels 13 px medium, `-0.01em`. Icons sit in a 16 px box with 1.5 px strokes, sized to match the
     mock (14 px frames, a 12 px heart); the video frame, the tray and the key are drawn in `components/icons/nav.tsx`.
     Inactive: `fg-muted` label, `fg-subtle` icon. Active: raised (`surface-2`, `border-strong`, `shadow-raised`),
-    `fg` label, lime icon. Below `sm` (640 px) the labels collapse to icons.
+    `fg` label, accent icon. Below `sm` (640 px) the labels collapse to icons.
   - **Key box**: key icon, "Add key", 6 px dot (`fg-disabled`) until a key is set (opens the key dialog); then the
-    remaining credits (`$12.34`) and a lime dot (opens Settings on the OpenRouter section).
+    remaining credits (`$12.34`) and an accent dot (opens Settings on the OpenRouter section).
 - **Content**: max-width 1400 px, 24 px page padding, 72 px top padding to clear the nav, bottom padding equal to the
   composer's measured height (`--composer-h`) + 16 px.
 - **Composer**: fixed bottom centre, `max-w-[940px]`, `rounded-dock` (24), `surface`, `border`, `shadow-float`, 13 px
@@ -132,7 +134,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
 - Feed: masonry grid (`minmax(260px, 1fr)` from `sm`, 160 below) newest first, each card at its real ratio.
   Pending cards show a shimmer skeleton with model name + elapsed timer. Failed cards show the provider error verbatim
   with Retry. Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) · Reuse prompt
-  · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small lime heart badge.
+  · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
 - Composer chips: [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds reference images (up to the
   largest count any model takes; the picker dims models that cannot take what is attached).
 
@@ -142,7 +144,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   + cost in the badge, a "N rendering · usually 2–5 min" line above while clips render.
 - Composer chips: [⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
   slider (ranges) or a list (fixed options) limited to the model's values; aspect ratio locks to the first frame for
-  models that drop it on i2v; resolution is a list with per-option estimates; Sound is a lime toggle shown only for
+  models that drop it on i2v; resolution is a list with per-option estimates; Sound is an accent toggle shown only for
   models with native audio; the count runs that many independent jobs. `+` opens a small menu: first frame, last
   frame (models with `caps.lastFrame`), style reference (unless the model rejects references). Dropped or pasted
   images fill those slots in that order. Image-to-video is implicit: a frame attached is the mode.
@@ -169,13 +171,13 @@ There is no page chrome: the app is four views under one floating nav, with one 
   Clicking one opens the folder at `?folder=<id>` (so Back returns to All): a header with ← All, the name, the count,
   Rename and Delete, then only that folder's runs, paged on their own. A run is in at most one folder, and All always
   shows every kept run. Deleting a folder never deletes runs: they stay kept, in All.
-- **Drag and drop.** In All, every card can be dragged onto a tile. While a drag is on, the tiles get a dashed lime
-  edge and the one under the pointer a lime ring; dropping files the run there ("Moved to Travel") and makes that
+- **Drag and drop.** In All, every card can be dragged onto a tile. While a drag is on, the tiles get a dashed accent
+  edge and the one under the pointer an accent ring; dropping files the run there ("Moved to Travel") and makes that
   folder the heart's default.
 - **The heart** (cards and the lightbox) keeps a run in one click, in the last destination picked (a folder, or All),
   and opens a small menu anchored to it: "Kept in Travel", a list (All, then the folders, the current one checked),
   New folder… (an inline field) and Remove from Favorites. On a kept run the heart opens the same menu, to move or
-  remove it. A kept card's lime heart badge carries the folder's name.
+  remove it. A kept card's accent heart badge carries the folder's name.
 
 ## Key dialog and Settings
 - **Key dialog** (`KeyDialog`, 400 px, `rounded-panel`, 20 px padding): one provider. "Add your OpenRouter key" /
@@ -200,7 +202,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   · fal (`surface-2` track, `rounded-control`, 4 px padding; 32 px options at `rounded-tag`, the selected one on
   `surface-3` with `fg` text; radio semantics, arrow keys move and select). OpenRouter by default; disabled, with a
   hint saying so, until both keys are saved.
-- **Library card**: a usage line ("Using 1.2 GB of 60 GB the browser allows") over a thin bar (lime, `danger` from
+- **Library card**: a usage line ("Using 1.2 GB of 60 GB the browser allows") over a thin bar (accent, `danger` from
   90 %), then two tiles, Images and Videos (count · size, files), with a reference-images line under them. Below a
   divider, "Protected from eviction" with a Yes / Not yet badge and a Protect button while it is not (Safari gets a
   note about the 7-day eviction). Then Backup: Export library… / Import… side by side; while an archive is written or
@@ -209,5 +211,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
 
 ## Motion & polish
 - 150ms ease-out transitions for hover/active; popovers fade+scale 4%. Skeleton shimmer 1.6s.
+- **Accent on load.** Every page load opens on the lime accent and, after 0.5 s, sweeps it to blue (`#5da8fd`) over
+  1.6 s: an OKLCH hue sweep through a soft aqua, eased in and out, applied to the three accent variables on `html`
+  (`accent-shift` in `globals.css`), so every accent element shifts together. Client-side navigation keeps the blue.
+  It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same sweep, from the
+  old brand lime (`#d0f81e`) to the brand blue, through `--color-logo`; the glyph stays ink.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.
 - Mobile: nav collapses to icons; video panel stacks above the canvas; prompt bar goes full-width.

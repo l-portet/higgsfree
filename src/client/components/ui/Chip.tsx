@@ -8,7 +8,7 @@ export interface ChipProps extends ComponentProps<"button"> {
   label: ReactNode;
   chevron?: boolean;
   active?: boolean;
-  /** `accent`: the active state is a lime tint (toggles like Sound); `neutral`: a raised surface (filters, open pickers). */
+  /** `accent`: the active state is an accent tint (toggles like Sound); `neutral`: a raised surface (filters, open pickers). */
   tone?: "neutral" | "accent";
   /** Full-strength label and icon, for the one chip that names the thing (the model). Option chips are muted with a dim icon. */
   strong?: boolean;
