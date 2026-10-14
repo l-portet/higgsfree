@@ -215,10 +215,12 @@ There is no page chrome: the app is four views under one floating nav, with one 
 
 ## Motion & polish
 - 150ms ease-out transitions for hover/active; popovers fade+scale 4%. Skeleton shimmer 1.6s.
-- **Accent on load.** Every page load opens on the lime accent and, after 0.3 s, sweeps it to blue (`#5da8fd`) over
-  1.2 s: an OKLCH hue sweep through a soft aqua, spaced by perceptual distance and eased in and out, applied to the
-  accent variables on `html` (`accent-shift` in `globals.css`), so every accent element shifts together.
-  Transitions are off until it ends (`data-accent-intro`), so no element trails behind. Client-side navigation keeps the blue.
+- **Accent on load.** Every page load opens on the lime accent. Once the app is up and painted, the lime holds
+  0.5 s more, then sweeps to blue (`#5da8fd`) over 1.2 s. The path is an OKLCH hue sweep through a soft aqua,
+  spaced by perceptual distance and eased in and out. It applies to the accent variables on `html` (`accent-shift`
+  in `globals.css`), so every accent element shifts together. `data-accent-intro` in the static HTML holds the lime;
+  Shell sets it to `play` after hydration and removes it at the end. That way a slow first paint never skips the
+  lime. Transitions are off until it ends, so no element trails behind. Client-side navigation keeps the blue.
   It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same sweep, from the
   old brand lime (`#d0f81e`) to the brand blue, through `--color-logo`; the glyph stays ink.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.

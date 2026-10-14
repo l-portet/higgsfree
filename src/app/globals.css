@@ -21,9 +21,10 @@
   --color-fg-disabled: #7e8486;
   /* Purely decorative (option-chip icons, dividers, chevrons), never for text. */
   --color-fg-faint: #676c6e;
-  --color-accent: #defd5d;
-  --color-accent-hover: #d2f24c;
-  --color-on-accent: #141a05;
+  /* At rest. Each page load shows the old lime first and sweeps here ("Accent on load" below). */
+  --color-accent: #5da8fd;
+  --color-accent-hover: #4b9cf6;
+  --color-on-accent: #04152b;
   --color-danger: #f87171;
   --color-warning: #fbbf24;
   --color-success: #4ade80;
@@ -103,10 +104,15 @@
 }
 
 /* ---------- Accent on load ----------
-   The page opens on the lime accent above and then sweeps to blue (#5da8fd). The three accent
-   variables are registered as colors so they interpolate, and every `bg-accent`, `text-accent`,
+   The page opens on the old lime and, once it is up, sweeps to the resting blue (#5da8fd). The three
+   accent variables are registered as colors so they interpolate, and every `bg-accent`, `text-accent`,
    `ring-accent/40`, the focus ring and the selection read them, so the whole UI shifts together. The
    logo's tile makes the same sweep from the old brand lime (`--color-logo`, read by Logo.tsx).
+   `data-accent-intro` on <html> drives it. It is in the static HTML (layout.tsx), so the first paint is
+   lime. Shell sets it to "play" once the app has hydrated and painted a frame: the lime holds 0.5 s
+   more, then the sweep runs. A clock started at first style instead would run out before a slow first
+   paint, and the page would open already blue. Shell removes the attribute when the sweep ends,
+   leaving the resting values, which equal the last stop.
    The stops are an OKLCH hue sweep (lime, aqua, sky blue, chroma eased off mid-way so it never turns
    neon), spaced by perceptual distance and eased in and out (sine) at 21 points, which is why the
    timing between them is `linear`: the color changes at an even visible pace with no kinks. It runs
@@ -114,23 +120,35 @@
 @property --color-accent {
   syntax: "<color>";
   inherits: true;
-  initial-value: #defd5d;
+  initial-value: #5da8fd;
 }
 @property --color-accent-hover {
   syntax: "<color>";
   inherits: true;
-  initial-value: #d2f24c;
+  initial-value: #4b9cf6;
 }
 @property --color-on-accent {
   syntax: "<color>";
   inherits: true;
-  initial-value: #141a05;
+  initial-value: #04152b;
 }
-/* The logo's tile: the old brand lime until the sweep moves it to the brand blue (docs/brand/BRAND.md). */
+/* The logo's tile: the brand blue at rest (docs/brand/BRAND.md), the old brand lime before the sweep. */
 @property --color-logo {
   syntax: "<color>";
   inherits: true;
-  initial-value: #d0f81e;
+  initial-value: #5da8fd;
+}
+
+/* Before and during the intro: the old lime (the sweep's first stop). */
+html[data-accent-intro] {
+  --color-accent: #defd5d;
+  --color-accent-hover: #d2f24c;
+  --color-on-accent: #141a05;
+  --color-logo: #d0f81e;
+}
+/* `both`: lime through the delay, the last stop until Shell removes the attribute. */
+html[data-accent-intro="play"] {
+  animation: accent-shift 1.2s linear 0.5s both;
 }
 
 @keyframes accent-shift {
@@ -157,9 +175,8 @@
   100% { --color-accent: #5da8fd; --color-accent-hover: #4b9cf6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
 }
 
-/* No transitions while the accent sweeps. A color transition re-targeted on every frame trails the
-   sweep (the active tab's icon ran ~0.3 s behind the logo), so everything moves in step instead. The
-   attribute is in the static HTML (layout.tsx); Shell removes it when the sweep finishes. */
+/* No transitions until the sweep is over. A color transition re-targeted on every frame trails the
+   sweep (the active tab's icon ran ~0.3 s behind the logo), so everything moves in step instead. */
 html[data-accent-intro] *,
 html[data-accent-intro] ::before,
 html[data-accent-intro] ::after {
@@ -174,8 +191,6 @@ html[data-accent-intro] ::after {
 /* ---------- Base ---------- */
 @layer base {
   html {
-    /* `both`: lime through the delay, blue once it is done. */
-    animation: accent-shift 1.2s linear 0.3s both;
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -360,7 +375,7 @@ html[data-accent-intro] ::after {
     transition-duration: 0.01ms !important;
   }
   /* The accent shift is a color fade with nothing moving: keep it rather than snap after the delay. */
-  html {
+  html[data-accent-intro="play"] {
     animation-duration: 1.2s !important;
   }
 }
