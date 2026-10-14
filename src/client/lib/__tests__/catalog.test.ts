@@ -43,7 +43,8 @@ describe("image models", () => {
     expect(new Set(m.sizes).size).toBe(m.sizes.length);
     expect(new Set(m.aspectRatios).size).toBe(m.aspectRatios.length);
     for (const ar of m.aspectRatios) expect(IMAGE_ASPECT_RATIOS, `${m.id} lists unknown aspect ratio ${ar}`).toContain(ar);
-    for (const size of m.sizes) {
+    // fal publishes prices only to a signed-in key, so fal-only models carry no estimate.
+    for (const size of m.falOnly ? [] : m.sizes) {
       expect(m.estCostUsd, `${m.id} has no estCostUsd for size ${size}`).toHaveProperty(size);
       const cost = m.estCostUsd[size];
       expect(typeof cost).toBe("number");
@@ -80,12 +81,13 @@ describe("image models", () => {
 
 describe("video models (visible)", () => {
   it.each(VISIBLE_VIDEO.map((m) => [m.id, m] as const))("%s: resolutions, durations, defaults and costs are consistent", (_id, m) => {
-    expect(m.resolutions.length).toBeGreaterThan(0);
+    // fal-only models: no resolution choice on some endpoints, and no published price (see above).
+    if (!m.falOnly) expect(m.resolutions.length).toBeGreaterThan(0);
     expect(new Set(m.resolutions).size).toBe(m.resolutions.length);
     expect(m.aspectRatios.length).toBeGreaterThan(0);
     for (const ar of m.aspectRatios) expect(VIDEO_ASPECT_RATIOS, `${m.id} lists unknown aspect ratio ${ar}`).toContain(ar);
 
-    for (const res of m.resolutions) {
+    for (const res of m.falOnly ? [] : m.resolutions) {
       expect(m.estCostPerSecUsd, `${m.id} has no estCostPerSecUsd for ${res}`).toHaveProperty(res);
       const per = m.estCostPerSecUsd[res];
       expect(typeof per).toBe("number");
@@ -95,7 +97,7 @@ describe("video models (visible)", () => {
     for (const res of Object.keys(m.estCostPerSecUsd)) expect(m.resolutions, `${m.id} prices unlisted resolution ${res}`).toContain(res);
 
     if (m.defaultResolution !== undefined) expect(m.resolutions, `${m.id} defaultResolution ${m.defaultResolution}`).toContain(m.defaultResolution);
-    expect(estimateVideoCost(m, m.defaultDuration), `${m.id} default cost`).toBeGreaterThan(0);
+    if (!m.falOnly) expect(estimateVideoCost(m, m.defaultDuration), `${m.id} default cost`).toBeGreaterThan(0);
 
     const durations = allowedDurations(m);
     expect(durations.length).toBeGreaterThan(0);
@@ -118,7 +120,7 @@ describe("video models (visible)", () => {
       expect(durations[0]).toBe(m.durations.min);
       expect(durations.at(-1)).toBeLessThanOrEqual(m.durations.max);
     }
-    expect(m.caps.textToVideo || m.caps.imageToVideo, `${m.id} can generate nothing`).toBe(true);
+    expect(m.caps.textToVideo || m.caps.imageToVideo || m.caps.motionControl, `${m.id} can generate nothing`).toBe(true);
     if (m.caps.lastFrame) expect(m.caps.imageToVideo, `${m.id} lastFrame without imageToVideo`).toBe(true);
   });
 
@@ -143,6 +145,32 @@ describe("video models (hidden)", () => {
       if (m.defaultResolution !== undefined) expect(m.resolutions).toContain(m.defaultResolution);
       // Hidden entries list resolutions without prices (empty estCostPerSecUsd); the estimate must degrade to undefined, not NaN.
       expect(estimateVideoCost(m, m.defaultDuration)).toBeUndefined();
+    }
+  });
+});
+
+describe("fal routes", () => {
+  it("every fal-only model has a route, and every route covers what the model offers", () => {
+    for (const m of IMAGE_MODELS) {
+      if (m.falOnly) expect(m.fal, `${m.id} is fal-only without a route`).toBeDefined();
+      if (!m.fal) continue;
+      if (m.caps.textToImage) expect(m.fal.textToImage, `${m.id} text-to-image endpoint`).toBeTruthy();
+      if (m.caps.imageToImage) expect(m.fal.edit, `${m.id} edit endpoint`).toBeTruthy();
+      if (m.falOnly) expect(m.endpoint).toBe("fal");
+    }
+    for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
+      if (m.falOnly) expect(m.fal, `${m.id} is fal-only without a route`).toBeDefined();
+      if (!m.fal) continue;
+      if (m.caps.motionControl) {
+        expect(m.fal.motionControl, `${m.id} motion-control endpoint`).toBeTruthy();
+        expect(m.falOnly).toBe(true);
+        continue;
+      }
+      if (m.caps.textToVideo) expect(m.fal.textToVideo, `${m.id} text-to-video endpoint`).toBeTruthy();
+      if (m.caps.imageToVideo) expect(m.fal.imageToVideo, `${m.id} image-to-video endpoint`).toBeTruthy();
+      if (m.caps.lastFrame) expect(m.fal.endImage, `${m.id} last frame on fal`).toBe(true);
+      if (m.caps.audio && m.falOnly) expect(m.fal.audio, `${m.id} audio field`).toBeTruthy();
+      if (m.fal.resolutions) for (const r of m.resolutions) expect(m.fal.resolutions[r], `${m.id} has no fal value for ${r}`).toBeTruthy();
     }
   });
 });

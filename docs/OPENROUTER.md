@@ -25,7 +25,7 @@ supported values (e.g. "Supported resolutions: 480p, 720p") and the UI shows the
 Status 0 means nothing answered (offline, CORS) or local storage is unavailable. A 2xx whose body is not
 JSON is a 502.
 
-Request timeouts: 6 min for an image call, 90 s for a video submit, 30 s per poll, 15 s for credits,
+Request timeouts: 6 min for an image call (the record itself times out after 10 min), 90 s for a video submit, 30 s per poll, 15 s for credits,
 20 s per model list.
 
 ## Images
@@ -57,7 +57,7 @@ Request timeouts: 6 min for an image call, 90 s for a video submit, 30 s per pol
   record completed, so a deleted record never leaves a file behind.
 - An image call cannot be resumed. It runs in the tab that submitted it, which warns before unloading
   while calls are in flight. If the tab closes anyway, the steward in the next tab (or the next visit)
-  marks the record failed with "Interrupted: the page running this image was closed. OpenRouter may still
+  marks the record failed with "Interrupted: the page running this image was closed. The provider may still
   have charged for it." and offers Retry. Re-running it automatically could bill twice, so the app never
   does.
 
@@ -96,7 +96,7 @@ Request timeouts: 6 min for an image call, 90 s for a video submit, 30 s per pol
     `completed | succeeded | success | done` finish; `failed | error | errored | cancelled | canceled |
     rejected` fail with the provider's error text **verbatim**. An unknown status with an `error` fails;
     without one it keeps polling (warned once in the console).
-  - A poll that fails with 400 or 404, or a url on a foreign origin, ends the job. 401 / 403 are transient
+  - A poll that fails with 400, 404 or 422, or a url on a foreign origin, ends the job. 401 / 403 are transient
     (the key may have just been rotated): keep polling with whatever key is stored, re-read every tick;
     no key means wait. Network errors are retried on the next tick.
   - On `completed`: download `unsigned_urls[0] ?? urls[0]` **with the Bearer header** (a plain fetch
@@ -124,7 +124,7 @@ Request timeouts: 6 min for an image call, 90 s for a video submit, 30 s per pol
 ## Credits
 - `GET /api/v1/credits` → `{ data: { total_credits, total_usage } }`.
 - `GET /api/v1/key` → `{ data: { label, limit, usage, is_free_tier } }`.
-- Fetched together, cached 30 s per key (`credits.ts`). "Test" in the key dialog bypasses the cache and
+- Fetched together, cached 30 s per key (`credits.ts`). "Test connection" in Settings › Keys (and the key dialog's check before saving) bypasses the cache and
   can test a pasted key without saving it.
 
 ## Live model catalog

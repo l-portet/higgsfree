@@ -3,7 +3,19 @@
  * and "Reuse prompt" drafts consumed by the page's prompt bar.
  */
 import { create } from "zustand";
-import type { GenerationType, ImageParams, VideoParams } from "@shared/types";
+import type { GenerationType, ImageParams, MotionOrientation, ProviderId, VideoParams } from "@shared/types";
+
+/** Sections of the Settings dialog, in sidebar order. */
+export type SettingsSection = "keys" | "library" | "about";
+
+/** The small "add your key" dialog: which provider, why (one line), and what to do once the key is saved. */
+export interface KeyPrompt {
+  provider: ProviderId;
+  /** e.g. "Kling 3.0 Motion Control runs on fal." */
+  reason?: string;
+  /** Called after the key was saved (Generate passes itself here, so one click finishes the job). */
+  onSaved?: () => void;
+}
 
 export interface Draft {
   type: GenerationType;
@@ -12,9 +24,12 @@ export interface Draft {
   params?: ImageParams | VideoParams;
   /** Media ids (reference / edit images). */
   referenceImages?: string[];
-  /** Media ids (image-to-video anchor frames). */
+  /** Media ids (image-to-video anchor frames; motion control: the character image). */
   firstFrame?: string;
   lastFrame?: string;
+  /** Motion control: media id of the reference video. */
+  motionVideo?: string;
+  orientation?: MotionOrientation;
 }
 
 export interface LightboxState {
@@ -23,10 +38,15 @@ export interface LightboxState {
 }
 
 interface UiState {
-  /** The "API key" dialog behind the Add key pill. */
-  keyDialog: boolean;
-  openKeyDialog: () => void;
+  /** The small key dialog (Generate without a key, the Add key pill). */
+  keyPrompt: KeyPrompt | null;
+  openKeyDialog: (prompt?: Partial<KeyPrompt>) => void;
   closeKeyDialog: () => void;
+
+  /** The Settings dialog and its open section. */
+  settings: SettingsSection | null;
+  openSettings: (section?: SettingsSection) => void;
+  closeSettings: () => void;
 
   lightbox: LightboxState | null;
   openLightbox: (ids: string[], index: number) => void;
@@ -46,9 +66,13 @@ interface UiState {
 }
 
 export const useUi = create<UiState>()((set, get) => ({
-  keyDialog: false,
-  openKeyDialog: () => set({ keyDialog: true }),
-  closeKeyDialog: () => set({ keyDialog: false }),
+  keyPrompt: null,
+  openKeyDialog: (prompt = {}) => set({ keyPrompt: { provider: "openrouter", ...prompt } }),
+  closeKeyDialog: () => set({ keyPrompt: null }),
+
+  settings: null,
+  openSettings: (section = "keys") => set({ settings: section, keyPrompt: null }),
+  closeSettings: () => set({ settings: null }),
 
   lightbox: null,
   openLightbox: (ids, index) => {

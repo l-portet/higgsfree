@@ -120,5 +120,7 @@ async function resubmit(g: Generation): Promise<Generation[]> {
   if (g.inputs?.firstFrame) req.firstFrame = g.inputs.firstFrame;
   if (g.inputs?.lastFrame) req.lastFrame = g.inputs.lastFrame;
   if (g.inputs?.referenceImages?.length) req.references = g.inputs.referenceImages;
+  if (g.inputs?.motionVideo) req.motionVideo = g.inputs.motionVideo;
+  if (p.orientation) req.orientation = p.orientation;
   return [await submitVideo(req)];
 }

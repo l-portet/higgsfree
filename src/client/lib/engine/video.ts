@@ -1,35 +1,43 @@
 /**
  * Video jobs: submit, then poll the provider every few seconds from the tab that holds the
- * job's lock, and stream the finished clip into the library. The lock is taken before the
- * record exists, so a pending video without a polling url whose lock is free can only be a
- * submit that died with its tab.
+ * job's lock, and store the finished clip in the library. The lock is taken before the record
+ * exists, so a pending video without a polling url whose lock is free can only be a submit that
+ * died with its tab.
+ *
+ * Two providers share that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
+ * the Bearer key) and fal (queue submit, `status_url`, result json with a public CDN url).
  */
-import type { Generation, GenerationInputs, VideoGenerateRequest, VideoModel, VideoParams } from "@shared/types";
+import type { Generation, GenerationInputs, MotionOrientation, ProviderId, VideoGenerateRequest, VideoModel, VideoParams } from "@shared/types";
 import { lookupVideoModel } from "../catalog";
-import { completeGeneration, getGeneration, insertGenerations, toPublic, toStored, type StoredGeneration } from "../db/generations";
+import { completeGeneration, getGeneration, insertGenerations, toPublic, toStored, type GenerationPatch, type StoredGeneration } from "../db/generations";
+import { getMediaBlob } from "../db/media";
 import type { MediaRow } from "../db/schema";
 import { ApiClientError, badRequest, conflict } from "../errors";
+import * as fal from "../fal";
+import { buildFalVideoPayload } from "../fal-payloads";
 import { publish } from "../live";
 import { errorMessage, log } from "../log";
 import { newGenerationId, outputMediaId } from "../media-ids";
 import { parseMp4MetaFromRanges } from "../mp4-meta";
 import * as or from "../openrouter";
-import { buildVideoPayload, type VideoBody } from "../payloads";
-import { getStoredKey, requireApiKey } from "../settings";
+import { buildVideoPayload } from "../payloads";
+import { getStoredKey } from "../settings";
 import { isQuotaError } from "../storage-health";
 import { validateVideoRequest } from "../validate";
 import { DONE_STATUSES, FAILED_STATUSES, JOB_TIMEOUT_MS, limits, PENDING_STATUSES, timing } from "./constants";
 import { assertInputsExist, inputDataUrl, inputDataUrls } from "./inputs";
+import { keyFor, resolveRun } from "./provider";
 import { failGeneration, isCancelled, NOT_ACQUIRED, savePublish, tryWithJobLock } from "./state";
 
 const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$${c.toFixed(4)}`);
 
 /**
- * Only a 400 / 404 (or a url on a foreign origin) ends the job. 401 / 403 are
+ * Only a 400 / 404 / 422 (or a url on a foreign origin) ends the job. 401 / 403 are
  * transient: the key may have just been rotated, so keep polling with whatever key
  * is configured until `JOB_TIMEOUT_MS` runs out.
  */
-const isPermanent = (err: unknown): boolean => err instanceof or.ForeignOriginError || (err instanceof ApiClientError && [400, 404].includes(err.status));
+const isPermanent = (err: unknown): boolean =>
+  err instanceof or.ForeignOriginError || err instanceof fal.FalOriginError || (err instanceof ApiClientError && [400, 404, 422].includes(err.status));
 
 // ---------- a pause that ends early when the tab becomes visible or the job is cancelled ----------
 
@@ -56,31 +64,86 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 
 // ---------- submit ----------
 
+interface Submitted {
+  jobId: string;
+  pollingUrl: string;
+}
+
 interface PreparedVideo {
   id: string;
-  key: string;
+  provider: ProviderId;
   model: VideoModel;
   prompt: string;
   inputs: GenerationInputs;
-  body: VideoBody;
   params: VideoParams;
+  /** One line for the console. */
+  summary: string;
+  submit: (signal: AbortSignal) => Promise<Submitted>;
+}
+
+/** fal's limits on the motion-control reference video: 3 s minimum, 30 s following the video, 10 s following the image. */
+export const MOTION_VIDEO_LIMITS = { minSec: 3, maxSec: { video: 30, image: 10 } } as const;
+
+/** Check the reference video's length before anything is uploaded (MP4 / MOV; WebM is left to fal). */
+async function assertMotionVideo(model: VideoModel, mediaId: string, orientation: MotionOrientation): Promise<void> {
+  const blob = await getMediaBlob(mediaId);
+  if (!blob) throw badRequest(`Reference video is no longer in the library (${mediaId})`);
+  if (blob.type === "video/webm") return;
+  const { durationSec } = await parseMp4MetaFromRanges(blob.size, async (start, end) => new Uint8Array(await blob.slice(start, end + 1).arrayBuffer()));
+  if (durationSec === undefined) return;
+  const max = MOTION_VIDEO_LIMITS.maxSec[orientation];
+  if (durationSec < MOTION_VIDEO_LIMITS.minSec) throw badRequest(`The reference video is ${durationSec.toFixed(1)} s. ${model.name} needs at least ${MOTION_VIDEO_LIMITS.minSec} s.`);
+  if (durationSec > max + 0.05) {
+    const hint = orientation === "image" ? " Switch to Follow video for up to 30 s." : "";
+    throw badRequest(`The reference video is ${Math.round(durationSec)} s. ${model.name} takes up to ${max} s when following the ${orientation}.${hint}`);
+  }
 }
 
 async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
-  const key = requireApiKey();
-  const model = await lookupVideoModel(req.model, key);
+  const model = await lookupVideoModel(req.model, getStoredKey());
   if (!model || model.hidden) throw badRequest(`Unknown video model: ${req.model}`);
+  const { provider, key } = resolveRun(model);
   const prompt = req.prompt.trim();
   validateVideoRequest(model, req, prompt);
   const inputs: GenerationInputs = {};
   if (req.firstFrame) inputs.firstFrame = req.firstFrame;
   if (req.lastFrame) inputs.lastFrame = req.lastFrame;
   if (req.references?.length) inputs.referenceImages = req.references;
+  if (req.motionVideo) inputs.motionVideo = req.motionVideo;
   await assertInputsExist(inputs);
+  if (inputs.motionVideo) await assertMotionVideo(model, inputs.motionVideo, req.orientation ?? "video");
 
   const frames: { firstFrame?: string; lastFrame?: string } = {};
   if (inputs.firstFrame) frames.firstFrame = await inputDataUrl(inputs.firstFrame);
   if (inputs.lastFrame) frames.lastFrame = await inputDataUrl(inputs.lastFrame);
+  const id = newGenerationId();
+
+  if (provider === "fal") {
+    if (inputs.referenceImages?.length) {
+      throw badRequest(`${model.name} on fal does not take style references. Remove them, or prefer OpenRouter in Settings.`);
+    }
+    const motionVideo = inputs.motionVideo;
+    const payload = buildFalVideoPayload(
+      model,
+      { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, orientation: req.orientation },
+      { ...frames, ...(motionVideo ? { motionVideo: "pending-upload" } : {}) },
+    );
+    return {
+      id, provider, model, prompt, inputs, params: payload.params,
+      summary: `endpoint=${payload.endpoint} duration=${payload.params.duration}s res=${payload.params.resolution ?? "-"} ar=${payload.params.aspectRatio ?? "-"}`,
+      submit: async (signal) => {
+        const input = { ...payload.input };
+        if (motionVideo) {
+          const blob = await getMediaBlob(motionVideo);
+          if (!blob) throw badRequest(`Reference video is no longer in the library (${motionVideo})`);
+          input.video_url = await fal.upload(key, blob, motionVideo, signal);
+        }
+        const queued = await fal.submit(key, payload.endpoint, input, signal);
+        return { jobId: queued.requestId, pollingUrl: queued.statusUrl };
+      },
+    };
+  }
+
   const refDataUrls = await inputDataUrls(inputs.referenceImages ?? []);
   const { body, effective } = buildVideoPayload(
     model,
@@ -92,24 +155,31 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   if (effective.aspectRatio) params.aspectRatio = effective.aspectRatio;
   if (effective.resolution) params.resolution = effective.resolution;
   if (req.audio !== undefined) params.audio = req.audio;
-  return { id: newGenerationId(), key, model, prompt, inputs, body, params };
+  return {
+    id, provider, model, prompt, inputs, params,
+    summary: `duration=${effective.duration}s res=${effective.resolution ?? "-"} ar=${effective.aspectRatio ?? "-"} audio=${body.generate_audio ?? "-"} frames=${body.frame_images?.length ?? 0}`,
+    submit: async (signal) => {
+      const submitted = await or.submitVideo(key, body, { signal });
+      return { jobId: submitted.id, pollingUrl: submitted.pollingUrl };
+    },
+  };
 }
 
 /** Insert the pending record, submit, mark it running. Throws after failing the record. */
 async function startVideo(p: PreparedVideo, signal: AbortSignal): Promise<StoredGeneration> {
   const ts = new Date().toISOString();
-  const g: Generation = { id: p.id, type: "video", status: "pending", prompt: p.prompt, model: p.model.id, modelName: p.model.name, params: p.params, createdAt: ts, updatedAt: ts };
+  const g: Generation = {
+    id: p.id, type: "video", status: "pending", prompt: p.prompt, model: p.model.id, modelName: p.model.name, params: p.params, provider: p.provider, createdAt: ts, updatedAt: ts,
+  };
   if (Object.keys(p.inputs).length > 0) g.inputs = p.inputs;
   const row = toStored(g);
   await insertGenerations([row], limits.maxActiveJobs);
   publish({ type: "generation", generation: toPublic(row) });
   try {
-    const submitted = await or.submitVideo(p.key, p.body, { signal });
-    const running = await savePublish(p.id, { status: "running", providerJobId: submitted.id, pollingUrl: submitted.pollingUrl });
+    const submitted = await p.submit(signal);
+    const running = await savePublish(p.id, { status: "running", providerJobId: submitted.jobId, pollingUrl: submitted.pollingUrl });
     if (!running) throw new ApiClientError(409, "Deleted before the provider accepted the job");
-    log.info(
-      `job ${p.id} video submitted model=${p.model.id} duration=${p.params.duration}s res=${p.params.resolution ?? "-"} ar=${p.params.aspectRatio ?? "-"} audio=${p.body.generate_audio ?? "-"} frames=${p.body.frame_images?.length ?? 0} provider=${submitted.id}`,
-    );
+    log.info(`job ${p.id} video submitted model=${p.model.id} via=${p.provider} ${p.summary} job=${submitted.jobId}`);
     return running;
   } catch (err) {
     if (!isCancelled(signal)) await failGeneration(p.id, err);
@@ -146,7 +216,7 @@ export function submitVideo(req: VideoGenerateRequest): Promise<Generation> {
           return;
         }
         settle(() => resolve(toPublic(started)));
-        await pollLoop({ id: started.id, pollingUrl: started.pollingUrl ?? "", createdAt: started.createdAt, durationHint: prepared.params.duration }, signal);
+        await pollLoop(jobOf(started), signal);
       });
       if (result === NOT_ACQUIRED) settle(() => reject(conflict("A job with this id is already running")));
     })();
@@ -157,21 +227,60 @@ export function submitVideo(req: VideoGenerateRequest): Promise<Generation> {
 
 export interface VideoJob {
   id: string;
+  provider: ProviderId;
   pollingUrl: string;
   createdAt: string;
-  /** The requested duration, used when the clip's own metadata has none. */
+  /** The requested duration, used when the clip's own metadata has none (0 = unknown: motion control). */
   durationHint: number;
+  params: VideoParams;
+}
+
+export function jobOf(row: StoredGeneration): VideoJob {
+  const params = row.params as VideoParams;
+  return { id: row.id, provider: row.provider ?? "openrouter", pollingUrl: row.pollingUrl ?? "", createdAt: row.createdAt, durationHint: params.duration, params };
+}
+
+/** One poll's verdict, the same for both providers. */
+type PollOutcome =
+  | { kind: "pending"; unknownStatus?: string }
+  | { kind: "failed"; error: string }
+  | { kind: "done"; costUsd?: number; download: () => Promise<Blob> };
+
+async function pollOpenRouter(key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
+  const poll = await or.pollVideo(key, job.pollingUrl, { signal });
+  if (FAILED_STATUSES.has(poll.status)) return { kind: "failed", error: poll.error ?? `Provider reported status "${poll.status}"` };
+  if (DONE_STATUSES.has(poll.status)) {
+    const url = poll.urls[0];
+    if (!url) return { kind: "failed", error: "Provider reported completion but returned no video url" };
+    const out: PollOutcome = { kind: "done", download: async () => new Response(await or.openVideoStream(key, url, { signal })).blob() };
+    if (poll.costUsd !== undefined) out.costUsd = poll.costUsd;
+    return out;
+  }
+  if (PENDING_STATUSES.has(poll.status)) return { kind: "pending" };
+  // Unknown status: an attached error means it is over; otherwise keep polling and say so once.
+  return poll.error ? { kind: "failed", error: poll.error } : { kind: "pending", unknownStatus: poll.status };
+}
+
+async function pollFal(key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
+  const st = await fal.status(key, job.pollingUrl, signal);
+  if (st.status === "IN_QUEUE" || st.status === "IN_PROGRESS") return { kind: "pending" };
+  if (st.status !== "COMPLETED") return { kind: "pending", unknownStatus: st.status };
+  if (st.error) return { kind: "failed", error: st.error };
+  const res = await fal.result<{ video?: { url?: string } }>(key, fal.responseUrlFor(job.pollingUrl), signal);
+  const url = res.video?.url;
+  if (!url) return { kind: "failed", error: "fal reported completion but returned no video url" };
+  return { kind: "done", download: () => fal.download(url, signal) };
 }
 
 export async function pollLoop(job: VideoJob, signal: AbortSignal): Promise<void> {
   let warnedUnknown = false;
   while (!signal.aborted) {
     if (!(await getGeneration(job.id).catch(() => undefined))) return; // deleted (maybe in another tab)
-    const key = getStoredKey(); // re-read each tick: a rotated key applies at once; none means wait for one
+    const key = keyFor(job.provider); // re-read each tick: a rotated key applies at once; none means wait for one
     if (key) {
-      let poll: or.VideoPollResult | undefined;
+      let outcome: PollOutcome | undefined;
       try {
-        poll = await or.pollVideo(key, job.pollingUrl, { signal });
+        outcome = job.provider === "fal" ? await pollFal(key, job, signal) : await pollOpenRouter(key, job, signal);
       } catch (err) {
         if (signal.aborted) return;
         if (isPermanent(err)) {
@@ -180,34 +289,19 @@ export async function pollLoop(job: VideoJob, signal: AbortSignal): Promise<void
         }
         log.warn(`job ${job.id} poll error (will retry): ${errorMessage(err)}`);
       }
-      if (poll) {
-        if (FAILED_STATUSES.has(poll.status)) {
-          await failGeneration(job.id, poll.error ?? `Provider reported status "${poll.status}"`);
-          return;
+      if (outcome?.kind === "failed") {
+        await failGeneration(job.id, outcome.error);
+        return;
+      }
+      if (outcome?.kind === "done" && (await finishVideo(job, outcome.download, outcome.costUsd, signal))) return;
+      if (outcome?.kind === "pending") {
+        if (outcome.unknownStatus && !warnedUnknown) {
+          warnedUnknown = true;
+          log.warn(`job ${job.id} unknown provider status "${outcome.unknownStatus}" (will keep polling)`);
         }
-        if (DONE_STATUSES.has(poll.status)) {
-          const url = poll.urls[0];
-          if (!url) {
-            await failGeneration(job.id, "Provider reported completion but returned no video url");
-            return;
-          }
-          if (await finishVideo(job, key, url, poll.costUsd, signal)) return;
-        } else {
-          if (!PENDING_STATUSES.has(poll.status)) {
-            // Unknown status: an attached error means it is over; otherwise keep polling and say so once.
-            if (poll.error) {
-              await failGeneration(job.id, poll.error);
-              return;
-            }
-            if (!warnedUnknown) {
-              warnedUnknown = true;
-              log.warn(`job ${job.id} unknown provider status "${poll.status}" (will keep polling)`);
-            }
-          }
-          if (Date.now() - Date.parse(job.createdAt) > JOB_TIMEOUT_MS) {
-            await failGeneration(job.id, "Timed out waiting for provider");
-            return;
-          }
+        if (Date.now() - Date.parse(job.createdAt) > JOB_TIMEOUT_MS) {
+          await failGeneration(job.id, "Timed out waiting for provider");
+          return;
         }
       }
     }
@@ -215,27 +309,31 @@ export async function pollLoop(job: VideoJob, signal: AbortSignal): Promise<void
   }
 }
 
-/** Stream the finished clip into the library. True when the job is over (completed, or failed for good); false to try again next tick. */
-async function finishVideo(job: VideoJob, key: string, url: string, costUsd: number | undefined, signal: AbortSignal): Promise<boolean> {
+/** Store the finished clip in the library. True when the job is over (completed, or failed for good); false to try again next tick. */
+async function finishVideo(job: VideoJob, download: () => Promise<Blob>, costUsd: number | undefined, signal: AbortSignal): Promise<boolean> {
   try {
-    const stream = await or.openVideoStream(key, url, { signal });
-    const blob = await new Response(stream).blob();
+    const blob = await download();
     const meta = await parseMp4MetaFromRanges(blob.size, async (start, end) => new Uint8Array(await blob.slice(start, end + 1).arrayBuffer()));
     const mediaId = outputMediaId(job.id, "mp4");
     const typed = blob.type === "video/mp4" ? blob : new Blob([blob], { type: "video/mp4" });
     const media: MediaRow = { id: mediaId, kind: "output", mime: "video/mp4", bytes: blob.size, createdAt: new Date().toISOString(), blob: typed };
-    const output: Generation["output"] = { id: mediaId, mime: "video/mp4", bytes: blob.size, durationSec: meta.durationSec ?? job.durationHint };
+    const durationSec = meta.durationSec ?? (job.durationHint > 0 ? job.durationHint : undefined);
+    const output: Generation["output"] = { id: mediaId, mime: "video/mp4", bytes: blob.size };
+    if (durationSec !== undefined) output.durationSec = durationSec;
     if (meta.width && meta.height) {
       output.width = meta.width;
       output.height = meta.height;
     }
     const completedAt = new Date().toISOString();
     const elapsedMs = Date.parse(completedAt) - Date.parse(job.createdAt);
-    const patch = { status: "completed" as const, output, completedAt, elapsedMs, pollingUrl: undefined, ...(costUsd !== undefined ? { costUsd } : {}) };
+    const patch: GenerationPatch = { status: "completed", output, completedAt, elapsedMs, pollingUrl: undefined };
+    if (costUsd !== undefined) patch.costUsd = costUsd;
+    // Motion control: the clip is as long as the reference video, known only now.
+    if (job.durationHint === 0 && durationSec !== undefined) patch.params = { ...job.params, duration: Math.round(durationSec) };
     const done = await completeGeneration(job.id, patch, media);
     if (done) {
       publish({ type: "generation", generation: toPublic(done) });
-      log.info(`job ${job.id} video completed ${output.width ?? "?"}x${output.height ?? "?"} ${Math.round(elapsedMs / 1000)}s cost=${fmtCost(costUsd)}`);
+      log.info(`job ${job.id} video completed via=${job.provider} ${output.width ?? "?"}x${output.height ?? "?"} ${Math.round(elapsedMs / 1000)}s cost=${fmtCost(costUsd)}`);
       onVideoCompleted?.();
     }
     return true;

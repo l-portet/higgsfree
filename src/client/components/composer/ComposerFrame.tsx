@@ -1,12 +1,12 @@
 import type { ComponentProps, ReactNode } from "react";
-import { X } from "lucide-react";
+import { CircleAlert, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMac } from "@/lib/format";
 import { useMediaUrl } from "@/lib/media-urls";
 import { Spinner } from "@/components/ui/Spinner";
 import { Tooltip } from "@/components/ui/Tooltip";
 
-/** One attached image in the composer (reference, first frame, last frame). */
+/** One attached input in the composer (reference, first frame, last frame, motion video). */
 export interface Attachment {
   id: string;
   name: string;
@@ -14,14 +14,24 @@ export interface Attachment {
   mediaId: string;
   /** Small caption on the thumbnail: "1st", "Last", … */
   tag?: string;
+  /** `video`: a wider (16:9) thumbnail showing the clip's first frame. Default `image`. */
+  kind?: "image" | "video";
 }
 
-/** 33 px thumbnail: a quiet surface until the library hands back the object url. */
+/** 33 px thumbnail (16:9 for a video): a quiet surface until the library hands back the object url. */
 function AttachmentThumb({ a }: { a: Attachment }) {
   const src = useMediaUrl(a.mediaId);
+  const video = a.kind === "video";
   return (
-    <div className="size-[33px] overflow-hidden rounded-thumb border border-border-strong bg-surface-2">
-      {src ? <img src={src} alt={a.name} className="size-full object-cover" draggable={false} /> : null}
+    <div className={cn("overflow-hidden rounded-thumb border border-border-strong bg-surface-2", video ? "h-[33px] w-[58px]" : "size-[33px]")}>
+      {src ? (
+        video ? (
+          // `#t=0.1` makes Safari paint a frame without playing.
+          <video src={`${src}#t=0.1`} muted playsInline preload="metadata" aria-label={a.name} className="size-full object-cover" />
+        ) : (
+          <img src={src} alt={a.name} className="size-full object-cover" draggable={false} />
+        )
+      ) : null}
       {a.tag ? (
         <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 text-center text-[9px] font-semibold uppercase leading-[14px] tracking-wide text-white/90">
           {a.tag}
@@ -95,8 +105,30 @@ export function GenerateButton({ disabledReason, submitting, reasonId, onClick }
   );
 }
 
+/**
+ * A short notice above the prompt (the selected model runs on a provider whose key is not stored),
+ * with one action. Static: it goes away on its own once the model can run.
+ */
+export function ComposerNotice({ message, action, onAction }: { message: string; action: string; onAction: () => void }) {
+  return (
+    <div role="note" className="flex items-center gap-2 rounded-control border border-warning/25 bg-warning/5 py-1.5 pl-2.5 pr-1.5 text-meta">
+      <CircleAlert size={14} className="shrink-0 text-warning" aria-hidden="true" />
+      <span className="min-w-0 flex-1">{message}</span>
+      <button
+        type="button"
+        onClick={onAction}
+        className="shrink-0 whitespace-nowrap rounded-button px-1 font-medium text-fg underline decoration-fg/40 underline-offset-2 transition-colors duration-150 hover:decoration-fg"
+      >
+        {action}
+      </button>
+    </div>
+  );
+}
+
 export interface ComposerFrameProps extends Omit<ComponentProps<"form">, "children"> {
   dragging?: boolean;
+  /** Full-width row at the top of the bar, just above the prompt (e.g. `ComposerNotice`). */
+  notice?: ReactNode;
   /** The round "+" control (a button or a popover trigger). */
   addControl: ReactNode;
   attachments?: ReactNode;
@@ -110,8 +142,8 @@ export interface ComposerFrameProps extends Omit<ComponentProps<"form">, "childr
   generate: GenerateButtonProps;
 }
 
-/** The bar itself (dock radius, 13 px inset): "+" and prompt on top, chips and Generate underneath. */
-export function ComposerFrame({ dragging, addControl, attachments, textarea, chips, note, estimate, generate, className, ...form }: ComposerFrameProps) {
+/** The bar itself (dock radius, 13 px inset): an optional notice, "+" and prompt, then chips and Generate underneath. */
+export function ComposerFrame({ dragging, notice, addControl, attachments, textarea, chips, note, estimate, generate, className, ...form }: ComposerFrameProps) {
   return (
     <form
       {...form}
@@ -122,6 +154,7 @@ export function ComposerFrame({ dragging, addControl, attachments, textarea, chi
         className,
       )}
     >
+      {notice ? <div className="mb-2.5">{notice}</div> : null}
       <div className="flex items-start gap-3.5">
         <div className="shrink-0">{addControl}</div>
         {attachments}

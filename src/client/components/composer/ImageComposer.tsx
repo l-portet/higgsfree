@@ -14,7 +14,6 @@ import { isImageAspectRatio, isImageSize } from "@/lib/models";
 import { readJson, writeJson } from "@/lib/storage";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
-import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 import { Badge } from "@/components/ui/Badge";
 import { Chip, StaticChip } from "@/components/ui/Chip";
@@ -24,7 +23,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
-import { AddButton, AttachmentStrip, ComposerFrame, PROMPT_TEXTAREA_CLASS } from "./ComposerFrame";
+import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS } from "./ComposerFrame";
+import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
 
 const STORAGE_KEY = "higgsfree.image.prompt-bar";
@@ -55,14 +55,11 @@ function clampCount(n: unknown): number {
 /** Coerce whatever is in localStorage into valid control values. */
 function restore(models: ImageModel[]) {
   const p = readJson<Record<string, unknown>>(STORAGE_KEY, {});
+  // The last model picked here comes back; the app's default otherwise.
   const pickedModel = p.pickedModel === true && typeof p.model === "string" && models.some((m) => m.id === p.model);
-  // Seed from Settings › Defaults when they are already loaded; the effect that follows them would
-  // otherwise swap the model in one render later, flashing the catalog default first.
-  const settingsDefault = useSettings.getState().settings?.defaults.imageModel;
-  const fallback = settingsDefault && models.some((m) => m.id === settingsDefault) ? settingsDefault : DEFAULT_IMAGE_MODEL;
   return {
     pickedModel,
-    model: pickedModel ? (p.model as string) : fallback,
+    model: pickedModel ? (p.model as string) : DEFAULT_IMAGE_MODEL,
     aspectRatio: isImageAspectRatio(p.aspectRatio) ? p.aspectRatio : ("1:1" as ImageAspectRatio),
     size: isImageSize(p.size) ? p.size : ("1K" as ImageSize),
     count: clampCount(p.count),
@@ -75,8 +72,6 @@ const SHOWS_IMAGES = /^\/(image|assets)(\/|$)/;
 
 export function ImageComposer() {
   const models = useModels((s) => s.image);
-  const defaultModel = useSettings((s) => s.settings?.defaults.imageModel);
-  const hasKey = useSettings((s) => s.settings?.hasKey);
   const draft = useUi((s) => s.draft);
   const router = useRouter();
   const pathname = usePathname() ?? "/";
@@ -108,12 +103,6 @@ export function ImageComposer() {
 
   /** Attach limit: the most any catalog model accepts, so you can attach first and switch model after. */
   const maxRefs = useMemo(() => models.reduce((n, m) => Math.max(n, m.caps.maxReferenceImages), 0), [models]);
-
-  // Follow Settings › Defaults (including later changes) until the user picks a model here.
-  useEffect(() => {
-    if (pickedModel || !defaultModel) return;
-    if (models.some((m) => m.id === defaultModel)) setModelId(defaultModel);
-  }, [defaultModel, models, pickedModel]);
 
   // Snap aspect ratio / size to what the selected model supports.
   useEffect(() => {
@@ -172,24 +161,23 @@ export function ImageComposer() {
   );
 
   const trimmed = prompt.trim();
-  const missingKey = hasKey === false;
+  // Generate stays clickable without a key: it opens the key dialog for the model's provider.
+  const keyGate = useKeyGate(model);
+  const notice = keyGate.notice;
 
   const disabledReason: string | null = !model
     ? "No image models available"
-    : missingKey
-      ? "Add your OpenRouter key first"
-      : !trimmed
-        ? "Enter a prompt"
-        : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
+    : !trimmed
+          ? "Enter a prompt"
+          : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
 
-  const estimate = model ? estimateImageCost(model, size, count) : undefined;
+  // The catalog's estimates are OpenRouter's prices; fal publishes none without a signed-in key.
+  const runsOnFal = keyGate.runsOnFal;
+  const estimate = model && !runsOnFal ? estimateImageCost(model, size, count) : undefined;
 
   const submit = async () => {
-    if (missingKey) {
-      useUi.getState().openKeyDialog();
-      return;
-    }
     if (!model || disabledReason || submitting) return;
+    if (keyGate.askForKey(() => void submit())) return;
     const req: ImageGenerateRequest = { prompt: trimmed, model: model.id, aspectRatio, size, count };
     if (refs.length) req.referenceImages = refs.map(frameInput);
     setSubmitting(true);
@@ -265,6 +253,7 @@ export function ImageComposer() {
       onDrop={onDrop}
       aria-label="Image prompt"
       dragging={dragging}
+      notice={notice ? <ComposerNotice message={notice.message} action={notice.action} onAction={notice.onAction} /> : null}
       addControl={
         <Tooltip content={addTooltip} side="top">
           <AddButton onClick={() => void pick()} aria-label="Add reference image">
@@ -360,7 +349,7 @@ export function ImageComposer() {
         </>
       }
       estimate={estimate !== undefined ? formatUsd(estimate, { approx: true }) : undefined}
-      generate={{ disabledReason, submitting, reasonId, onClick: missingKey ? () => useUi.getState().openKeyDialog() : undefined }}
+      generate={{ disabledReason, submitting, reasonId }}
       className={cn(submitting && "cursor-progress")}
     />
   );

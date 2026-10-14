@@ -20,7 +20,7 @@ import type {
   UploadResponse,
   VideoGenerateRequest,
 } from "@shared/types";
-import { imageCatalog, lookupImageModel, lookupVideoModel, videoCatalog } from "./catalog";
+import { imageCatalog, videoCatalog } from "./catalog";
 import { cachedCredits, fetchCredits, invalidateCredits } from "./credits";
 import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic } from "./db/generations";
 import { listUploads, putMedia } from "./db/media";
@@ -28,11 +28,13 @@ import { cancelJob, retryGeneration as engineRetry, submitImageBatch, submitVide
 import { ApiClientError, badRequest, isKeyRejected, notFound } from "./errors";
 import { detectImage } from "./image-meta";
 import { publish } from "./live";
-import { MAX_UPLOAD_BYTES, newUploadId } from "./media-ids";
+import * as fal from "./fal";
+import { MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-ids";
 import { revokeAllMediaUrls } from "./media-urls";
 import { listLiveModels } from "./openrouter";
-import { getStoredKey, requireApiKey, setDefaults, setStoredKey, settingsResponse } from "./settings";
+import { getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setStoredFalKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
+import { detectVideo } from "./video-meta";
 
 export { ApiClientError, describeApiError, OFFLINE_MESSAGE, providerMessage } from "./errors";
 
@@ -47,15 +49,10 @@ export async function updateSettings(body: UpdateSettingsRequest): Promise<Setti
     setStoredKey(body.apiKey);
     invalidateCredits();
   }
-  if (body.defaults) {
-    if (body.defaults.imageModel && !(await lookupImageModel(body.defaults.imageModel, getStoredKey()))) {
-      throw badRequest(`Unknown image model: ${body.defaults.imageModel}`);
-    }
-    if (body.defaults.videoModel) {
-      const m = await lookupVideoModel(body.defaults.videoModel, getStoredKey());
-      if (!m || m.hidden) throw badRequest(`Unknown video model: ${body.defaults.videoModel}`);
-    }
-    setDefaults(body.defaults);
+  if (body.falKey !== undefined) setStoredFalKey(body.falKey);
+  if (body.preferredProvider !== undefined) {
+    if (body.preferredProvider !== "openrouter" && body.preferredProvider !== "fal") throw badRequest("preferredProvider must be openrouter or fal");
+    setPreferredProvider(body.preferredProvider);
   }
   return settingsResponse();
 }
@@ -70,6 +67,19 @@ export async function testSettings(apiKey?: string): Promise<CreditsResponse> {
     if (isKeyRejected(err)) throw new ApiClientError(401, "Invalid API key", (err as ApiClientError).provider);
     throw err;
   }
+}
+
+/** Check a fal key (the stored one when none is passed). Resolves when fal accepts it. */
+export async function testFalKey(falKey?: string): Promise<{ ok: true }> {
+  const key = falKey?.trim() || getStoredFalKey();
+  if (!key) throw badRequest("No fal key to test. Paste one, or save one first.");
+  try {
+    await fal.testKey(key);
+  } catch (err) {
+    if (err instanceof ApiClientError && err.status === 401) throw new ApiClientError(401, "Invalid fal key", err.provider);
+    throw err;
+  }
+  return { ok: true };
 }
 
 export async function getCredits(): Promise<CreditsResponse> {
@@ -116,7 +126,11 @@ export async function updateGeneration(id: string, body: UpdateGenerationRequest
 
 /** Remove the record, its file, and inputs nothing else uses; stops the job if this tab drives it. */
 export async function deleteGeneration(id: string): Promise<{ ok: true }> {
+  const row = await readGeneration(id);
   cancelJob(id);
+  // fal can cancel a queued job; OpenRouter has no cancel endpoint. Best effort, never blocks the delete.
+  const falKey = getStoredFalKey();
+  if (row?.provider === "fal" && row.status === "running" && row.pollingUrl && falKey) void fal.cancel(falKey, row.pollingUrl).catch(() => undefined);
   const removed = await removeGeneration(id);
   if (!removed) throw notFound("Generation not found");
   publish({ type: "generation-deleted", id });
@@ -149,6 +163,24 @@ export async function upload(file: Blob): Promise<UploadResponse> {
     media.height = meta.height;
   }
   return { media };
+}
+
+/** Store a reference video (motion control) in the library: MP4, MOV or WebM, up to 90 MB. */
+export async function uploadVideo(file: Blob): Promise<UploadResponse> {
+  if (file.size === 0) throw badRequest("Empty file");
+  if (file.size > MAX_VIDEO_UPLOAD_BYTES) throw new ApiClientError(413, `Video exceeds the ${Math.round(MAX_VIDEO_UPLOAD_BYTES / 1024 / 1024)} MB limit`);
+  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer());
+  const format = detectVideo(head);
+  if (!format) throw badRequest("Unsupported video type: only MP4, MOV and WebM are accepted");
+  const id = newUploadId(format.ext);
+  const blob = file.type === format.mime ? file : new Blob([file], { type: format.mime });
+  try {
+    await putMedia({ id, kind: "upload", mime: format.mime, bytes: file.size, createdAt: new Date().toISOString(), blob });
+  } catch (err) {
+    if (isQuotaError(err)) throw new ApiClientError(507, quotaMessage());
+    throw err;
+  }
+  return { media: { id, mime: format.mime, bytes: file.size } };
 }
 
 // ---------- library stats ----------

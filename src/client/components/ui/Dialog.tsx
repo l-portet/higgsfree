@@ -25,8 +25,8 @@ export function DialogOverlay({ className, ...props }: ComponentProps<typeof Dia
   return <DialogPrimitive.Overlay className={cn(dialogOverlayClasses, className)} {...props} />;
 }
 
-type DialogSize = "sm" | "md" | "lg";
-const SIZE: Record<DialogSize, string> = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl" };
+type DialogSize = "sm" | "md" | "lg" | "xl";
+const SIZE: Record<DialogSize, string> = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl", xl: "max-w-[880px]" };
 
 export interface DialogContentProps extends ComponentProps<typeof DialogPrimitive.Content> {
   size?: DialogSize;

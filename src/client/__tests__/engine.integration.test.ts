@@ -360,8 +360,8 @@ describe("live model catalog", () => {
     const res = await api.getModels();
     expect(res.live).toBeDefined();
     const available = new Set(res.live?.available);
-    for (const m of IMAGE_MODELS) expect(available.has(m.id), m.id).toBe(true);
-    for (const m of VIDEO_MODELS) expect(available.has(m.id), m.id).toBe(true);
+    for (const m of IMAGE_MODELS.filter((x) => !x.falOnly)) expect(available.has(m.id), m.id).toBe(true);
+    for (const m of VIDEO_MODELS.filter((x) => !x.falOnly)) expect(available.has(m.id), m.id).toBe(true);
     expect(mock.seen.map((s) => s.url).sort()).toEqual(["/api/v1/images/models", "/api/v1/videos/models"]);
     expect(mock.seen.every((s) => s.auth === undefined)).toBe(true);
     const before = mock.seen.length;

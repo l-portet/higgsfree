@@ -25,6 +25,7 @@
   --color-accent-hover: #d2f24c;
   --color-on-accent: #141a05;
   --color-danger: #f87171;
+  --color-warning: #fbbf24;
   --color-success: #4ade80;
 
   /* Corner radii, measured from the design mockups. Use these names, never raw values: nested surfaces

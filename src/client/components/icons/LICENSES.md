@@ -22,6 +22,7 @@ one weight at 14–20 px. Colors, gradients and wordmarks were dropped.
 | `runway` | Runway "R" monogram | Traced (potrace 1.16) from the official favicon <https://runway.com/icon.png> (320×320) | Nominative use of Runway AI, Inc.'s trademark |
 | `krea` | Krea "K" mark | Official inline SVG on <https://www.krea.ai/> (`aria-label="Krea Logo"`), four paths merged | Nominative use of Krea's trademark |
 | `heygen` | HeyGen four-petal symbol | [Wikimedia Commons: File:HeyGen logo.svg](https://commons.wikimedia.org/wiki/File:HeyGen_logo.svg) (source heygen.com), symbol only, gradients flattened | Public domain per Commons (`PD-logo`) |
+| `fal` | fal ring mark (a ring with four notches) | Official inline SVG logo on <https://fal.ai/> (120×48 lockup), symbol path only, wordmark removed | Nominative use of Features & Labels, Inc.'s trademark |
 | `openrouter` | OpenRouter arrows | Simple Icons `openrouter` (v16.29.0) | CC0 1.0 |
 
 Simple Icons is released under [CC0 1.0](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md);

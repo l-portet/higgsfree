@@ -3,7 +3,7 @@
 Derived from a live walkthrough of higgsfield.ai (Aug 2026). The goal is a faithful, *professional-minimal* interpretation:
 Vercel/Linear dark discipline with Higgsfield's single lime accent. No neon, no glows, no gamer aesthetics.
 
-## Tokens (Tailwind v4 `@theme` in `src/client/styles.css`)
+## Tokens (Tailwind v4 `@theme` in `src/app/globals.css`)
 ```
 --color-bg:         #0a0a0b   page background
 --color-surface:    #1b1d1f   floating chrome: nav pills, the composer, dialogs
@@ -22,6 +22,7 @@ Vercel/Linear dark discipline with Higgsfield's single lime accent. No neon, no 
 --color-accent-hover: #d2f24c
 --color-on-accent:  #141a05
 --color-danger:     #f87171
+--color-warning:    #fbbf24   amber: the composer's provider notice (a model whose provider has no key)
 --color-success:    #4ade80
 ```
 
@@ -65,7 +66,7 @@ Rules that follow from the tokens:
 Fonts: `Inter` for UI (Google Fonts, `font-feature-settings: "cv11","ss01"`), `Inter Tight` 800 for display headings
 (uppercase, `tracking-[-0.02em]`, `leading-[0.95]`). Both with `system-ui` fallback.
 
-## Typography scale (`@utility` in `src/client/styles.css`)
+## Typography scale (`@utility` in `src/app/globals.css`)
 
 One utility per kind of text; add a color or weight utility after it when the default doesn't fit
 (`text-meta text-danger`, `text-body font-medium`). Letter-spacing only on `text-display` and `text-label`.
@@ -94,14 +95,15 @@ There is no page chrome: the app is four views under one floating nav, with one 
 - **Top bar**: three boxes floating 12 px from the top, centred, 8 px apart, over the content (`fixed`, `z-40`).
   Each box is 46 px tall: `surface`, 1 px `border`, `rounded-chrome` (15), `shadow-float` (a hairline of top light
   inside, a soft drop outside).
-  - **Logo box**: 46 × 46, the brand tile at 30 px; links to the Image view.
-  - **Views**: Image · Video · Assets · Favorites as 36 px tabs (`rounded-control`, `px-3`, `gap-2`, 2 px apart) in a
+  - **Logo box**: 46 × 46, the brand tile at 30 px; links to the Video view (the default). On hover or
+    focus it stretches to reveal the "higgsfree" wordmark.
+  - **Views**: Video · Image · Assets · Favorites as 36 px tabs (`rounded-control`, `px-3`, `gap-2`, 2 px apart) in a
     4 px padded box. Labels 13 px medium, `-0.01em`. Icons sit in a 16 px box with 1.5 px strokes, sized to match the
     mock (14 px frames, a 12 px heart); the video frame, the tray and the key are drawn in `components/icons/nav.tsx`.
     Inactive: `fg-muted` label, `fg-subtle` icon. Active: raised (`surface-2`, `border-strong`, `shadow-raised`),
     `fg` label, lime icon. Below `sm` (640 px) the labels collapse to icons.
-  - **Key box**: key icon, "Add key", 6 px dot (`fg-disabled`) until a key is set; then the remaining credits
-    (`$12.34`) and a lime dot. Opens the API key dialog.
+  - **Key box**: key icon, "Add key", 6 px dot (`fg-disabled`) until a key is set (opens the key dialog); then the
+    remaining credits (`$12.34`) and a lime dot (opens Settings on the OpenRouter section).
 - **Content**: max-width 1400 px, 24 px page padding, 72 px top padding to clear the nav, bottom padding equal to the
   composer's measured height (`--composer-h`) + 16 px.
 - **Composer**: fixed bottom centre, `max-w-[940px]`, `rounded-dock` (24), `surface`, `border`, `shadow-float`, 13 px
@@ -114,6 +116,13 @@ There is no page chrome: the app is four views under one floating nav, with one 
   ⌘/Ctrl+Enter submits; the whole bar is a drop target and accepts pasted images. It is one global surface: it follows the Image
   and Video views and keeps its last mode on Assets and Favorites, where a submit navigates to the matching view.
   While asset selection is active the composer steps aside for the selection bar.
+- **Missing key** (`useKeyGate`): Generate is never blocked by a missing key. Pressed while the selected model's
+  provider has no key, it opens the key dialog for that provider, whose primary button reads "Save and generate":
+  the key is checked, saved, and the generation starts. When the user has the other provider's key (a fal-only model
+  with only an OpenRouter key, or the reverse), a notice also sits at the top of the composer, 10 px above row 1
+  (`ComposerNotice`): `rounded-control`, `border-warning/25` on `bg-warning/5`, a 14 px `warning` alert icon, the
+  sentence in `text-meta` ("Kling 3.0 Motion Control runs on fal.") and an "Add fal key" text button that opens the
+  same dialog. It goes away once the key is saved. The model list carries no provider tag.
 
 ## Image view (`/image`)
 - Empty: centred block. Title 20 px semibold, `-0.02em`; 8 px below, a 13 px `fg-subtle` line of guidance on a 20 px
@@ -137,6 +146,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
   models with native audio; the count runs that many independent jobs. `+` opens a small menu: first frame, last
   frame (models with `caps.lastFrame`), style reference (unless the model rejects references). Dropped or pasted
   images fill those slots in that order. Image-to-video is implicit: a frame attached is the mode.
+- Motion control (Kling 3.0 Motion Control, `caps.motionControl`): `+` offers "Character image" and "Reference
+  video"; dropped images fill the character, dropped videos the reference. One chip replaces duration, aspect
+  ratio, resolution and Sound: [Follow video ˅] / [Follow image ˅], with the reference video's limit (30 s / 10 s)
+  in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
 
 ## Assets view (`/assets`)
 - Empty: "Nothing generated yet" with one line, no toolbar.
@@ -151,15 +164,29 @@ There is no page chrome: the app is four views under one floating nav, with one 
 - The kept runs, images and videos together, newest first, type badge on each card. Empty: "Nothing kept yet. Hover a
   run and press its heart to keep it here."
 
-## API key dialog and Settings
-- The key box opens a 440 px dialog (`rounded-panel`, 20 px padding): "API key" (16 px semibold), a 13 px `fg-subtle`
-  paragraph (the key stays in this browser and only goes to openrouter.ai), a 13 px label, a 34 px password field on
-  `inset` (`rounded-field`), Test and Get a key (or Remove once a key is saved) on the left, "Save key" (34 px primary,
-  `rounded-button`) on the right; the close button is 32 px, `rounded-field`, at the 20 px corner. The saved key is
-  shown masked with the remaining credits. A footer link leads to the full Settings page (`/settings`, not in the nav).
-- **Settings** is a 760 px column of cards (`rounded-panel`): OpenRouter key (masked key, Save / Test connection /
-  Remove key, a Connected / Not set badge), Credits (remaining, used, purchased, a usage bar, Refresh), Default
-  models, Library, About (version, "This browser (IndexedDB)", MIT, links).
+## Key dialog and Settings
+- **Key dialog** (`KeyDialog`, 400 px, `rounded-panel`, 20 px padding): one provider. "Add your OpenRouter key" /
+  "Add your fal key" (16 px semibold), a 13 px `fg-subtle` line (why, when Generate opened it: "Kling 3.0 Motion
+  Control runs on fal.", then that the key stays in this browser and only goes to that provider), a 34 px monospace
+  password field on `inset` with a show / hide toggle, a "Use a dedicated key with a spend limit" hint (or the
+  error in `danger` when the provider rejects the key), Get a key on the left and the primary button on the right:
+  "Save and generate" when Generate opened it, "Save key" otherwise. The key is tested before it is saved; only a
+  clear rejection blocks it. Footer: "All settings" opens the Settings dialog on Keys.
+- **Settings** is a dialog (`SettingsDialog`, 880 px wide, up to 640 px tall, no separate page): a 208 px sidebar on
+  `inset` with "Settings" and the sections Keys, Library, About (36 px rows,
+  `rounded-control`; the open one raised on `surface-2`), and the open section's cards on the right, shown flat
+  (no card border or fill, sections separated by a divider). Below `sm` the sections become a scrolling row under the
+  title. Keys: the OpenRouter key (masked key, Save / Test connection / Remove key, a Connected / Not set badge),
+  then the fal key card. There is no credits breakdown (the key box shows the balance) and no default-model setting:
+  each composer starts on the app's default and then remembers the last model picked. Old `/settings` links (`#fal`,
+  `#providers`, `#library`…) open the dialog over the Image view.
+- **fal key card**: the OpenRouter
+  card's anatomy, titled "fal key" with a Connected / Not set badge, a line naming the fal-only models with a link to
+  fal.ai/dashboard/keys, a monospace password field (`key_id:key_secret`), Save / Test connection / Remove key
+  (confirm dialog). Below a divider, "Run models both providers offer on": a two-option segmented control, OpenRouter
+  · fal (`surface-2` track, `rounded-control`, 4 px padding; 32 px options at `rounded-tag`, the selected one on
+  `surface-3` with `fg` text; radio semantics, arrow keys move and select). OpenRouter by default; disabled, with a
+  hint saying so, until both keys are saved.
 - **Library card**: a usage line ("Using 1.2 GB of 60 GB the browser allows") over a thin bar (lime, `danger` from
   90 %), then two tiles, Images and Videos (count · size, files), with a reference-images line under them. Below a
   divider, "Protected from eviction" with a Yes / Not yet badge and a Protect button while it is not (Safari gets a

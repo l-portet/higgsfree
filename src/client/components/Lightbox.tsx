@@ -1,6 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, RefreshCw, RotateCcw, Trash2, WandSparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, RefreshCw, RotateCcw, Trash2, VideoOff, WandSparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { downloadFilename } from "@/lib/files";
 import { formatBytes, formatDateTime, formatDims, formatDurationMs, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
@@ -8,7 +8,9 @@ import { useGenerationActions } from "@/lib/actions";
 import { copyText, useElapsed, useReturnFocus } from "@/lib/hooks";
 import { useMediaUrl } from "@/lib/media-urls";
 import { isImageParams, providerLabel } from "@/lib/models";
+import { PROVIDER_NAME } from "@/lib/providers";
 import { isPending, useGenerations } from "@/store/generations";
+import { useModels } from "@/store/models";
 import { useUi } from "@/store/ui";
 import { Badge } from "@/components/ui/Badge";
 import { AnchorButton, Button } from "@/components/ui/Button";
@@ -37,6 +39,13 @@ function Details({ g }: { g: Generation }) {
   const src = useMediaUrl(out?.id);
   const p = g.params;
   const image = isImageParams(p);
+  // Motion control: a character image and a reference video; the clip is as long as the video.
+  const motion = !image && (p.orientation !== undefined || Boolean(g.inputs?.motionVideo));
+  // The model's maker from the catalog (a fal-only slug starts with `fal/`), else the slug's prefix.
+  const catalogModel = useModels((s) => (g.type === "image" ? s.findImage(g.model) : s.findVideo(g.model)));
+  const maker = catalogModel?.provider ?? g.model.split("/")[0] ?? "openrouter";
+  // 0 = not known yet (motion control, until the clip is back).
+  const durationSec = out?.durationSec ?? (!image && p.duration > 0 ? p.duration : undefined);
   const status: { label: string; variant: "neutral" | "accent" | "danger" } =
     g.status === "completed"
       ? { label: "Completed", variant: "neutral" }
@@ -47,14 +56,14 @@ function Details({ g }: { g: Generation }) {
   return (
     <div className="flex flex-col gap-5 p-5">
       <div className="flex items-center gap-3">
-        <ProviderTile provider={g.model.split("/")[0] ?? "openrouter"} size={36} />
+        <ProviderTile provider={maker} size={36} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <DialogPrimitive.Title className="truncate text-heading">{g.modelName}</DialogPrimitive.Title>
             <Badge variant={status.variant}>{status.label}</Badge>
           </div>
           <DialogPrimitive.Description className="truncate text-meta">
-            {g.type === "image" ? "Image" : "Video"} · {providerLabel(g.model.split("/")[0] ?? "")} · {formatDateTime(g.createdAt)}
+            {g.type === "image" ? "Image" : "Video"} · {providerLabel(maker)} · {formatDateTime(g.createdAt)}
           </DialogPrimitive.Description>
         </div>
       </div>
@@ -83,6 +92,7 @@ function Details({ g }: { g: Generation }) {
         <h3 className="mb-1 text-label">Details</h3>
         <dl className="divide-y divide-border">
           <Row label="Model" mono>{g.model}</Row>
+          <Row label="Provider">{PROVIDER_NAME[g.provider ?? "openrouter"]}</Row>
           {image ? (
             <>
               <Row label="Aspect ratio">{p.aspectRatio === "auto" ? "Auto" : p.aspectRatio}</Row>
@@ -90,7 +100,8 @@ function Details({ g }: { g: Generation }) {
             </>
           ) : (
             <>
-              <Row label="Duration">{formatSeconds(out?.durationSec ?? p.duration)}</Row>
+              <Row label="Duration">{durationSec !== undefined ? formatSeconds(durationSec) : undefined}</Row>
+              <Row label="Orientation">{motion ? (p.orientation === "image" ? "Follow image" : "Follow video") : undefined}</Row>
               <Row label="Aspect ratio">{p.aspectRatio}</Row>
               <Row label="Resolution">{p.resolution}</Row>
               <Row label="Audio">{p.audio === undefined ? undefined : p.audio ? "Yes" : "No"}</Row>
@@ -106,11 +117,12 @@ function Details({ g }: { g: Generation }) {
         </dl>
       </section>
 
-      {g.inputs?.referenceImages?.length || g.inputs?.firstFrame || g.inputs?.lastFrame ? (
+      {g.inputs?.referenceImages?.length || g.inputs?.firstFrame || g.inputs?.lastFrame || g.inputs?.motionVideo ? (
         <section>
           <h3 className="mb-2 text-label">Inputs</h3>
           <div className="flex flex-wrap gap-2">
-            {g.inputs.firstFrame ? <InputThumb id={g.inputs.firstFrame} label="First frame" /> : null}
+            {g.inputs.firstFrame ? <InputThumb id={g.inputs.firstFrame} label={motion ? "Character" : "First frame"} /> : null}
+            {g.inputs.motionVideo ? <InputThumb id={g.inputs.motionVideo} label="Motion" video /> : null}
             {g.inputs.lastFrame ? <InputThumb id={g.inputs.lastFrame} label="Last frame" /> : null}
             {g.inputs.referenceImages?.map((id, i) => (
               <InputThumb key={`${id}-${i}`} id={id} label={`Reference ${i + 1}`} />
@@ -172,13 +184,22 @@ function Details({ g }: { g: Generation }) {
   );
 }
 
-/** An input by media id; a quiet placeholder when the file is no longer in the library. */
-function InputThumb({ id, label }: { id: string; label: string }) {
+/** An input by media id (a muted loop for a video); a quiet placeholder when the file is no longer in the library. */
+function InputThumb({ id, label, video }: { id: string; label: string; video?: boolean }) {
   const src = useMediaUrl(id);
+  const Missing = video ? VideoOff : ImageOff;
   return (
     <figure className="w-16">
       <div className="flex size-16 items-center justify-center overflow-hidden rounded-thumb border border-border bg-surface-2 text-fg-subtle">
-        {src ? <img src={src} alt={label} className="size-full object-cover" loading="lazy" /> : <ImageOff size={18} aria-label={`${label} not available`} />}
+        {src ? (
+          video ? (
+            <video src={src} muted loop autoPlay playsInline preload="metadata" aria-label={label} className="size-full object-cover" />
+          ) : (
+            <img src={src} alt={label} className="size-full object-cover" loading="lazy" />
+          )
+        ) : (
+          <Missing size={18} aria-label={`${label} not available`} />
+        )}
       </div>
       <figcaption className="mt-1 truncate text-center text-caption">{label}</figcaption>
     </figure>

@@ -20,7 +20,7 @@ interface ComposerState {
 
 function restoreMode(): ComposerMode {
   const p = readJson<Record<string, unknown>>(STORAGE_KEY, {});
-  return p.mode === "video" ? "video" : "image";
+  return p.mode === "image" ? "image" : "video";
 }
 
 export const useComposer = create<ComposerState>()((set, get) => ({

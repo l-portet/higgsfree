@@ -50,13 +50,17 @@ export const MP4 = Uint8Array.from([
 export interface Seen {
   method: string;
   url: string;
+  /** Host, so fal and OpenRouter calls with the same path can be told apart. */
+  host: string;
   auth?: string;
   body?: Record<string, unknown>;
 }
 
 export interface MockOpenRouter {
   seen: Seen[];
-  state: { pollCount: number; unknownPolls: number; catalogDown: boolean };
+  state: { pollCount: number; unknownPolls: number; catalogDown: boolean; falPolls: number; uploads: number };
+  /** Calls to fal hosts (API, uploads, CDN), by path. */
+  fal(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
 }
@@ -66,7 +70,7 @@ const json = (status: number, payload: unknown): Response => new Response(JSON.s
 /** Replace `fetch` for the current test (undone by `vi.unstubAllGlobals()` in the setup's afterEach). */
 export function installMockOpenRouter(): MockOpenRouter {
   const seen: Seen[] = [];
-  const state = { pollCount: 0, unknownPolls: 0, catalogDown: false };
+  const state = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0 };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
     const u = new URL(input instanceof Request ? input.url : String(input));
@@ -74,11 +78,12 @@ export function installMockOpenRouter(): MockOpenRouter {
     const headers = new Headers(init?.headers);
     const raw = typeof init?.body === "string" ? init.body : undefined;
     const body = raw ? (JSON.parse(raw) as Record<string, unknown>) : undefined;
-    const entry: Seen = { method: init?.method ?? "GET", url };
+    const entry: Seen = { method: init?.method ?? "GET", url, host: u.hostname };
     const auth = headers.get("authorization");
     if (auth) entry.auth = auth;
     if (body) entry.body = body;
     seen.push(entry);
+    if (u.hostname !== "openrouter.ai") return falRoute(u, entry, state);
     // The two catalogs are public: no key needed.
     if (url === "/api/v1/videos/models" || url === "/api/v1/images/models") {
       if (state.catalogDown) return json(503, { error: { message: "catalog unavailable" } });
@@ -120,6 +125,7 @@ export function installMockOpenRouter(): MockOpenRouter {
   return {
     seen,
     state,
+    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && s.url === path),
     calls: (url) => seen.filter((s) => s.url === url),
     last: (url) => seen.filter((s) => s.url === url).at(-1),
   };
@@ -135,4 +141,52 @@ export async function waitFor(cond: () => boolean | Promise<boolean>, ms = 5000)
     if (Date.now() > until) throw new Error("timed out waiting for condition");
     await sleep(5);
   }
+}
+
+export const FAL_KEY = "test-fal-key";
+export const FAL_CDN = "https://v3b.fal.media";
+
+/**
+ * fal's hosts: \`fal.run\` (sync images), \`queue.fal.run\` (video jobs: submit, status, result),
+ * \`rest.fal.ai\` (upload initiate) + the presigned PUT, \`api.fal.ai\` (pricing = key test), and the
+ * public CDN the results come from. Prompts containing FAL_FAIL make the job fail.
+ */
+function falRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
+  const path = u.pathname;
+  const keyed = ["fal.run", "queue.fal.run", "rest.fal.ai", "api.fal.ai"].includes(u.hostname);
+  if (keyed && entry.auth !== `Key ${FAL_KEY}`) return json(401, { detail: "Invalid key" });
+  if (u.hostname === "api.fal.ai" && path === "/v1/models/pricing") {
+    return json(200, { prices: [{ endpoint_id: "fal-ai/flux/schnell", unit_price: 0.003, unit: "image", currency: "USD" }], next_cursor: null, has_more: false });
+  }
+  if (u.hostname === "fal.run") {
+    if (String(entry.body?.prompt ?? "").includes("FAL_FAIL")) return json(422, { detail: [{ loc: ["body", "prompt"], msg: "prompt rejected", type: "value_error" }] });
+    return json(200, { images: [{ url: `${FAL_CDN}/files/out.png`, content_type: "image/png" }] });
+  }
+  if (u.hostname === "rest.fal.ai" && path === "/storage/upload/initiate") {
+    state.uploads++;
+    return json(200, { upload_url: `${FAL_CDN}/upload/presigned-${state.uploads}`, file_url: `${FAL_CDN}/files/ref-${state.uploads}.mp4` });
+  }
+  if (u.hostname === "queue.fal.run") {
+    const app = path.split("/").slice(1, 3).join("/"); // owner/alias: status and result urls use only these
+    const status = path.match(/\/requests\/([^/]+)\/status$/);
+    if (status) {
+      state.falPolls++;
+      if (status[1] === "req_fail") return json(200, { status: "COMPLETED", error: "The reference video has no visible person", error_type: "validation" });
+      return json(200, state.falPolls === 1 ? { status: "IN_PROGRESS", logs: [] } : { status: "COMPLETED", logs: [] });
+    }
+    if (/\/requests\/[^/]+\/cancel$/.test(path) && entry.method === "PUT") return json(202, { status: "CANCELLATION_REQUESTED" });
+    const result = path.match(/\/requests\/([^/]+)$/);
+    if (result && entry.method === "GET") return json(200, { video: { url: `${FAL_CDN}/files/out.mp4`, content_type: "video/mp4" } });
+    if (entry.method === "POST") {
+      const id = String(entry.body?.prompt ?? "").includes("FAL_FAIL") ? "req_fail" : "req_1";
+      const base = `https://queue.fal.run/${app}/requests/${id}`;
+      return json(200, { request_id: id, status_url: `${base}/status`, response_url: base, cancel_url: `${base}/cancel`, queue_position: 0 });
+    }
+  }
+  if (u.hostname === "v3b.fal.media") {
+    if (entry.method === "PUT") return new Response(null, { status: 200 });
+    if (path === "/files/out.png") return new Response(new Blob([PNG_2X2]), { status: 200, headers: { "content-type": "image/png" } });
+    if (path === "/files/out.mp4") return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
+  }
+  return json(404, { detail: `no fal route ${u.hostname}${path}` });
 }

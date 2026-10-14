@@ -53,10 +53,12 @@ const GA_SCRIPT = "https://*.googletagmanager.com";
 const GA_CONNECT = "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
 
 /**
- * Production only (Next dev needs eval and websockets). The key lives in this browser, so the one
- * thing worth locking down is where a script on this origin may send data: OpenRouter, plus the
- * Google Analytics endpoints, and nothing else.
+ * Production only (Next dev needs eval and websockets). The keys live in this browser, so the one
+ * thing worth locking down is where a script on this origin may send data: OpenRouter, fal (its API
+ * hosts, upload targets and the CDN its results come from), plus the Google Analytics endpoints,
+ * and nothing else.
  */
+const FAL_ORIGINS = "https://fal.run https://queue.fal.run https://rest.fal.ai https://api.fal.ai https://fal.media https://*.fal.media https://storage.googleapis.com";
 const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
 const CSP = [
   "default-src 'self'",
@@ -65,7 +67,7 @@ const CSP = [
   `img-src 'self' blob: data: ${GA_CONNECT}`,
   "media-src 'self' blob:",
   "font-src 'self'",
-  `connect-src 'self' ${OPENROUTER_ORIGIN} ${GA_CONNECT}`,
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${GA_CONNECT}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

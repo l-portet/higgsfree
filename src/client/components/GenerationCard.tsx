@@ -25,7 +25,9 @@ function paramsLabel(g: Generation): string {
     return [g.params.size, dims].filter(Boolean).join(" · ");
   }
   const p = g.params;
-  return [formatSeconds(g.output?.durationSec ?? p.duration), p.resolution].filter(Boolean).join(" · ");
+  const seconds = g.output?.durationSec ?? p.duration;
+  // Motion control: the length follows the reference video and is known only once the clip is back.
+  return [seconds > 0 ? formatSeconds(seconds) : undefined, p.resolution].filter(Boolean).join(" · ");
 }
 
 export interface GenerationCardProps {

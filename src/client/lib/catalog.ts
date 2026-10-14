@@ -241,8 +241,10 @@ function merge(live: LiveModels): Merged {
   const videoSpecs = new Map(live.video.map((s) => [s.id, s]));
   const video: VideoModel[] = [];
   for (const curated of VIDEO_MODELS) {
-    const spec = videoSpecs.get(curated.id);
-    if (spec) video.push(buildVideoModel(spec, curated)); // a curated slug OpenRouter dropped is gone
+    const spec = curated.falOnly ? undefined : videoSpecs.get(curated.id);
+    if (spec) video.push(buildVideoModel(spec, curated));
+    else if (curated.fal) video.push(curated.falOnly ? curated : { ...curated, falOnly: true }); // fal still serves it
+    // a curated OpenRouter-only slug OpenRouter dropped is gone
   }
   const newestFirst = <T extends { created?: number }>(a: T, b: T): number => (b.created ?? 0) - (a.created ?? 0);
   for (const spec of [...live.video].sort(newestFirst)) if (!findVideoModel(spec.id)) video.push(buildVideoModel(spec));
@@ -251,8 +253,8 @@ function merge(live: LiveModels): Merged {
   const image: ImageModel[] = [];
   for (const curated of IMAGE_MODELS) {
     const spec = imageSpecs.get(curated.id);
-    if (!spec) {
-      // Verified routes do not depend on the image catalog; the picker dims it if OpenRouter stopped listing it.
+    if (!spec || curated.falOnly) {
+      // Verified routes and fal-only models do not depend on OpenRouter's image catalog.
       if (curated.endpoint !== "native") image.push(curated);
       continue;
     }

@@ -2,6 +2,8 @@ import { useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export interface SettingsCardProps {
+  /** DOM id for `/settings#<id>` links. */
+  id?: string;
   icon?: ReactNode;
   title: ReactNode;
   /** Small badge / status pill rendered next to the title. */
@@ -14,10 +16,11 @@ export interface SettingsCardProps {
 }
 
 /** Surface card used by every Settings section: icon · title · badge, muted description, body. */
-export function SettingsCard({ icon, title, badge, description, actions, children, className }: SettingsCardProps) {
+export function SettingsCard({ id: domId, icon, title, badge, description, actions, children, className }: SettingsCardProps) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className={cn("rounded-panel border border-border bg-surface p-5", className)}>
+    // scroll-mt clears the fixed nav when a `#id` link scrolls the card into view.
+    <section id={domId} aria-labelledby={id} className={cn("scroll-mt-20 rounded-panel border border-border bg-surface p-5", className)}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

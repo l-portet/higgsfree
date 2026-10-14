@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { Generation } from "@shared/types";
+import type { Generation, VideoParams } from "@shared/types";
 import { describeApiError } from "@/lib/api";
 import { useGenerations } from "@/store/generations";
 import { useUi } from "@/store/ui";
@@ -70,6 +70,8 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
       referenceImages: g.inputs?.referenceImages,
       firstFrame: g.inputs?.firstFrame,
       lastFrame: g.inputs?.lastFrame,
+      motionVideo: g.inputs?.motionVideo,
+      orientation: g.type === "video" ? (g.params as VideoParams).orientation : undefined,
     });
     useUi.getState().closeLightbox();
     router.push(g.type === "image" ? "/image" : "/video");
