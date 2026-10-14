@@ -245,6 +245,18 @@ is recorded on the result.
 Provider 400s for a discovered model are surfaced verbatim. Once you have run one through the
 checklist below, add a curated entry; it then stops being discovered.
 
+## Prompt editor models
+
+The video composer's AI Prompt Editor uses two fixed models (`src/client/lib/prompt-editor.ts`), picked from
+OpenRouter's live catalogs on 14 Oct 2026 as the newest fast, cheap ones:
+
+| Role | Model | Why |
+|---|---|---|
+| Rewrite the prompt | `openai/gpt-6-luna` (GPT-6 Luna, 22 Sep 2026) | GPT-6's fast, cost-efficient tier: $0.05 / $0.25 per million tokens in / out. Asked for low reasoning. |
+| Preview a frame | `openai/gpt-image-2.5-flare` (GPT Image 2.5 Flare, Sep 2026) | The speed tier of GPT Image 2.5 (Sunburst is the precision tier). Asked for `quality: "low"`. |
+
+When OpenAI ships a newer tier, change the two ids there and the names shown in the dialog follow.
+
 ## Adding a model
 
 1. Confirm the slug is live on OpenRouter (see the checklist below). For a model on fal, see

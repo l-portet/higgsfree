@@ -22,6 +22,7 @@ import type {
   UpdateGenerationRequest,
   UpdateSettingsRequest,
   UploadResponse,
+  VideoAspectRatio,
   VideoGenerateRequest,
 } from "@shared/types";
 import { imageCatalog, videoCatalog } from "./catalog";
@@ -29,7 +30,9 @@ import { cachedCredits, fetchCredits, invalidateCredits } from "./credits";
 import { countInFolder, getFolder as readFolder, listFolders as readFolders, putFolder, removeFolder } from "./db/folders";
 import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic, type GenerationPatch } from "./db/generations";
 import { listUploads, putMedia } from "./db/media";
+import { base64ToBytes, toDataUrl } from "./data-url";
 import { cancelJob, retryGeneration as engineRetry, submitImageBatch, submitVideo } from "./engine";
+import { inputDataUrl } from "./engine/inputs";
 import { ApiClientError, badRequest, isKeyRejected, notFound } from "./errors";
 import { compareFolders, FOLDER_COVER_COUNT, folderNameKey, newFolderId, normalizeFolderName } from "./folders";
 import { detectImage } from "./image-meta";
@@ -37,7 +40,8 @@ import { publish } from "./live";
 import * as fal from "./fal";
 import { MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-ids";
 import { revokeAllMediaUrls } from "./media-urls";
-import { listLiveModels } from "./openrouter";
+import { chatText, listLiveModels, nativeImage } from "./openrouter";
+import { buildPreviewBody, buildRewriteBody, cleanRewrite, previewAspect, type RewriteContext } from "./prompt-editor";
 import { getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setStoredFalKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
 import { detectVideo } from "./video-meta";
@@ -210,6 +214,49 @@ export async function deleteFolder(id: string): Promise<{ ok: true }> {
   publish({ type: "folder-deleted", id });
   for (const generation of res.cleared) publish({ type: "generation", generation });
   return { ok: true };
+}
+
+// ---------- the AI Prompt Editor (video composer) ----------
+
+export interface RewriteRequest {
+  prompt: string;
+  /** "More cinematic", or empty for a general improvement. */
+  instruction: string;
+  context?: RewriteContext;
+}
+
+/** Rewrite a video prompt with the editor's model (OpenRouter, the user's key); `onText` streams the text so far. */
+export async function rewriteVideoPrompt(req: RewriteRequest, opts: { signal?: AbortSignal; onText?: (text: string) => void } = {}): Promise<{ prompt: string; costUsd?: number }> {
+  const key = requireApiKey();
+  const res = await chatText(key, buildRewriteBody(req.prompt, req.instruction, req.context), {
+    signal: opts.signal,
+    onText: opts.onText ? (t) => opts.onText?.(cleanRewrite(t)) : undefined,
+  });
+  invalidateCredits();
+  const prompt = cleanRewrite(res.text);
+  if (!prompt) throw new ApiClientError(502, "The model returned an empty prompt. Try again.");
+  return res.costUsd !== undefined ? { prompt, costUsd: res.costUsd } : { prompt };
+}
+
+export interface PreviewRequest {
+  prompt: string;
+  aspectRatio?: VideoAspectRatio;
+  /** Media id of the attached first frame (or character image), sent as a reference. */
+  firstFrame?: string;
+}
+
+/** A quick still of the shot (low quality, not saved to the library), as a data URL. */
+export async function previewVideoFrame(req: PreviewRequest, opts: { signal?: AbortSignal } = {}): Promise<{ dataUrl: string; costUsd?: number }> {
+  const key = requireApiKey();
+  if (!req.prompt.trim()) throw badRequest("Write a prompt first");
+  const ref = req.firstFrame ? await inputDataUrl(req.firstFrame) : undefined;
+  const res = await nativeImage(key, buildPreviewBody(req.prompt, previewAspect(req.aspectRatio), ref), opts);
+  invalidateCredits();
+  const bytes = base64ToBytes(res.b64);
+  const meta = detectImage(bytes);
+  if (!meta) throw new ApiClientError(502, "Provider returned data that is not a PNG, JPEG or WebP image");
+  const dataUrl = toDataUrl(meta.mime, bytes);
+  return res.costUsd !== undefined ? { dataUrl, costUsd: res.costUsd } : { dataUrl };
 }
 
 // ---------- uploads ----------

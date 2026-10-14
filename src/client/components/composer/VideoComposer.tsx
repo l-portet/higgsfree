@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { AudioLines, Check, CircleAlert, Film, Gem, ImageIcon, ImagePlus, Images, Plus, SquareArrowRight, UserRound } from "lucide-react";
+import { AudioLines, Check, CircleAlert, Film, Gem, ImageIcon, ImagePlus, Images, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Generation, MotionOrientation, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
 import { DEFAULT_VIDEO_MODEL, estimateVideoCost, snapDuration } from "@shared/models";
@@ -25,6 +25,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { DurationControl } from "@/components/video/DurationControl";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS, type Attachment } from "./ComposerFrame";
+import { PromptEditorDialog } from "./PromptEditorDialog";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
 
@@ -129,6 +130,7 @@ export function VideoComposer() {
   const [arOpen, setArOpen] = useState(false);
   const [resOpen, setResOpen] = useState(false);
   const [orientOpen, setOrientOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reasonId = useId();
 
@@ -428,6 +430,7 @@ export function VideoComposer() {
   const orientationLabel = orientation === "image" ? "Follow image" : "Follow video";
 
   return (
+    <>
     <ComposerFrame
       onSubmit={onFormSubmit}
       onDragOver={onDragOver}
@@ -502,6 +505,18 @@ export function VideoComposer() {
           maxRows={6}
           className={PROMPT_TEXTAREA_CLASS}
         />
+      }
+      promptAction={
+        // The AI Prompt Editor: rewrite the prompt with an LLM, preview a frame, use it. As tall as one prompt line; icon only on phones.
+        <Tooltip content="Rewrite the prompt with AI and preview a frame" side="top" align="end">
+          <Chip
+            icon={<Sparkles />}
+            label={<span className="hidden sm:inline">AI Prompt Editor</span>}
+            aria-label="AI Prompt Editor"
+            onClick={() => setEditorOpen(true)}
+            className="h-[33px]"
+          />
+        </Tooltip>
       }
       note={
         faceWarning ? (
@@ -641,11 +656,32 @@ export function VideoComposer() {
           )}
 
           <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of videos" />
+
         </>
       }
       estimate={estimate !== undefined ? formatUsd(estimate, { approx: true }) : undefined}
       generate={{ disabledReason, submitting, reasonId }}
       className={cn(submitting && "cursor-progress")}
     />
+    {/* Beside the form, not in it: React events bubble out of portals, so a submit or a drop in the dialog would reach the composer. */}
+    <PromptEditorDialog
+      open={editorOpen}
+      onOpenChange={setEditorOpen}
+      prompt={prompt}
+      context={{
+        modelName: model.name,
+        duration: motionMode ? undefined : duration,
+        aspectRatio: motionMode ? undefined : aspectRatio,
+        startsFromImage: Boolean(firstFrame),
+        motionControl: motionMode,
+      }}
+      aspectRatio={motionMode ? undefined : aspectRatio}
+      firstFrame={firstFrame ? frameInput(firstFrame) : undefined}
+      onUse={(p) => {
+        setPrompt(p);
+        requestAnimationFrame(() => textareaRef.current?.focus());
+      }}
+    />
+    </>
   );
 }

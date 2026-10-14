@@ -32,7 +32,22 @@ export interface NativeImageBody {
   prompt: string;
   aspect_ratio?: ImageAspectRatio;
   resolution?: ImageSize;
+  /** Models whose catalog entry lists `quality` (GPT Image); only the prompt editor's preview sends it. */
+  quality?: "low" | "medium" | "high";
   input_references?: { type: "image_url"; image_url: { url: string } }[];
+}
+
+// ---------- text ----------
+
+/** `POST /api/v1/chat/completions` for text, streamed (the prompt editor). */
+export interface ChatTextBody {
+  model: string;
+  messages: { role: "system" | "user"; content: string }[];
+  stream: true;
+  max_tokens: number;
+  /** Little thinking for a short rewrite, and none of it in the stream. */
+  reasoning: { effort: "low"; exclude: true };
+  usage: { include: true };
 }
 
 export type ImagePayload =

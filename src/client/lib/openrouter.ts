@@ -5,7 +5,7 @@
  */
 import { ApiClientError, KEY_REJECTED, OFFLINE_MESSAGE, providerMessage } from "./errors";
 import { errorMessage, log } from "./log";
-import type { ChatImageBody, ImagesGenerationsBody, NativeImageBody, VideoBody } from "./payloads";
+import type { ChatImageBody, ChatTextBody, ImagesGenerationsBody, NativeImageBody, VideoBody } from "./payloads";
 import { readJson, writeJson } from "./storage";
 
 /** Overridable for tests / proxies (`NEXT_PUBLIC_OPENROUTER_BASE_URL`, inlined at build time); defaults to the real API. */
@@ -187,6 +187,82 @@ export async function nativeImage(key: string, body: NativeImageBody, opts: Pick
   const out: ImagesGenerationsResult = { b64 };
   if (typeof res.usage?.cost === "number") out.costUsd = res.usage.cost;
   return out;
+}
+
+// ---------- text ----------
+
+export interface ChatTextResult {
+  text: string;
+  costUsd?: number;
+}
+
+interface ChatTextChunk {
+  choices?: { delta?: { content?: unknown }; message?: { content?: unknown } }[];
+  usage?: { cost?: number };
+  error?: unknown;
+}
+
+/**
+ * Streamed text completion: `onText` gets the text so far after every chunk. Server-sent events,
+ * `data: {json}` lines ending with `data: [DONE]`; `:` lines are keep-alive comments. An `error`
+ * chunk mid-stream is a 502 carrying OpenRouter's message; `usage.cost` arrives in the last chunk. A
+ * reply that is not a stream (a proxy that buffers) is read whole.
+ */
+export async function chatText(key: string, body: ChatTextBody, opts: { signal?: AbortSignal; onText?: (text: string) => void } = {}): Promise<ChatTextResult> {
+  const target = assertProviderOrigin("/api/v1/chat/completions");
+  const signal = anySignal([AbortSignal.timeout(90_000), opts.signal]);
+  let res: Response;
+  try {
+    res = await fetch(target, { method: "POST", headers: headers(key), body: JSON.stringify(body), signal });
+  } catch (err) {
+    throw abortedError(signal, err);
+  }
+  if (!res.ok) throw providerError(res.status, await readBody(res).catch(() => undefined));
+  let text = "";
+  let costUsd: number | undefined;
+  const take = (chunk: ChatTextChunk, whole: boolean): void => {
+    if (chunk.error) throw new ApiClientError(502, providerMessage(chunk) ?? "OpenRouter returned an error", chunk);
+    const choice = chunk.choices?.[0];
+    const part = whole ? choice?.message?.content : choice?.delta?.content;
+    if (typeof part === "string" && part) {
+      text += part;
+      opts.onText?.(text);
+    }
+    if (typeof chunk.usage?.cost === "number") costUsd = chunk.usage.cost;
+  };
+  try {
+    if (!res.body || !(res.headers.get("content-type") ?? "").includes("text/event-stream")) {
+      const whole = await readBody(res);
+      if (whole === null || typeof whole !== "object") throw new ApiClientError(502, "OpenRouter returned a non-JSON response", whole);
+      take(whole as ChatTextChunk, true);
+    } else {
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += value;
+        for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (!data || data === "[DONE]") continue;
+          let chunk: ChatTextChunk;
+          try {
+            chunk = JSON.parse(data) as ChatTextChunk;
+          } catch {
+            continue;
+          }
+          take(chunk, false);
+        }
+      }
+    }
+  } catch (err) {
+    if (err instanceof ApiClientError) throw err;
+    throw abortedError(signal, err);
+  }
+  return costUsd !== undefined ? { text, costUsd } : { text };
 }
 
 // ---------- videos ----------
