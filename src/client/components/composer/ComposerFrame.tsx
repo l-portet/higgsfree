@@ -133,8 +133,8 @@ export interface ComposerFrameProps extends Omit<ComponentProps<"form">, "childr
   addControl: ReactNode;
   attachments?: ReactNode;
   textarea: ReactNode;
-  /** Row 1, right of the prompt: a tool that acts on the prompt itself (the video composer's AI Prompt Editor). */
-  promptAction?: ReactNode;
+  /** Under the "+": a second square control that acts on the prompt (the video composer's prompt editor). */
+  secondaryControl?: ReactNode;
   /** Row 2, left: the option chips. */
   chips: ReactNode;
   /** Optional line between the rows (warnings, hints). */
@@ -145,7 +145,7 @@ export interface ComposerFrameProps extends Omit<ComponentProps<"form">, "childr
 }
 
 /** The bar itself (dock radius, 13 px inset): an optional notice, "+" and prompt, then chips and Generate underneath. */
-export function ComposerFrame({ dragging, notice, addControl, attachments, textarea, promptAction, chips, note, estimate, generate, className, ...form }: ComposerFrameProps) {
+export function ComposerFrame({ dragging, notice, addControl, secondaryControl, attachments, textarea, chips, note, estimate, generate, className, ...form }: ComposerFrameProps) {
   return (
     <form
       {...form}
@@ -158,10 +158,12 @@ export function ComposerFrame({ dragging, notice, addControl, attachments, texta
     >
       {notice ? <div className="mb-2.5">{notice}</div> : null}
       <div className="flex items-start gap-3.5">
-        <div className="shrink-0">{addControl}</div>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          {addControl}
+          {secondaryControl}
+        </div>
         {attachments}
         <div className="min-w-0 flex-1">{textarea}</div>
-        {promptAction ? <div className="shrink-0">{promptAction}</div> : null}
       </div>
       {note ? <div className="mt-1.5 pl-[47px]">{note}</div> : null}
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
