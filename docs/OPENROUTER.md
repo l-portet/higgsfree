@@ -159,3 +159,17 @@ Discovered image models (anything in `/api/v1/images/models` without a curated e
 - `input_references: [{ type: "image_url", image_url: { url: dataUrl } }]` for reference images.
 - Response `{ data: [{ b64_json, media_type }], usage: { cost } }`; `data[0].b64_json` is decoded
   and sniffed like every other image. A body with an `error` field is a 502.
+
+## Prompt editor (video composer)
+
+Two calls, both with the user's key, neither saved to the library (`src/client/lib/prompt-editor.ts` builds the
+bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
+- Rewrite: `POST /api/v1/chat/completions` with
+  `{ model: "openai/gpt-6-luna", messages: [system, user], stream: true, max_tokens: 1500, reasoning: { effort: "low", exclude: true }, usage: { include: true } }`.
+  The reply is server-sent events: `data: {json}` lines with `choices[0].delta.content`, `:` keep-alive comments,
+  `usage.cost` in the last chunk, then `data: [DONE]`. An `error` chunk mid-stream is a 502 with OpenRouter's
+  message; a non-2xx before the stream is the usual `ApiClientError`. A reply that is not `text/event-stream`
+  (a buffering proxy) is read whole. `chatText` in `openrouter.ts`; 90 s timeout.
+- Preview: the native images API with `{ model: "openai/gpt-image-2.5-flare", prompt, aspect_ratio, quality: "low",
+  input_references? }` (`quality` is in that model's catalog entry). The video's ratio when Flare lists it, else
+  the closest; the first frame as the one reference when attached.

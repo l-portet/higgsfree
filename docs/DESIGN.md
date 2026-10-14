@@ -160,6 +160,15 @@ There is no page chrome: the app is four views under one floating nav, with one 
   ratio, resolution and Sound: [Follow video ˅] / [Follow image ˅], with the reference video's limit (30 s / 10 s)
   in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
 
+- **AI Prompt Editor**: in the video composer, right of the prompt on row 1, a neutral chip as tall as the prompt's
+  first line (33 px) with a sparkle and "AI Prompt Editor" (the sparkle alone below `sm`); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px): the prompt on the left in an
+  editable field seeded from the composer, a "change" field with Rewrite (Write when the prompt is empty) and four
+  quick changes as small chips (More cinematic, Add camera motion, More detail, Make it shorter); GPT-6 Luna's
+  rewrite streams into the field, with Undo and a line naming the model and the real cost. On the right, a preview
+  frame at the video's ratio (a portrait one is 300 px tall): GPT Image 2.5 Flare at low quality, with the first
+  frame as a reference when one is attached, its cost, and a note that it is a quick look, not saved. Footer: Cancel
+  and Use prompt (the only accent button), which puts the text in the composer. Both calls run on the OpenRouter key;
+  without one, the key dialog opens and the action runs once the key is saved. Errors show verbatim under each half.
 ## Assets view (`/assets`)
 - Empty: "Nothing generated yet" with one line, no toolbar.
 - Otherwise a count line ("9 generations · 410 KB") with Select at the right, a toolbar of type chips (All · Images ·
