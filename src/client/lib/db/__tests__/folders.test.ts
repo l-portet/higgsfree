@@ -3,7 +3,7 @@ import { openDB } from "idb";
 import { describe, expect, it } from "vitest";
 import type { Folder, Generation } from "@shared/types";
 import { countInFolder, listFolders, putFolder, removeFolder } from "../folders";
-import { clearLibrary, getAllGenerations, insertGenerations, listGenerations, toStored } from "../generations";
+import { clearLibrary, getAllGenerations, insertGenerations, listGenerations, patchGeneration, toStored } from "../generations";
 import { closeDb, getDb } from "../index";
 import { DB_NAME } from "../schema";
 
@@ -81,6 +81,34 @@ describe("folders store", () => {
     expect((await listGenerations({ folder: TRAVEL.id, type: "video" })).items).toHaveLength(0);
     expect((await getAllGenerations()).find((g) => g.id === "gen_00000100")?.folder).toBeUndefined();
     expect((await listGenerations({ favorite: true, limit: 100 })).items).toHaveLength(30);
+  });
+
+  it("lists the records in no folder (folder: null), full pages through the cursor, filed ones left out", async () => {
+    await putFolder(TRAVEL);
+    const rows: Generation[] = [];
+    for (let i = 0; i < 30; i++) rows.push(record(i, i % 2 === 0 ? { favorite: true, folder: TRAVEL.id } : { favorite: true }));
+    rows.push(record(50)); // not kept
+    await insertGenerations(rows.map((g) => toStored(g)), 1000);
+
+    const loose = await listGenerations({ favorite: true, folder: null, limit: 100 });
+    expect(loose.items).toHaveLength(15);
+    expect(loose.items.every((g) => g.favorite === true && g.folder === undefined)).toBe(true);
+    // Every page is full even though the filed rows in between are skipped.
+    const first = await listGenerations({ favorite: true, folder: null, limit: 6 });
+    expect(first.items.map((g) => g.id)).toEqual(["gen_00000029", "gen_00000027", "gen_00000025", "gen_00000023", "gen_00000021", "gen_00000019"]);
+    const second = await listGenerations({ favorite: true, folder: null, limit: 6, cursor: first.nextCursor });
+    expect(second.items).toHaveLength(6);
+    const third = await listGenerations({ favorite: true, folder: null, limit: 6, cursor: second.nextCursor });
+    expect(third.items).toHaveLength(3);
+    expect(third.nextCursor).toBeUndefined();
+    // Without `favorite`, the record that is not kept is in no folder too.
+    expect((await listGenerations({ folder: null, limit: 100 })).items).toHaveLength(16);
+
+    // Filing a run takes it out of the loose list; unfiling brings it back.
+    await patchGeneration("gen_00000029", { folder: TRAVEL.id });
+    expect((await listGenerations({ favorite: true, folder: null, limit: 100 })).items).toHaveLength(14);
+    await patchGeneration("gen_00000029", { folder: undefined });
+    expect((await listGenerations({ favorite: true, folder: null, limit: 100 })).items).toHaveLength(15);
   });
 
   it("deleting a folder unfiles its records (still kept) and reports them; clearing the library drops folders too", async () => {

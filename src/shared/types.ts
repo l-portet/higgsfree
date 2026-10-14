@@ -302,8 +302,8 @@ export interface ListGenerationsQuery {
   status?: GenerationStatus;
   /** Only kept (hearted) runs. */
   favorite?: boolean;
-  /** Only the records filed in this Favorites folder. */
-  folder?: string;
+  /** Only the records filed in this Favorites folder; `null`: only the ones in no folder. */
+  folder?: string | null;
   limit?: number;
   /** Opaque cursor (createdAt of the last item). */
   cursor?: string;

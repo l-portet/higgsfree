@@ -22,7 +22,8 @@ import { dragHasGeneration } from "@/components/favorites/dnd";
 import { FolderNameDialog } from "@/components/favorites/FolderNameDialog";
 import { FolderTile } from "@/components/favorites/FolderTile";
 
-const ALL_QUERY: ListQuery = { favorite: true };
+/** The main grid: kept runs in no folder (a filed run shows only inside its folder). */
+const ALL_QUERY: ListQuery = { favorite: true, folder: null };
 const SKELETON_ASPECTS = ["3 / 4", "16 / 9", "1 / 1", "3 / 4", "9 / 16", "4 / 3", "1 / 1", "16 / 9"];
 const SKELETON_ITEMS = skeletonItems(SKELETON_ASPECTS, (a) => <GenerationCardSkeleton aspect={a} />);
 /** A folder tile is square. */
@@ -32,8 +33,9 @@ type NameDialog = { mode: "create" } | { mode: "rename"; folder: Folder };
 
 /**
  * Kept runs (the heart on a card), images and videos together, newest first. Folders take the first
- * positions of the grid; cards can be dragged onto them. `?folder=<id>` opens one folder (its own
- * paged list), so Back returns to All.
+ * positions of the grid, followed by the kept runs that are in no folder; cards can be dragged onto a
+ * folder, which takes them out of this grid. `?folder=<id>` opens one folder (its own paged list), so
+ * Back returns to All.
  */
 export default function FavoritesPage() {
   const router = useRouter();
@@ -49,7 +51,7 @@ export default function FavoritesPage() {
   const folder = useFolders((s) => (folderId ? s.byId[folderId] : undefined));
   const fetchFolders = useFolders((s) => s.fetch);
 
-  const items = useFavoriteList(folderId);
+  const items = useFavoriteList(folderId ?? null);
   const page = usePage(query);
   const fetchPage = useGenerations((s) => s.fetchPage);
 
@@ -191,7 +193,9 @@ export default function FavoritesPage() {
 
   const countLabel = (() => {
     if (!page.loaded && !hasCards) return "Kept runs, images and videos together.";
-    const head = `${items.length} kept${page.nextCursor ? " loaded" : ""}`;
+    // Everything kept: the loose runs on this grid plus what the folders hold.
+    const filed = folders.reduce((n, f) => n + (summaries[f.id]?.count ?? 0), 0);
+    const head = `${items.length + filed} kept${page.nextCursor ? " loaded" : ""}`;
     return folders.length > 0 ? `${head} · ${pluralize(folders.length, "folder")}` : head;
   })();
 

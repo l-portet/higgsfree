@@ -172,11 +172,12 @@ There is no page chrome: the app is four views under one floating nav, with one 
   cover made of the folder's newest runs (one, a split, one big and two small, or a 2 × 2), the name with a folder
   glyph and the count over a bottom gradient, Rename / Delete as overlay icon buttons on hover. Tiles sort by name.
   Clicking one opens the folder at `?folder=<id>` (so Back returns to All): a header with ← All, the name, the count,
-  Rename and Delete, then only that folder's runs, paged on their own. A run is in at most one folder, and All always
-  shows every kept run. Deleting a folder never deletes runs: they stay kept, in All.
+  Rename and Delete, then only that folder's runs, paged on their own. A run is in at most one folder, and a filed run
+  shows only inside it: All holds the folders and the kept runs in no folder. The header count totals both. Deleting
+  a folder never deletes runs: they stay kept and come back to All.
 - **Drag and drop.** In All, every card can be dragged onto a tile. While a drag is on, the tiles get a dashed accent
-  edge and the one under the pointer an accent ring; dropping files the run there ("Moved to Travel") and makes that
-  folder the heart's default.
+  edge and the one under the pointer an accent ring; dropping files the run there ("Moved to Travel"), so it leaves
+  All, and makes that folder the heart's default.
 - **The heart** (cards and the lightbox) keeps a run in one click, in the last destination picked (a folder, or All),
   and opens a small menu anchored to it: "Kept in Travel", a list (All, then the folders, the current one checked),
   New folder… (an inline field) and Remove from Favorites. On a kept run the heart opens the same menu, to move or

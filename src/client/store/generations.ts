@@ -25,7 +25,8 @@ const EMPTY_PAGE: PageState = { loading: false, loaded: false };
 export type ListQuery = Pick<ListGenerationsQuery, "type" | "status" | "favorite" | "folder">;
 
 export function listKey(q: ListQuery): ListKey {
-  return `${q.type ?? "all"}:${q.status ?? "any"}${q.favorite ? ":kept" : ""}${q.folder ? `:in:${q.folder}` : ""}`;
+  const where = q.folder === null ? ":loose" : q.folder ? `:in:${q.folder}` : "";
+  return `${q.type ?? "all"}:${q.status ?? "any"}${q.favorite ? ":kept" : ""}${where}`;
 }
 
 /** What the heart can change: kept or not, and the folder (`null` = out of its folder). */
@@ -225,14 +226,18 @@ export function usePage(q: ListQuery): PageState {
   return useGenerations((s) => s.pages[key] ?? EMPTY_PAGE);
 }
 
-/** Every kept (hearted) record in the store, newest first; with `folder`, only the ones filed in that folder. */
-export function useFavoriteList(folder?: string): Generation[] {
+/**
+ * Kept (hearted) records in the store, newest first: every one (`undefined`), the ones filed in a
+ * folder (its id), or the ones in no folder (`null`, the Favorites view's own grid).
+ */
+export function useFavoriteList(folder?: string | null): Generation[] {
   return useGenerations(
     useShallow((s) => {
       const out: Generation[] = [];
       for (const id of s.ids) {
         const g = s.byId[id];
-        if (g?.favorite && (folder === undefined || g.folder === folder)) out.push(g);
+        if (!g?.favorite) continue;
+        if (folder === undefined || (folder === null ? !g.folder : g.folder === folder)) out.push(g);
       }
       return out;
     }),
