@@ -36,10 +36,10 @@ src/
       catalog.ts      curated catalog merged with OpenRouter's live video and image catalogs
       settings.ts     the keys and the provider preference in localStorage
       video-meta.ts   sniffs uploaded reference videos (MP4, MOV, WebM)
-      db/             IndexedDB (idb): schema, generations, media
+      db/             IndexedDB (idb): schema, generations, media, folders (Favorites)
       engine/         job lifecycle: image batches, video submit / poll / download, Web Locks, steward;
                       provider.ts picks the provider and key for a run
-      archive/        library export / import as a zip (zip.js)
+      archive/        library export / import as a zip (zip.js): records, files and folders
       media-urls.ts   ref-counted object urls for media in the library
       live.ts         the change feed: every write is broadcast to the other tabs
       __tests__/      unit tests; fal.test.ts covers the fal builders, the provider choice and the

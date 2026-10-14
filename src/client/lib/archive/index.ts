@@ -1,21 +1,24 @@
 /**
- * Library export / import as a zip: `manifest.json`, `generations.json` and one `media/<id>`
- * entry per file, stored uncompressed (media are already compressed). zip.js is loaded on
- * first use; exports stream straight to disk where the File System Access API exists.
+ * Library export / import as a zip: `manifest.json`, `generations.json`, `folders.json` (the
+ * Favorites folders) and one `media/<id>` entry per file, stored uncompressed (media are already
+ * compressed). zip.js is loaded on first use; exports stream straight to disk where the File
+ * System Access API exists.
  */
-import type { Generation, GenerationType } from "@shared/types";
+import type { Folder, Generation, GenerationType } from "@shared/types";
+import { listFolders } from "../db/folders";
 import { getAllGenerations, isActive, toPublic, toStored } from "../db/generations";
 import { getDb } from "../db/index";
 import { getMediaRow } from "../db/media";
 import type { MediaRow } from "../db/schema";
 import { ApiClientError, badRequest } from "../errors";
+import { compareFolders, folderNameKey } from "../folders";
 import { detectImage } from "../image-meta";
 import { publish } from "../live";
 import { errorMessage, log } from "../log";
 import { inputMediaIds, mediaKind, mimeForId } from "../media-ids";
 import { revokeAllMediaUrls } from "../media-urls";
 import { isQuotaError, quotaMessage } from "../storage-health";
-import { ARCHIVE_FORMAT, ARCHIVE_VERSION, isArchiveManifest, sanitizeRecord, type ArchiveManifest, type ArchiveProgress } from "./manifest";
+import { ARCHIVE_FORMAT, ARCHIVE_VERSION, isArchiveManifest, sanitizeFolder, sanitizeRecord, type ArchiveManifest, type ArchiveProgress } from "./manifest";
 
 export type { ArchiveManifest, ArchiveProgress } from "./manifest";
 
@@ -60,6 +63,8 @@ interface ExportPlan {
   records: Generation[];
   mediaIds: string[];
   bytes: number;
+  /** Every folder, whatever the scope: they are small, and a record's folder must be there when it comes back. */
+  folders: Folder[];
   manifest: ArchiveManifest;
 }
 
@@ -68,7 +73,7 @@ function newestFirst(a: Generation, b: Generation): number {
   return (a.batchIndex ?? 0) - (b.batchIndex ?? 0) || (a.id < b.id ? -1 : 1);
 }
 
-/** What goes in: finished records in scope, their outputs, and (optionally) the uploads they reference. */
+/** What goes in: finished records in scope, their outputs, (optionally) the uploads they reference, and the folders. */
 async function planExport(opts: ExportOptions): Promise<ExportPlan> {
   const scope = opts.scope ?? "all";
   const includeUploads = opts.includeUploads ?? true;
@@ -90,21 +95,23 @@ async function planExport(opts: ExportOptions): Promise<ExportPlan> {
     mediaIds.push(id);
     bytes += row.bytes;
   }
+  const folders = (await listFolders()).sort(compareFolders);
   const manifest: ArchiveManifest = {
     format: ARCHIVE_FORMAT,
     version: ARCHIVE_VERSION,
     exportedAt: new Date().toISOString(),
     app: { version: APP_VERSION },
-    counts: { generations: records.length, media: mediaIds.length },
+    counts: { generations: records.length, media: mediaIds.length, folders: folders.length },
     bytes,
   };
-  return { records, mediaIds, bytes, manifest };
+  return { records, mediaIds, bytes, folders, manifest };
 }
 
 async function writeArchive(zip: ZipModule, writer: InstanceType<ZipModule["ZipWriter"]>, plan: ExportPlan, opts: ExportOptions): Promise<void> {
   opts.onProgress?.({ phase: "listing", done: 0, total: plan.mediaIds.length, bytes: 0 });
   await writer.add("manifest.json", new zip.TextReader(JSON.stringify(plan.manifest, null, 2)));
   await writer.add("generations.json", new zip.TextReader(JSON.stringify(plan.records)));
+  await writer.add("folders.json", new zip.TextReader(JSON.stringify(plan.folders)));
   let done = 0;
   let bytes = 0;
   for (const id of plan.mediaIds) {
@@ -199,8 +206,10 @@ export interface ImportResult {
   skipped: number;
   /** Completed records whose file was not in the archive (not imported). */
   missingMedia: number;
-  /** Entries of `generations.json` that were not records. */
+  /** Entries of `generations.json` (or `folders.json`) that were not records (or folders). */
   invalid: number;
+  /** Folders created (one with the same name here takes the archive's records instead). */
+  folders: number;
   mediaWritten: number;
   bytes: number;
 }
@@ -222,7 +231,7 @@ async function readEntryBlob(zip: ZipModule, entry: FileEntry, id: string): Prom
 export async function importLibrary(file: Blob, opts: ImportOptions = {}): Promise<ImportResult> {
   const zip = await zipjs();
   const mode = opts.mode ?? "skip";
-  const result: ImportResult = { imported: 0, replaced: 0, skipped: 0, missingMedia: 0, invalid: 0, mediaWritten: 0, bytes: 0 };
+  const result: ImportResult = { imported: 0, replaced: 0, skipped: 0, missingMedia: 0, invalid: 0, folders: 0, mediaWritten: 0, bytes: 0 };
   const reader = new zip.ZipReader(new zip.BlobReader(file));
   try {
     const entries = new Map<string, FileEntry>();
@@ -238,6 +247,41 @@ export async function importLibrary(file: Blob, opts: ImportOptions = {}): Promi
     if (!Array.isArray(raw)) throw badRequest("Archive has an unreadable generations.json");
 
     const db = await getDb();
+
+    // Folders first, so the records' folder ids can be checked. An archive folder lands under its own id,
+    // joins the folder here with the same name, or is already here; `folderMap` says which id to file under.
+    const folderMap = new Map<string, string>();
+    const foldersEntry = entries.get("folders.json");
+    if (foldersEntry) {
+      const rawFolders: unknown = JSON.parse(await foldersEntry.getData(new zip.TextWriter()));
+      if (!Array.isArray(rawFolders)) throw badRequest("Archive has an unreadable folders.json");
+      const local = await listFolders();
+      const byName = new Map(local.map((f) => [folderNameKey(f.name), f.id] as const));
+      const localIds = new Set(local.map((f) => f.id));
+      for (const item of rawFolders) {
+        throwIfAborted(opts.signal, "Import");
+        const f = sanitizeFolder(item);
+        if (!f) {
+          result.invalid++;
+          continue;
+        }
+        if (localIds.has(f.id)) {
+          folderMap.set(f.id, f.id);
+          continue;
+        }
+        const sameName = byName.get(folderNameKey(f.name));
+        if (sameName !== undefined) {
+          folderMap.set(f.id, sameName);
+          continue;
+        }
+        await db.put("folders", f);
+        localIds.add(f.id);
+        byName.set(folderNameKey(f.name), f.id);
+        folderMap.set(f.id, f.id);
+        result.folders++;
+      }
+    }
+
     const total = raw.length;
     let done = 0;
     /** Media written by this import, so a file referenced twice is read once. */
@@ -273,6 +317,12 @@ export async function importLibrary(file: Blob, opts: ImportOptions = {}): Promi
         rows.push({ id, kind: mediaKind(id) ?? "upload", mime: blob.type, bytes: blob.size, createdAt: record.createdAt, blob });
         return true;
       };
+
+      if (record.folder) {
+        const mapped = folderMap.get(record.folder) ?? ((await db.getKey("folders", record.folder)) !== undefined ? record.folder : undefined);
+        if (mapped) record.folder = mapped;
+        else delete record.folder; // the folder never made it here: the record stays kept, in All
+      }
 
       if (record.output && !(await resolve(record.output.id))) {
         if (record.status === "completed") {
@@ -329,7 +379,7 @@ export async function importLibrary(file: Blob, opts: ImportOptions = {}): Promi
     throw err;
   } finally {
     await reader.close().catch(() => undefined);
-    if (result.imported + result.replaced + result.mediaWritten > 0) {
+    if (result.imported + result.replaced + result.mediaWritten + result.folders > 0) {
       publish({ type: "reset" });
       revokeAllMediaUrls();
     }

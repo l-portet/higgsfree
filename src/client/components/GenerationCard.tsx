@@ -1,4 +1,4 @@
-import { memo, useRef, useState, type FocusEvent, type ReactNode } from "react";
+import { memo, useRef, useState, type DragEvent, type FocusEvent, type ReactNode } from "react";
 import { CircleAlert, Download, Heart, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { cn } from "@/lib/cn";
@@ -9,6 +9,7 @@ import { useElapsed, useMediaQuery, useNearViewport } from "@/lib/hooks";
 import { cardAspect } from "@/lib/masonry";
 import { useMediaUrl } from "@/lib/media-urls";
 import { isImageParams } from "@/lib/models";
+import { useFolderName } from "@/store/folders";
 import { isPending } from "@/store/generations";
 import { OverlayBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { iconButtonClasses } from "@/components/ui/iconButtonClasses";
 import { Spinner } from "@/components/ui/Spinner";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { endGenerationDrag, startGenerationDrag } from "@/components/favorites/dnd";
+import { KeepMenu } from "@/components/favorites/KeepMenu";
 
 /** Short params label: "2K · 1024×1536" for images, "5s · 1080p" for videos. */
 function paramsLabel(g: Generation): string {
@@ -36,6 +39,8 @@ export interface GenerationCardProps {
   onReuse?: (g: Generation) => void;
   /** Show an Image/Video badge (for mixed lists). */
   showType?: boolean;
+  /** Can be dragged onto a Favorites folder (the drag carries the record id). */
+  draggable?: boolean;
   className?: string;
 }
 
@@ -48,9 +53,10 @@ export interface GenerationCardProps {
  * `bg-surface-2` box until it is there; the Download link appears with it.
  * Media loads only once the card is near the viewport (one shared observer), and the hover action
  * row with its tooltips is mounted only while the card is hovered or focused; on coarse pointers it
- * is always there, matching the always-visible overlay.
+ * is always there, matching the always-visible overlay. The heart opens the keep menu (where it is
+ * kept, which folder); the overlay stays up while that menu is open.
  */
-export const GenerationCard = memo(function GenerationCard({ generation: g, onOpen, onReuse, showType, className }: GenerationCardProps) {
+export const GenerationCard = memo(function GenerationCard({ generation: g, onOpen, onReuse, showType, draggable, className }: GenerationCardProps) {
   const pending = isPending(g);
   const elapsed = useElapsed(g.createdAt, pending, g.completedAt);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -59,14 +65,17 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
   const coarse = useMediaQuery("(pointer: coarse)");
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [active, setActive] = useState(false);
+  const [keepOpen, setKeepOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const folderName = useFolderName(g.folder);
   const actions = useGenerationActions(g, onReuse);
   const out = g.output;
   // Hooks run on every render; `undefined` until the object url resolves (or when the file is gone).
   const src = useMediaUrl(out?.id);
   const isVideo = g.type === "video";
   const failed = !pending && (g.status === "failed" || !out);
-  // Stay mounted while the delete dialog is up so focus has a button to return to on close.
-  const showActions = active || coarse || actions.confirmDelete;
+  // Stay mounted while the delete dialog or the keep menu is up so focus has a button to return to on close.
+  const showActions = active || coarse || actions.confirmDelete || keepOpen;
 
   const play = () => {
     const v = videoRef.current;
@@ -91,6 +100,18 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
     actions.setConfirmDelete(open);
     // Keep the row until the next pointer leave / blur so the dialog can hand focus back to Delete.
     if (!open) setActive(true);
+  };
+  const onKeepOpenChange = (open: boolean) => {
+    setKeepOpen(open);
+    if (!open) setActive(true);
+  };
+  const onDragStart = (e: DragEvent<HTMLDivElement>) => {
+    startGenerationDrag(e.dataTransfer, g.id);
+    setDragging(true);
+  };
+  const onDragEnd = () => {
+    endGenerationDrag();
+    setDragging(false);
   };
 
   let body: ReactNode;
@@ -192,23 +213,25 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
           className={cn(
             "pointer-events-none absolute inset-0 flex flex-col justify-between opacity-0 transition-opacity duration-150",
             "group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
+            keepOpen && "opacity-100",
           )}
         >
           <div className="flex items-start gap-1 bg-gradient-to-b from-black/60 to-transparent p-2 pb-6">
             {showType ? <OverlayBadge className="mr-auto">{isVideo ? "Video" : "Image"}</OverlayBadge> : null}
             {showActions ? (
               <div className="pointer-events-auto ml-auto flex items-center gap-1">
-                <IconButton
-                  label={g.favorite ? "Remove from Favorites" : "Keep in Favorites"}
-                  size="sm"
-                  variant="overlay"
-                  aria-pressed={Boolean(g.favorite)}
-                  disabled={actions.keeping}
-                  onClick={() => void actions.toggleFavorite()}
-                  className={cn(g.favorite && "text-accent")}
-                >
-                  <Heart fill={g.favorite ? "currentColor" : "none"} />
-                </IconButton>
+                <KeepMenu generation={g} actions={actions} open={keepOpen} onOpenChange={onKeepOpenChange}>
+                  <IconButton
+                    label={g.favorite ? (folderName ? `Kept in ${folderName}` : "Kept in Favorites") : "Keep in Favorites"}
+                    size="sm"
+                    variant="overlay"
+                    aria-pressed={Boolean(g.favorite)}
+                    disabled={actions.keeping}
+                    className={cn(g.favorite && "text-accent")}
+                  >
+                    <Heart fill={g.favorite ? "currentColor" : "none"} />
+                  </IconButton>
+                </KeepMenu>
                 {src ? (
                   // Object urls are same-origin, so `download` is honoured.
                   <Tooltip content="Download">
@@ -242,9 +265,15 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
               <span className="truncate">{info}</span>
             </OverlayBadge>
             {g.favorite ? (
-              <OverlayBadge className="shrink-0 text-accent">
-                <Heart size={12} fill="currentColor" aria-hidden="true" />
-                <span className="sr-only">Kept</span>
+              // The heart, with the folder's name when it is filed in one.
+              <OverlayBadge className="min-w-0 max-w-[50%] shrink-0 gap-1 text-accent">
+                <Heart size={12} fill="currentColor" aria-hidden="true" className="shrink-0" />
+                {folderName ? (
+                  <span className="truncate" aria-hidden="true">
+                    {folderName}
+                  </span>
+                ) : null}
+                <span className="sr-only">{folderName ? `Kept in ${folderName}` : "Kept"}</span>
               </OverlayBadge>
             ) : null}
             {audio ? (
@@ -270,9 +299,13 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
         failed && "border border-danger/25 hover:border-danger/40",
         // Completed: the media box shows a quiet placeholder until the object url resolves.
         !pending && !failed && "bg-surface-2",
+        dragging && "opacity-50",
         className,
       )}
       data-status={g.status}
+      draggable={draggable || undefined}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       onFocus={onFocus}

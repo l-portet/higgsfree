@@ -162,7 +162,20 @@ There is no page chrome: the app is four views under one floating nav, with one 
 
 ## Favorites view (`/favorites`)
 - The kept runs, images and videos together, newest first, type badge on each card. Empty: "Nothing kept yet. Hover a
-  run and press its heart to keep it here."
+  run and press its heart to keep it here." A header line ("12 kept · 2 folders") carries New folder on the right.
+- **Folders** take the first positions of the grid as square tiles (`rounded-card`, `surface-2`, 1 px `border`): a
+  cover made of the folder's newest runs (one, a split, one big and two small, or a 2 × 2), the name with a folder
+  glyph and the count over a bottom gradient, Rename / Delete as overlay icon buttons on hover. Tiles sort by name.
+  Clicking one opens the folder at `?folder=<id>` (so Back returns to All): a header with ← All, the name, the count,
+  Rename and Delete, then only that folder's runs, paged on their own. A run is in at most one folder, and All always
+  shows every kept run. Deleting a folder never deletes runs: they stay kept, in All.
+- **Drag and drop.** In All, every card can be dragged onto a tile. While a drag is on, the tiles get a dashed lime
+  edge and the one under the pointer a lime ring; dropping files the run there ("Moved to Travel") and makes that
+  folder the heart's default.
+- **The heart** (cards and the lightbox) keeps a run in one click, in the last destination picked (a folder, or All),
+  and opens a small menu anchored to it: "Kept in Travel", a list (All, then the folders, the current one checked),
+  New folder… (an inline field) and Remove from Favorites. On a kept run the heart opens the same menu, to move or
+  remove it. A kept card's lime heart badge carries the folder's name.
 
 ## Key dialog and Settings
 - **Key dialog** (`KeyDialog`, 400 px, `rounded-panel`, 20 px padding): one provider. "Add your OpenRouter key" /

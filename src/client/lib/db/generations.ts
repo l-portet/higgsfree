@@ -18,11 +18,14 @@ export type GenerationInput = Generation & { pollingUrl?: string };
 /** Fields a write may change. `undefined` removes the field (`pollingUrl: undefined` clears it). */
 export type GenerationPatch = Partial<Omit<StoredGeneration, "id" | "type" | "createdAt" | "updatedAt" | "fav" | "refs">>;
 
-/** Derive the indexable fields; `favorite` is only ever present when true. */
+/** Derive the indexable fields; `favorite` is only ever present when true, and a folder only on a kept record. */
 export function toStored(g: GenerationInput): StoredGeneration {
-  const { favorite, ...rest } = g;
+  const { favorite, folder, ...rest } = g;
   const row: StoredGeneration = { ...rest, fav: favorite ? 1 : 0, refs: inputMediaIds(g.inputs) };
-  if (favorite) row.favorite = true;
+  if (favorite) {
+    row.favorite = true;
+    if (folder) row.folder = folder;
+  }
   return row;
 }
 
@@ -36,7 +39,7 @@ export function toPublic(row: StoredGeneration): Generation {
  * Merge a patch and bump `updatedAt` strictly past the previous value: the store ignores a
  * record whose `updatedAt` is not newer, and `pending → running` can land in the same millisecond.
  */
-function applyPatch(prev: StoredGeneration, patch: GenerationPatch): StoredGeneration {
+export function applyPatch(prev: StoredGeneration, patch: GenerationPatch): StoredGeneration {
   const merged: Record<string, unknown> = { ...prev };
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined) delete merged[k];
@@ -60,9 +63,9 @@ function parseCursor(cursor: string | undefined): { createdAt: string; id?: stri
   return { createdAt: cursor };
 }
 
-type ListIndex = "byCreated" | "byType" | "byStatus" | "byTypeStatus" | "byFavorite";
+type ListIndex = "byCreated" | "byType" | "byStatus" | "byTypeStatus" | "byFavorite" | "byFolder";
 
-/** Newest first, `limit` + a cursor for the next page; filters by type, status and favorite. */
+/** Newest first, `limit` + a cursor for the next page; filters by type, status, favorite and folder. */
 export async function listGenerations(q: ListGenerationsQuery = {}): Promise<ListGenerationsResponse> {
   const db = await getDb();
   const limit = Math.min(LIST_MAX_LIMIT, Math.max(1, q.limit ?? LIST_DEFAULT_LIMIT));
@@ -70,7 +73,12 @@ export async function listGenerations(q: ListGenerationsQuery = {}): Promise<Lis
   let index: ListIndex;
   let prefix: (string | number)[];
   let matches = (_g: StoredGeneration): boolean => true;
-  if (q.favorite !== undefined) {
+  if (q.folder !== undefined) {
+    index = "byFolder";
+    prefix = [q.folder];
+    matches = (g) =>
+      (q.favorite === undefined || Boolean(g.favorite) === q.favorite) && (!q.type || g.type === q.type) && (!q.status || g.status === q.status);
+  } else if (q.favorite !== undefined) {
     index = "byFavorite";
     prefix = [q.favorite ? 1 : 0];
     matches = (g) => (!q.type || g.type === q.type) && (!q.status || g.status === q.status);
@@ -213,10 +221,10 @@ export async function getAllGenerations(): Promise<StoredGeneration[]> {
   return db.getAll("generations");
 }
 
-/** Both stores emptied in one transaction ("Delete everything"). */
+/** Every store emptied in one transaction ("Delete everything"). */
 export async function clearLibrary(): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["generations", "media"], "readwrite");
-  await Promise.all([tx.objectStore("generations").clear(), tx.objectStore("media").clear()]);
+  const tx = db.transaction(["generations", "media", "folders"], "readwrite");
+  await Promise.all([tx.objectStore("generations").clear(), tx.objectStore("media").clear(), tx.objectStore("folders").clear()]);
   await tx.done;
 }
