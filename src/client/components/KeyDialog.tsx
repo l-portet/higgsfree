@@ -99,7 +99,8 @@ export function KeyDialog() {
           </label>
           <Input
             id={inputId}
-            type={reveal ? "text" : "password"}
+            type="text"
+            masked={!reveal}
             value={value}
             onChange={(e) => {
               setValue(e.target.value);

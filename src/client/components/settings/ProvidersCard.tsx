@@ -214,7 +214,8 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
             <FieldLabel htmlFor={inputId}>{hasKey ? "Replace key" : "Key"}</FieldLabel>
             <Input
               id={inputId}
-              type={reveal ? "text" : "password"}
+              type="text"
+            masked={!reveal}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="key_id:key_secret"

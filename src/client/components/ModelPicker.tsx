@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { Check, Search, Sparkles, Volume2 } from "lucide-react";
 import type { ImageModel, VideoModel } from "@shared/types";
 import { cn } from "@/lib/cn";
+import { NO_AUTOFILL } from "@/lib/no-autofill";
 import { formatRelative } from "@/lib/format";
 import { durationRange, maxResolution, providerLabel } from "@/lib/models";
 import { useModels } from "@/store/models";
@@ -261,6 +262,7 @@ export function ModelPicker(props: ModelPickerProps) {
             aria-hidden="true"
           />
           <input
+            {...NO_AUTOFILL}
             ref={inputRef}
             role="combobox"
             aria-expanded="true"

@@ -1,19 +1,29 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { NO_AUTOFILL, supportsTextSecurity } from "@/lib/no-autofill";
 
 export interface InputProps extends ComponentProps<"input"> {
   leftIcon?: ReactNode;
   rightSlot?: ReactNode;
   invalid?: boolean;
+  /**
+   * Show dots instead of the text (API keys). A text field masked with CSS rather than
+   * `type="password"`, so password managers leave it alone; a password field only where the
+   * browser cannot mask with CSS.
+   */
+  masked?: boolean;
 }
 
-export function Input({ leftIcon, rightSlot, invalid, className, ...props }: InputProps) {
+export function Input({ leftIcon, rightSlot, invalid, masked, className, type, ...props }: InputProps) {
+  const cssMask = Boolean(masked) && supportsTextSecurity();
   return (
     <div className={cn("relative flex items-center", className)}>
       {leftIcon ? (
         <span className="pointer-events-none absolute left-2.5 inline-flex text-fg-faint [&_svg]:size-4">{leftIcon}</span>
       ) : null}
       <input
+        {...NO_AUTOFILL}
+        type={masked && !cssMask ? "password" : type}
         aria-invalid={invalid || undefined}
         className={cn(
           "h-9 w-full rounded-field border border-border bg-inset px-3 text-[13px] text-fg placeholder:text-fg-subtle",
@@ -23,6 +33,7 @@ export function Input({ leftIcon, rightSlot, invalid, className, ...props }: Inp
           "disabled:opacity-50",
           leftIcon && "pl-8",
           rightSlot && "pr-9",
+          cssMask && "[-webkit-text-security:disc]",
         )}
         {...props}
       />

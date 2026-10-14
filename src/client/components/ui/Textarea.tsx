@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, type ComponentProps } from "react";
 import { cn } from "@/lib/cn";
+import { NO_AUTOFILL } from "@/lib/no-autofill";
 
 export interface TextareaProps extends ComponentProps<"textarea"> {
   /** Grow with content (default true). */
@@ -50,6 +51,7 @@ export function Textarea({
 
   return (
     <textarea
+      {...NO_AUTOFILL}
       ref={setRef}
       rows={rows ?? minRows}
       value={value}
