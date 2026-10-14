@@ -83,7 +83,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    // `data-accent-intro`: transitions stay off until the accent sweep on load is done (globals.css, Shell).
+    // `data-accent-intro`: the page opens on the old lime, transitions off, until Shell plays the sweep (globals.css).
     <html lang="en" className={`dark ${inter.variable} ${interTight.variable}`} data-accent-intro="">
       {process.env.NODE_ENV === "production" ? (
         <head>

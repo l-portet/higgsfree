@@ -23,27 +23,28 @@ const SettingsDialog = dynamic(() => import("@/components/settings/SettingsDialo
 
 const STORAGE_TOAST = "storage-unavailable";
 
+const INTRO = "data-accent-intro";
+
 /**
- * Turn transitions back on once the accent sweep (`accent-shift` on <html>, globals.css) is done. The
- * static HTML starts with them off so color transitions don't trail the sweep. Already over (a slow
- * first load) or not running at all: right away.
+ * The accent intro (globals.css): the static HTML opens on the old lime; once the app is up and a frame
+ * is painted, play the sweep, then drop the attribute (resting blue, transitions back on). Started here
+ * rather than by a clock at first style, so a slow first paint can never swallow the lime. Two frames:
+ * the first may still be the one that commits hydration. A background tab waits until it is shown.
  */
-function endAccentIntro(): () => void {
+function playAccentIntro(): () => void {
   const root = document.documentElement;
-  const done = () => root.removeAttribute("data-accent-intro");
-  const sweep = typeof root.getAnimations === "function" ? root.getAnimations().find((a) => (a as CSSAnimation).animationName === "accent-shift") : undefined;
-  if (!sweep) {
-    done();
-    return () => undefined;
-  }
-  let live = true;
-  sweep.finished.then(
-    () => live && done(),
-    () => live && done(),
-  );
-  return () => {
-    live = false;
-  };
+  if (root.getAttribute(INTRO) !== "") return () => undefined; // already playing or played
+  const done = () => root.removeAttribute(INTRO);
+  let frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(() => {
+      root.setAttribute(INTRO, "play");
+      const sweep = typeof root.getAnimations === "function" ? root.getAnimations().find((a) => (a as CSSAnimation).animationName === "accent-shift") : undefined;
+      if (sweep) sweep.finished.then(done, done);
+      else done();
+    });
+  });
+  // StrictMode runs effects twice in dev: the first pass is cancelled before its frames fire.
+  return () => cancelAnimationFrame(frame);
 }
 
 /** After the first completed generation in this profile, ask the browser to keep the library out of eviction. */
@@ -57,7 +58,7 @@ function onCompleted(): void {
  */
 function useBoot() {
   useEffect(() => {
-    const stopIntro = endAccentIntro();
+    const stopIntro = playAccentIntro();
     connectEvents();
     startEngine({ onCompleted });
     void useModels.getState().fetch();
