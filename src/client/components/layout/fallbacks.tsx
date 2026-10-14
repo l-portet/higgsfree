@@ -46,22 +46,6 @@ export function AssetsFallback() {
 }
 
 /** Title + three card blocks in the narrow settings column. */
-export function SettingsFallback() {
-  return (
-    <Page {...BUSY} className="max-w-[760px] pb-16">
-      <div className="mb-6">
-        <Skeleton className="h-[22px] w-24" />
-        <Skeleton className="mt-1.5 h-4 w-40" />
-      </div>
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-[220px] rounded-panel" />
-        <Skeleton className="h-[160px] rounded-panel" />
-        <Skeleton className="h-[140px] rounded-panel" />
-      </div>
-    </Page>
-  );
-}
-
 export function PlainFallback() {
   return (
     <Page {...BUSY}>

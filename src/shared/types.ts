@@ -4,6 +4,10 @@
  */
 
 export type GenerationType = "image" | "video";
+/** Who runs a generation. A model can be offered by one or both. */
+export type ProviderId = "openrouter" | "fal";
+/** Motion control: whose orientation the character keeps (fal caps the reference video at 30 s for `video`, 10 s for `image`). */
+export type MotionOrientation = "video" | "image";
 export type GenerationStatus = "pending" | "running" | "completed" | "failed";
 
 export type ImageAspectRatio =
@@ -35,14 +39,18 @@ export interface VideoParams {
   resolution?: VideoResolution;
   /** Whether native audio was requested (only meaningful for models with `audio: true`). */
   audio?: boolean;
+  /** Motion control only. */
+  orientation?: MotionOrientation;
 }
 
 export interface GenerationInputs {
   /** Reference / edit images (media ids). */
   referenceImages?: string[];
-  /** Image-to-video anchor frames (media ids; an upload, or another record's output). */
+  /** Image-to-video anchor frames (media ids; an upload, or another record's output). Motion control: the character image. */
   firstFrame?: string;
   lastFrame?: string;
+  /** Motion control: the reference video whose movement is copied (media id of an uploaded video). */
+  motionVideo?: string;
 }
 
 export interface Generation {
@@ -63,6 +71,8 @@ export interface Generation {
   costUsd?: number;
   /** Provider job id (video), useful for support / debugging. */
   providerJobId?: string;
+  /** Who ran it; absent on records made before fal support (= OpenRouter). */
+  provider?: ProviderId;
   /** Groups the N images of one batch request. */
   batchId?: string;
   /** Position within the batch (0-based). */
@@ -80,7 +90,7 @@ export interface Generation {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "openrouter";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "fal" | "openrouter";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -94,9 +104,9 @@ export interface ImageModel {
   /**
    * Which OpenRouter endpoint serves this model: `chat` (chat completions with `image_config`),
    * `images` (the OpenAI-style `/images/generations`), or `native` (`POST /api/v1/images`, whose
-   * options come straight from OpenRouter's image catalog).
+   * options come straight from OpenRouter's image catalog). `fal` = not on OpenRouter at all.
    */
-  endpoint: "chat" | "images" | "native";
+  endpoint: "chat" | "images" | "native" | "fal";
   featured: boolean;
   badges: ModelBadge[];
   caps: {
@@ -115,6 +125,10 @@ export interface ImageModel {
   verified: boolean;
   /** Listed by OpenRouter but not in the curated catalog: options from OpenRouter, not tested here. */
   discovered?: boolean;
+  /** fal serves it too (or only fal does, with `falOnly`). */
+  fal?: FalImageRoute;
+  /** Not on OpenRouter: needs a fal key. */
+  falOnly?: boolean;
 }
 
 export interface VideoModel {
@@ -136,6 +150,8 @@ export interface VideoModel {
     realFaces?: boolean;
     /** Accepts `input_references` (style / character images). false = known to reject; undefined = supported. */
     references?: boolean;
+    /** Motion control: a character image (`firstFrame`) and a reference video (`motionVideo`) are required. */
+    motionControl?: boolean;
   };
   /** Either a contiguous integer range or an explicit list of allowed durations (seconds). */
   durations: { min: number; max: number; step?: number } | { options: number[] };
@@ -155,9 +171,54 @@ export interface VideoModel {
    * OpenRouter's video catalog, quirks (faces, references, i2v aspect) are unknown.
    */
   discovered?: boolean;
+  /** fal serves it too (or only fal does, with `falOnly`). */
+  fal?: FalVideoRoute;
+  /** Not on OpenRouter: needs a fal key. */
+  falOnly?: boolean;
 }
 
 export type CatalogModel = ImageModel | VideoModel;
+
+/**
+ * How fal serves an image model: one endpoint for text-to-image and one for edits (with
+ * reference images), plus how the options are spelled. fal endpoints differ in field names,
+ * so each model says which ones it takes.
+ */
+export interface FalImageRoute {
+  textToImage?: string;
+  edit?: string;
+  /** Reference images: a list (`image_urls`) or a single image (`image_url`). */
+  refs?: "image_urls" | "image_url";
+  /** Aspect ratio as `aspect_ratio`, or as an `image_size` preset / explicit size. Absent = never sent. */
+  aspect?: "aspect_ratio" | "image_size";
+  /** Per-ratio `image_size` values when the model has its own list (otherwise fal's presets / explicit sizes). */
+  imageSizes?: Partial<Record<ImageAspectRatio, string>>;
+  /** `resolution: "1K" | "2K" | "4K"` is accepted. */
+  resolution?: boolean;
+  /** Fixed fields sent with every request. */
+  extra?: Record<string, string | number | boolean>;
+}
+
+/** How fal serves a video model. Values are mapped from the app's options on the way out. */
+export interface FalVideoRoute {
+  textToVideo?: string;
+  imageToVideo?: string;
+  /** Character image + reference video (Kling Motion Control). */
+  motionControl?: string;
+  /** Field for the first frame: `image_url` (default) or `start_image_url`. */
+  imageField?: "image_url" | "start_image_url";
+  /** The last frame goes in `end_image_url`. */
+  endImage?: boolean;
+  /** How `duration` is written: `5`, `"5"` or `"5s"`. Absent = never sent. */
+  duration?: "number" | "string" | "seconds";
+  /** Where `aspect_ratio` is accepted. Absent = never sent. */
+  aspect?: "text" | "always";
+  /** App resolution → fal's value. Absent = never sent. */
+  resolutions?: Partial<Record<VideoResolution, string>>;
+  /** Field that toggles the audio track. */
+  audio?: "generate_audio" | "generate_audio_switch";
+  extra?: Record<string, string | number | boolean>;
+}
 
 export interface ModelsResponse {
   image: ImageModel[];
@@ -195,6 +256,9 @@ export interface VideoGenerateRequest {
   lastFrame?: string;
   /** Style / character references (no frame lock). */
   references?: string[];
+  /** Motion control: media id of the reference video (an upload). */
+  motionVideo?: string;
+  orientation?: MotionOrientation;
 }
 
 export interface GenerateResponse {
@@ -226,19 +290,22 @@ export interface UploadResponse {
 }
 
 export interface SettingsResponse {
+  /** An OpenRouter key is stored. */
   hasKey: boolean;
   /** e.g. `sk-or-v1-…a1b2` */
   keyMasked?: string;
-  defaults: {
-    imageModel: string;
-    videoModel: string;
-  };
+  hasFalKey: boolean;
+  falKeyMasked?: string;
+  /** Which provider runs a model both offer (when both keys are set). */
+  preferredProvider: ProviderId;
 }
 
 export interface UpdateSettingsRequest {
-  /** Pass a new key, or `""` to clear the stored key. */
+  /** Pass a new OpenRouter key, or `""` to clear the stored one. */
   apiKey?: string;
-  defaults?: Partial<SettingsResponse["defaults"]>;
+  /** Pass a new fal key, or `""` to clear the stored one. */
+  falKey?: string;
+  preferredProvider?: ProviderId;
 }
 
 export interface CreditsResponse {

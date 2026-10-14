@@ -1,17 +1,25 @@
-/** The key and the defaults in localStorage, never leaked; uploads are sniffed, not trusted. */
-import { describe, expect, it } from "vitest";
-import { DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL } from "@shared/models";
+/** The keys and the provider choice in localStorage, never leaked; uploads are sniffed, not trusted. */
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../api";
 import { getMediaBlob } from "../db/media";
+import { resetLiveModels } from "../openrouter";
 import { KEY_STORAGE, PROTECTED_STORAGE_KEYS } from "../settings";
 import { clearAppStorage, writeJson } from "../storage";
 import { PNG_2X2 } from "../../__tests__/mock-openrouter";
 
 const KEY = "sk-or-v1-abcdefghijklmnopqrstuvwxyz0123";
 
+// Model lookups refresh OpenRouter's public catalog; keep these tests offline (the curated catalog answers).
+beforeEach(() => {
+  resetLiveModels();
+  vi.stubGlobal("fetch", async () => {
+    throw new TypeError("offline");
+  });
+});
+
 describe("settings", () => {
   it("stores the key in localStorage and only ever shows it masked", async () => {
-    expect(await api.getSettings()).toEqual({ hasKey: false, defaults: { imageModel: DEFAULT_IMAGE_MODEL, videoModel: DEFAULT_VIDEO_MODEL } });
+    expect(await api.getSettings()).toEqual({ hasKey: false, hasFalKey: false, preferredProvider: "openrouter" });
     const saved = await api.updateSettings({ apiKey: ` ${KEY} ` });
     expect(saved).toMatchObject({ hasKey: true, keyMasked: "sk-or-v1-…0123" });
     expect(JSON.stringify(saved)).not.toContain("abcdefgh");
@@ -21,22 +29,12 @@ describe("settings", () => {
     await expect(api.getCredits()).rejects.toMatchObject({ status: 401 });
   });
 
-  it("validates default models against the catalog and keeps the old values on a bad one", async () => {
-    await expect(api.updateSettings({ defaults: { imageModel: "nope/x" } })).rejects.toMatchObject({ status: 400, error: "Unknown image model: nope/x" });
-    await expect(api.updateSettings({ defaults: { videoModel: "nope/y" } })).rejects.toMatchObject({ status: 400 });
-    await expect(api.updateSettings({ defaults: { videoModel: "runway/aleph-2" } })).rejects.toMatchObject({ status: 400 }); // hidden
-    expect((await api.getSettings()).defaults).toEqual({ imageModel: DEFAULT_IMAGE_MODEL, videoModel: DEFAULT_VIDEO_MODEL });
-    const next = await api.updateSettings({ defaults: { imageModel: "krea/krea-2-large", videoModel: "kwaivgi/kling-v3.0-pro" } });
-    expect(next.defaults).toEqual({ imageModel: "krea/krea-2-large", videoModel: "kwaivgi/kling-v3.0-pro" });
-    expect((await api.updateSettings({ defaults: { imageModel: "google/gemini-2.5-flash-image" } })).defaults.videoModel).toBe("kwaivgi/kling-v3.0-pro");
-  });
-
   it("survives 'Reset local settings'", async () => {
-    await api.updateSettings({ apiKey: KEY, defaults: { imageModel: "krea/krea-2-large" } });
+    await api.updateSettings({ apiKey: KEY, preferredProvider: "fal" });
     writeJson("higgsfree.composer", { mode: "video" });
     clearAppStorage(PROTECTED_STORAGE_KEYS);
     expect(localStorage.getItem("higgsfree.composer")).toBeNull();
-    expect(await api.getSettings()).toMatchObject({ hasKey: true, defaults: { imageModel: "krea/krea-2-large" } });
+    expect(await api.getSettings()).toMatchObject({ hasKey: true, preferredProvider: "fal" });
   });
 });
 

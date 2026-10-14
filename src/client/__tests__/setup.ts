@@ -44,6 +44,10 @@ export const objectUrls = new Map<string, Blob>();
 let urlCounter = 0;
 
 beforeEach(() => {
+  // No test reaches the network: suites that need fetch install a mock (mock-openrouter.ts or vi.stubGlobal).
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    throw new TypeError(`network disabled in tests: ${input instanceof Request ? input.url : String(input)}`);
+  });
   closeDb();
   globalThis.indexedDB = new IDBFactory();
   localStorage.clear();

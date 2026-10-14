@@ -39,7 +39,7 @@ export default function RouteError({ error }: { error: unknown }) {
               <Button variant="secondary" onClick={reset}>
                 Reset local settings
               </Button>
-              <LinkButton href="/image" variant="ghost">
+              <LinkButton href="/video" variant="ghost">
                 Go home
               </LinkButton>
             </div>

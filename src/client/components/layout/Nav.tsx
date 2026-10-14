@@ -12,8 +12,8 @@ import { useUi } from "@/store/ui";
 
 /** Each icon sits in a 16 px box; sizes are tuned so the drawn shapes match the mockup (14 px frames, a 12 px heart). */
 const TABS: { href: string; label: string; icon: ReactNode }[] = [
-  { href: "/image", label: "Image", icon: <Image size={17} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
   { href: "/video", label: "Video", icon: <VideoIcon /> },
+  { href: "/image", label: "Image", icon: <Image size={17} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
   { href: "/assets", label: "Assets", icon: <AssetsIcon /> },
   { href: "/favorites", label: "Favorites", icon: <Heart size={13} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
 ];
@@ -30,11 +30,12 @@ function IconBox({ children }: { children: ReactNode }) {
   return <span className="inline-flex size-4 shrink-0 items-center justify-center">{children}</span>;
 }
 
-/** "Add key" with a grey dot until a key is set; then the remaining credits with a lime dot. Opens the key dialog. */
+/** "Add key" with a grey dot until a key is set (opens the key dialog); then the remaining credits with a lime dot (opens Settings). */
 function KeyBox() {
   const settings = useSettings((s) => s.settings);
   const credits = useSettings((s) => s.credits);
   const openKeyDialog = useUi((s) => s.openKeyDialog);
+  const openSettings = useUi((s) => s.openSettings);
   const hasKey = Boolean(settings?.hasKey);
   const label = hasKey ? (credits ? formatUsd(credits.remaining) : "Key") : "Add key";
   const title = hasKey
@@ -46,7 +47,7 @@ function KeyBox() {
     <Tooltip content={title} side="bottom">
       <button
         type="button"
-        onClick={openKeyDialog}
+        onClick={() => (hasKey ? openSettings("keys") : openKeyDialog({ provider: "openrouter" }))}
         aria-label={title}
         className={cn(BOX, "group gap-2 px-[17px] text-fg-muted transition-colors duration-150 hover:text-fg")}
       >
@@ -94,7 +95,7 @@ function useIndicator(activeIndex: number) {
 }
 
 /**
- * The top bar: three floating boxes, centred. The logo (home), the four views (the active one raised,
+ * The top bar: three floating boxes, centred. The logo (home, the Video view), the four views (the active one raised,
  * its icon in lime), and the key. Tab labels collapse to icons on phones.
  */
 export function Nav() {
@@ -104,9 +105,26 @@ export function Nav() {
   return (
     <header className="pointer-events-none fixed inset-x-0 top-3 z-40 flex justify-center px-3">
       <div className="pointer-events-auto flex items-center gap-2">
-        {/* A 30 px tile in a 46 px box: its 7 px corners stay concentric with the box's 15 px at the 8 px inset. */}
-        <Link href="/image" aria-label="higgsfree home" className={cn(BOX, "w-[46px] justify-center transition-colors duration-150 hover:border-border-strong")}>
+        {/*
+          A 30 px tile in a 46 px box: its 7 px corners stay concentric with the box's 15 px at the 8 px inset.
+          On hover or focus the box stretches to reveal the wordmark; the 0fr → 1fr column animates to the text's exact width.
+        */}
+        <Link
+          href="/video"
+          aria-label="higgsfree home"
+          className={cn(BOX, "group px-[7px] transition-colors duration-150 hover:border-border-strong focus-visible:border-border-strong")}
+        >
           <Logo variant="mark" size={30} />
+          <span
+            aria-hidden="true"
+            className="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr]"
+          >
+            <span className="overflow-hidden">
+              <span className="block whitespace-nowrap pl-2.5 pr-2 font-display text-[15px] font-bold leading-normal tracking-[-0.01em] text-fg opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:delay-75 group-focus-visible:opacity-100">
+                higgsfree
+              </span>
+            </span>
+          </span>
         </Link>
 
         <nav aria-label="Primary" className={cn(BOX, "relative gap-0.5 p-1")}>

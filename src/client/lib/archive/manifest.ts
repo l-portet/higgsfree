@@ -57,6 +57,7 @@ function inputs(v: unknown): GenerationInputs | undefined {
   if (refs.length > 0) out.referenceImages = refs;
   if (isMediaId(o.firstFrame)) out.firstFrame = o.firstFrame;
   if (isMediaId(o.lastFrame)) out.lastFrame = o.lastFrame;
+  if (isMediaId(o.motionVideo)) out.motionVideo = o.motionVideo;
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
@@ -90,6 +91,7 @@ export function sanitizeRecord(v: unknown): Generation | undefined {
   if (providerJobId) g.providerJobId = providerJobId;
   const batchId = str(o.batchId);
   if (batchId) g.batchId = batchId;
+  if (o.provider === "openrouter" || o.provider === "fal") g.provider = o.provider;
   const batchIndex = num(o.batchIndex);
   if (batchIndex !== undefined) g.batchIndex = batchIndex;
   if (o.favorite === true) g.favorite = true;

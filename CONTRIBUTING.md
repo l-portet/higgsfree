@@ -12,7 +12,7 @@ pnpm install                  # pnpm 11, Node >= 22
 pnpm dev                      # Next.js on :3000; paste a key behind Add key
 ```
 
-There is no server, database or secret to set up: the key and the library live in the browser.
+There is no server, database or secret to set up: the keys and the library live in the browser.
 `cp .env.example .env.local` only matters if you want to change one of the three build-time values
 (site url for social cards, OpenRouter base url for a proxy, app name for `X-Title`).
 
@@ -30,18 +30,27 @@ src/
     lib/
       openrouter.ts   the OpenRouter client: headers, origin check, errors, the live model list
       payloads.ts     pure request-body builders (the verified shapes from docs/OPENROUTER.md)
+      fal.ts          the fal client: `Key` auth, host check, run, queue, upload, download, key test
+      fal-payloads.ts pure fal request builders: the app's options mapped onto each model's fields
+      providers.ts    which provider runs a model (keys + preference) and the composer notice text
       catalog.ts      curated catalog merged with OpenRouter's live video and image catalogs
-      settings.ts     the key and the default models in localStorage
+      settings.ts     the keys and the provider preference in localStorage
+      video-meta.ts   sniffs uploaded reference videos (MP4, MOV, WebM)
       db/             IndexedDB (idb): schema, generations, media
-      engine/         job lifecycle: image batches, video submit / poll / download, Web Locks, steward
+      engine/         job lifecycle: image batches, video submit / poll / download, Web Locks, steward;
+                      provider.ts picks the provider and key for a run
       archive/        library export / import as a zip (zip.js)
       media-urls.ts   ref-counted object urls for media in the library
       live.ts         the change feed: every write is broadcast to the other tabs
-    __tests__/        setup (Node + fake-indexeddb), the mock OpenRouter, the engine integration test
+      __tests__/      unit tests; fal.test.ts covers the fal builders, the provider choice and the
+                      client's guards
+    __tests__/        setup (Node + fake-indexeddb), the mock OpenRouter (fal included), the engine and
+                      fal integration tests
     features/         one folder per view · components/ composer, ui, settings · store/ zustand
 public/       icons, manifest, sample stills
 docker/       nginx.conf for the static image
-docs/         OPENROUTER.md (integration rules) · DESIGN.md (visual spec) · MODELS.md (catalog)
+docs/         OPENROUTER.md, FAL.md (integration rules) · DESIGN.md (visual spec) · MODELS.md
+              (catalog)
 ```
 
 `src/shared/types.ts` is the single source of truth for the shapes the UI and the data layer exchange.
@@ -53,11 +62,14 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
   server actions, no `headers()` / `cookies()` / `redirect()` on the server, no `redirects` / `rewrites` /
   `headers` in `next.config.ts`, no proxy or middleware; `next/image` stays `unoptimized`. Anything that
   needs a runtime runs in the browser. CI checks that `out/` contains the expected pages.
-- **The key goes to one place.** Never log the key or store it anywhere but `higgsfree.apiKey`, and never
-  send it to an origin other than OpenRouter's (`assertProviderOrigin`). See [SECURITY.md](SECURITY.md).
-- **Match `docs/OPENROUTER.md` and `docs/DESIGN.md`.** They encode verified OpenRouter behaviour
-  (HTTP 202 on video submit, `frame_images` for i2v, downloading results with the Bearer header,
-  etc.) and the visual language. Don't "simplify" the integration rules. They were learned the
+- **Each key goes to one place.** Never log a key or store it anywhere but `higgsfree.apiKey` (OpenRouter)
+  and `higgsfree.falKey` (fal). The OpenRouter key goes only to OpenRouter's origin
+  (`assertProviderOrigin`), the fal key only to fal's API hosts (`assertFalOrigin`); fal's CDN and upload
+  urls never get it. See [SECURITY.md](SECURITY.md).
+- **Match `docs/OPENROUTER.md`, `docs/FAL.md` and `docs/DESIGN.md`.** They encode verified
+  OpenRouter behaviour (HTTP 202 on video submit, `frame_images` for i2v, downloading results with
+  the Bearer header, etc.), the fal rules (the `Key` header, the queue's own status urls, keyless CDN
+  downloads) and the visual language. Don't "simplify" the integration rules. They were learned the
   hard way. If you find one is wrong, fix the doc in the same PR.
 - **Surface provider errors verbatim.** OpenRouter's 400 bodies list the supported values; users
   need to see them.
@@ -67,14 +79,16 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
 - **Nothing that compiles on install.** Image and MP4 headers are parsed by hand; the zip is zip.js on the
   main thread. The app has to install and build anywhere Node 22 runs, including Vercel's build image.
 - **Cost honesty.** Estimates in the UI come from `estCostUsd` / `estCostPerSecUsd` in the
-  catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. If you change
-  an estimate, say where the number came from.
+  catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. fal reports no
+  cost, and fal-only models carry no estimate rather than a guessed one. If you change an estimate,
+  say where the number came from.
 
 ## Adding or updating a model
 
 Edit `src/shared/models.ts` only. The picker, validation and cost estimate are all driven by
 the catalog. Field-by-field guidance and the verification checklist are in
-[docs/MODELS.md](docs/MODELS.md). Set `verified: true` only after you've actually run the model
+[docs/MODELS.md](docs/MODELS.md), including how to add a model on fal (a `fal` route, read from
+the endpoint's OpenAPI schema). Set `verified: true` only after you've actually run the model
 through the app end-to-end; otherwise leave it `false` and the UI will show a "best-effort" note.
 
 Please run the model once and paste the measured `usage.cost` and any provider error bodies into
@@ -106,8 +120,8 @@ builds the Docker image. Please also:
 ## Reporting bugs / requesting models
 
 Use the issue templates: one for bugs, one for model requests. For bugs, include the
-provider error text and the model slug; for models, include the OpenRouter slug and whatever
-constraints you already know.
+provider error text and the model slug; for models, include the OpenRouter slug or the fal
+endpoint id and whatever constraints you already know.
 
 ## License
 

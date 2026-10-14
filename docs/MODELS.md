@@ -7,13 +7,17 @@ The model list comes from two places, merged in the browser by
   (public, no key), read at startup and cached 10 minutes. They give each model's options
   (durations, resolutions, aspect ratios, frames, audio, reference images) and the video prices.
 - **The curated catalog** in [`src/shared/models.ts`](../src/shared/models.ts): display names,
-  featured order, badges, descriptions, the quirks OpenRouter does not publish, and the verified
-  image routes. It is also what the app shows until the live catalog arrives, or when it cannot.
+  featured order, badges, descriptions, the quirks OpenRouter does not publish, the verified
+  image routes, and every model's fal route. It is also what the app shows until the live catalog
+  arrives, or when it cannot.
 
 The picker, the option chips, request validation and the cost estimate all read the merged list.
 The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026; see
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
-runtime.
+runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
+
+Curated today: 19 image models (8 of them fal-only) and 39 video models, of which 35 are offered
+(9 fal-only) and 4 are hidden.
 
 **Legend**
 
@@ -52,12 +56,12 @@ GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered 
 model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
 
-Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`).
+Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
 
 ## Video models
 
-All video models go through the async `POST /api/v1/videos` endpoint (HTTP 202 on submit, then
-polling). `†` = `omitAspectRatioOnI2v`: the model rejects `aspect_ratio` on image-to-video, so the
+On OpenRouter, video models go through the async `POST /api/v1/videos` endpoint (HTTP 202 on
+submit, then polling). `†` = `omitAspectRatioOnI2v`: the model rejects `aspect_ratio` on image-to-video, so the
 app omits it and the output follows the input frame. **Last frame** = accepts a
 `frame_type: "last_frame"` anchor. **Audio** = accepts `generate_audio` (a native track you can
 turn off). Durations are in seconds; a range means every integer step in it is allowed.
@@ -104,8 +108,9 @@ text-to-video again in Oct 2026, so it is offered; a rejection shows the provide
 
 Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced above Wan 3.0.
 
-Not on OpenRouter, so not in the app: Higgsfield Genjutsu, Seedance 2.5 Draft and Edit, Gemini Omni
-Flash, Kling 3.0 Motion Control. Sora 2 Pro left OpenRouter and was removed.
+Not on OpenRouter: Gemini Omni Flash and Kling 3.0 Motion Control run on fal (see
+[fal models](#fal-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
+Sora 2 Pro left OpenRouter and was removed.
 
 Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
 
@@ -122,6 +127,89 @@ any duration is hidden the same way.
 | **HeyGen Avatar IV** | `heygen/avatar-iv` | Talking avatar (needs audio input) |
 | **FLUX Video Edit** | `black-forest-labs/flux-video-edit` | Video-to-video editing (video input) |
 
+## fal models
+
+With a fal key these run on fal ([FAL.md](FAL.md) has the request rules). **fal-only** models
+(`falOnly: true`) are not on OpenRouter: their ids (`fal/<name>`) are the app's own, not fal endpoint
+ids, and their options are curated, since the app reads no catalog from fal. None of them is
+verified yet, and none has a cost estimate: fal shows prices only to a signed-in key, and it reports
+no cost with a result.
+
+### fal-only video models
+
+Endpoints are fal endpoint ids; `…/image-to-video` repeats the text-to-video path. `†` = the aspect
+ratio is sent for text-to-video only (`aspect: "text"` or `omitAspectRatioOnI2v`). Resolutions in
+brackets are the values fal receives when they differ from the app's.
+
+| Model | Id | fal endpoints | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
+|---|---|---|:-:|:-:|:-:|:-:|---|---|---|
+| **Gemini Omni Flash 1.1** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1` | `google/gemini-omni-flash/v1.1/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | 3–10 (default 8) | 16:9, 9:16 |
+| **Kling O3 Pro** <sub>NEW</sub> | `fal/kling-o3-pro` | `fal-ai/kling-video/o3/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
+| **Kling 3.0 Turbo** <sub>FAST</sub> | `fal/kling-v3-turbo-pro` | `fal-ai/kling-video/v3/turbo/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | – | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
+| **PixVerse 6** <sub>NEW</sub> | `fal/pixverse-v6` | `fal-ai/pixverse/v6/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | ✓ ¹ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
+| **Vidu Q4** <sub>NEW</sub> | `fal/vidu-q4` | `fal-ai/vidu/q4/image-to-video` | – | ✓ | – | – | 720p / 1080p / 2K / 4K (default 720p) | 3–16 (default 5) | not sent (follows the frame) |
+| **LTX 2.3** | `fal/ltx-2.3` | `fal-ai/ltx-2.3/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | 1080p / 2K [`1440p`] / 4K [`2160p`] (default 1080p) | 6, 8, 10 (default 6) | 16:9, 9:16 |
+| **Luma Ray 3.2** | `fal/luma-ray-3.2` | `luma/agent/ray/v3.2/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p (default 720p) | 5, 10 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 |
+
+¹ Sent as `generate_audio_switch`; the others use `generate_audio`.
+
+Durations go out as numbers (Gemini Omni Flash, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
+seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`).
+
+**Motion control** (`caps.motionControl`): a character image plus a reference video, and an optional
+prompt. The clip copies the video's movement and is as long as the video. There is no duration,
+resolution or aspect ratio choice, no audio and no style reference. The reference video is MP4, MOV
+or WebM up to 90 MB, 3 s or longer, and at most 30 s when the character follows the video's
+orientation (the default) or 10 s when it follows the image's.
+
+| Model | Id | fal endpoint |
+|---|---|---|
+| **Kling 3.0 Motion Control** <sub>NEW</sub> | `fal/kling-v3-pro-motion-control` | `fal-ai/kling-video/v3/pro/motion-control` |
+| **Kling 3.0 Motion Control Standard** | `fal/kling-v3-standard-motion-control` | `fal-ai/kling-video/v3/standard/motion-control` |
+
+### fal-only image models
+
+All are 1K only (no size choice). References are sent as a list (`image_urls`) or a single
+`image_url`. "preset" = the aspect ratio goes out as one of fal's `image_size` presets
+(`square_hd`, `landscape_4_3`, `portrait_4_3`, `landscape_16_9`, `portrait_16_9`).
+
+| Model | Id | fal endpoints (text-to-image · edit) | t2i | i2i (max refs) | Aspect ratios | Aspect sent as |
+|---|---|---|:-:|:-:|---|---|
+| **FLUX.1 Kontext Pro** | `fal/flux-kontext-pro` | `fal-ai/flux-pro/kontext/text-to-image` · `fal-ai/flux-pro/kontext` | ✓ | ✓ (1, `image_url`) | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
+| **FLUX 1.1 Pro Ultra** | `fal/flux-1.1-pro-ultra` | `fal-ai/flux-pro/v1.1-ultra` | ✓ | – | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
+| **Ideogram 4.5** <sub>NEW</sub> | `fal/ideogram-4.5` | `ideogram/v4.5` · `ideogram/v4.5/edit` | ✓ | ✓ (1, `image_url`) | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+| **GPT Image 1.5** | `fal/gpt-image-1.5` | `fal-ai/gpt-image-1.5` · `fal-ai/gpt-image-1.5/edit` | ✓ | ✓ (4, `image_urls`) | auto, 1:1, 3:2, 2:3 | `image_size` `1024x1024` / `1536x1024` / `1024x1536` |
+| **Qwen Image Edit 2511** | `fal/qwen-image-edit-2511` | edit only: `fal-ai/qwen-image-edit-2511` | – | ✓ (3, `image_urls`) | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+| **Z-Image Turbo** <sub>FAST</sub> | `fal/z-image-turbo` | `fal-ai/z-image/turbo` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+| **FLUX.1 [dev]** | `fal/flux-dev` | `fal-ai/flux/dev` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+| **FLUX.1 [schnell]** <sub>FAST</sub> | `fal/flux-schnell` | `fal-ai/flux/schnell` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+
+### Models on both
+
+These are in the OpenRouter tables above and also have a fal route. With both keys, Settings decides
+who runs them (OpenRouter by default); with one key, that provider does. The options are the same
+whoever runs them (OpenRouter's live values for video, the curated ones for images), mapped onto
+fal's fields. Style references are never sent to fal.
+
+- **Nano Banana Pro**: `fal-ai/nano-banana-pro` · `fal-ai/nano-banana-pro/edit`; `image_urls`,
+  `aspect_ratio`, `resolution` 1K / 2K / 4K.
+- **Nano Banana 2**: `fal-ai/nano-banana-2` · `fal-ai/nano-banana-2/edit`; `image_urls`,
+  `aspect_ratio`, `resolution` 1K / 2K.
+- **GPT Image 2**: `openai/gpt-image-2` · `openai/gpt-image-2/edit`; `image_urls`, `image_size`
+  (1:1 `square_hd`, 2:3 832×1216, 3:2 1216×832).
+- **Seedance 2.5**: `bytedance/seedance-2.5/text-to-video` · `…/image-to-video`; `duration` as a
+  string, `aspect_ratio` (not with a frame), `resolution` 480p / 720p, `end_image_url`,
+  `generate_audio`.
+- **MiniMax H3**: `minimax/h3/text-to-video` · `…/image-to-video`; `duration` as a number,
+  `aspect_ratio` for text-to-video, `resolution: "2K"`, `end_image_url`. The audio toggle is not sent.
+- **MiniMax H3 Max**: `minimax/h3-max/text-to-video` · `…/image-to-video`; as H3, with `resolution`
+  `"480P"` / `"768P"` and `prompt_expansion_mode: "balanced"`.
+- **Kling 3.0 Pro**: `fal-ai/kling-video/v3/pro/text-to-video` · `…/image-to-video`;
+  `start_image_url`, `end_image_url`, `duration` as a string, `aspect_ratio` for text-to-video,
+  `generate_audio`, no `resolution`.
+- **Kling 3.0 Standard**: `fal-ai/kling-video/v3/standard/text-to-video` · `…/image-to-video`; as
+  Kling 3.0 Pro.
+
 ## Live catalog and discovered models
 
 At startup the browser reads `GET /api/v1/videos/models` and `GET /api/v1/images/models`. Both are
@@ -131,8 +219,9 @@ localStorage, so a model OpenRouter adds shows up within 10 minutes.
 **Video.** For every curated model the live entry replaces durations, resolutions, aspect ratios,
 image-to-video and last-frame support, audio and the price. The curated entry keeps the name,
 featured flag, badges, description, `realFaces`, `references`, `omitAspectRatioOnI2v`, `verified`
-and a text-to-video quirk. A curated model OpenRouter no longer lists disappears from the picker.
-Every other listed model is **discovered**:
+and a text-to-video quirk. A curated model OpenRouter no longer lists disappears from the picker,
+unless it has a fal route: it then stays, as a fal-only model. fal-only models are never looked up
+in OpenRouter's catalogs. Every other listed model is **discovered**:
 
 | Field | Value |
 |---|---|
@@ -145,7 +234,7 @@ Every other listed model is **discovered**:
 | `hidden` | `true` when the catalog lists no duration (editing, upscaling, avatars). |
 
 **Image.** Curated models keep their verified routes and options (`chat` and `images` do not take
-the catalog's fields one to one). Every other model in `/api/v1/images/models` is discovered and
+the catalog's fields one to one), and stay listed as they are when OpenRouter stops listing them. Every other model in `/api/v1/images/models` is discovered and
 served through the native `POST /api/v1/images` with `aspect_ratio`, `resolution` and
 `input_references` as the catalog lists them. Aspect ratios are the ones the app knows plus `auto`.
 Sizes are the catalog's `resolution` values among 1K / 2K / 4K. References are capped at 8. A model
@@ -158,21 +247,42 @@ checklist below, add a curated entry; it then stops being discovered.
 
 ## Adding a model
 
-1. Confirm the slug is live on OpenRouter (see the checklist below).
+1. Confirm the slug is live on OpenRouter (see the checklist below). For a model on fal, see
+   [Adding a fal model](#adding-a-fal-model).
 2. Add an entry to `IMAGE_MODELS` or `VIDEO_MODELS` in `src/shared/models.ts`. That's the whole
    change; no other code needs to know about a new model.
 3. Run it once through the app, paste the measured `usage.cost` and any provider error bodies into
    your PR, and update the table above.
 4. Leave `verified: false` until you've completed the checklist.
 
+### Adding a fal model
+
+1. Find the endpoint id on fal and read its input schema (field names, enums, defaults, limits):
+   `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=<endpoint>`. Write down how it spells
+   each option; endpoints of the same family often differ.
+2. A model OpenRouter also has: add a `fal` route to its existing entry. A fal-only model: add an
+   entry with `id: "fal/<name>"`, `falOnly: true`, a `fal` route, `verified: false` and empty
+   `estCostUsd` / `estCostPerSecUsd`; image models also take `endpoint: "fal"`. Fill `caps`,
+   durations, resolutions and aspect ratios from the schema's enums.
+3. Fill the route (fields below). If the endpoint needs something `FalImageRoute` / `FalVideoRoute`
+   cannot say, extend the type in `src/shared/types.ts` and `src/client/lib/fal-payloads.ts`, with a
+   case in `src/client/lib/__tests__/fal.test.ts`.
+4. `src/client/lib/__tests__/catalog.test.ts` ("fal routes") checks the route against the model: a
+   fal-only model has a route, every mode the caps offer has an endpoint, `lastFrame` needs
+   `endImage`, a fal-only model with audio names its audio field, a `resolutions` map covers every
+   listed resolution, fal-only image models use `endpoint: "fal"`, and motion-control models are
+   fal-only with a `motionControl` endpoint.
+5. Run it once through the app with a fal key and put any fal error bodies in the PR. fal reports no
+   cost, so there is no `usage.cost` to paste. Update the tables in [fal models](#fal-models).
+
 ### `ImageModel` fields
 
 | Field | Meaning |
 |---|---|
 | `kind` | Always `"image"`. |
-| `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. |
-| `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, everything discovered is `native`. |
+| `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
+| `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, everything discovered is `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
@@ -180,8 +290,10 @@ checklist below, add a curated entry; it then stops being discovered.
 | `aspectRatios` | Subset of `ImageAspectRatio`. `auto` means "don't send `image_config.aspect_ratio`". `images`-endpoint models often support only 1:1 (Krea) or 1:1 / 2:3 / 3:2 (`gpt-image-2`, mapped to `size`). |
 | `sizes` | Subset of `"1K" \| "2K" \| "4K"`. Only meaningful when `supportsImageSize` is true; otherwise list `["1K"]`. |
 | `supportsImageSize` | Whether `image_config.image_size` is honoured. If false the app never sends it. |
-| `estCostUsd` | USD per image keyed by size. Missing sizes fall back to `"1K"`. Shown as `~$0.13` in the Generate button. |
-| `verified` | `true` only after the checklist below. |
+| `estCostUsd` | USD per image keyed by size. Missing sizes fall back to `"1K"`. Shown as `~$0.13` in the Generate button. Empty for fal-only models (no estimate shown). |
+| `verified` | `true` only after the checklist below. For a model on both, it is about the OpenRouter route. |
+| `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
+| `falOnly` | Not on OpenRouter: runs only with a fal key, and is never looked up in OpenRouter's catalogs. |
 
 ### `VideoModel` fields
 
@@ -192,7 +304,8 @@ checklist below, add a curated entry; it then stops being discovered.
 | `caps.lastFrame` | Accepts `frame_images` with `frame_type: "last_frame"` in addition to `first_frame`. Enables the last-frame slot in the UI. |
 | `caps.audio` | Accepts `generate_audio` (the live catalog's `generate_audio: true`). Shows the speaker glyph in the picker; the `audio` request flag is sent as `generate_audio` only for these models (and only when the user set it explicitly). |
 | `caps.realFaces` | `true` = known to accept recognisable human faces on i2v, `false` = known to reject (Seedance moderation), `undefined` = unknown. Used for the "safe for real faces" hint. |
-| `caps.references` | `false` = the provider rejects `input_references` (FLUX.3 Video). The app then hides the style-reference strip and answers a request that still sends `references` with a 400. `undefined` = supported. |
+| `caps.references` | `false` = the provider rejects `input_references` (FLUX.3 Video). The app then hides the style-reference strip and answers a request that still sends `references` with a 400. `undefined` = supported. fal never gets style references, whatever this says. |
+| `caps.motionControl` | Motion control: a character image (`firstFrame`) and a reference video (`motionVideo`) are required, the prompt is optional, and duration, resolution and aspect ratio are not sent (the clip follows the video). Only on fal-only models with a `fal.motionControl` endpoint. |
 | `durations` | Either a range `{ min, max, step? }` (every step is allowed, e.g. Seedance 4–30 s) or an explicit list `{ options: [4, 6, 8] }` (Veo, Kling O1, Hailuo 2.3). The stepper snaps to these (`snapDuration`). |
 | `defaultDuration` | Preselected duration. |
 | `resolutions` / `defaultResolution` | Values the provider accepts for `resolution`. Some accept exactly one (H3 → `2K`, Kling 3.0 Pro → `720p`); if the list is empty the app doesn't send `resolution` at all. |
@@ -202,6 +315,8 @@ checklist below, add a curated entry; it then stops being discovered.
 | `verified` | `true` only after the checklist below. |
 | `hidden` | Keep in the catalog but don't list it (video-to-video, avatar models). |
 | `discovered` | Set by the browser (`src/client/lib/catalog.ts`), never in `models.ts`: OpenRouter lists the model but the curated catalog does not (see above). |
+| `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo` and `motionControl` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
+| `falOnly` | Not on OpenRouter: runs only with a fal key, and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with a `fal` route that OpenRouter stopped listing. |
 
 ## Verification checklist
 

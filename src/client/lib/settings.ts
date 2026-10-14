@@ -1,13 +1,13 @@
-/** The OpenRouter key and the default models, in this browser's localStorage. */
-import type { SettingsResponse } from "@shared/types";
-import { DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL } from "@shared/models";
+/** The OpenRouter and fal keys and the provider choice, in this browser's localStorage. */
+import type { ProviderId, SettingsResponse } from "@shared/types";
 import { ApiClientError } from "./errors";
 import { readJson, removeKey, writeJson } from "./storage";
 
 export const KEY_STORAGE = "higgsfree.apiKey";
-export const DEFAULTS_STORAGE = "higgsfree.defaults";
-/** Survive "Reset local settings": losing the key or the defaults is never what that button means. */
-export const PROTECTED_STORAGE_KEYS: readonly string[] = [KEY_STORAGE, DEFAULTS_STORAGE];
+export const FAL_KEY_STORAGE = "higgsfree.falKey";
+export const PROVIDER_STORAGE = "higgsfree.preferredProvider";
+/** Survive "Reset local settings": losing a key or the provider choice is never what that button means. */
+export const PROTECTED_STORAGE_KEYS: readonly string[] = [KEY_STORAGE, FAL_KEY_STORAGE, PROVIDER_STORAGE];
 
 export function getStoredKey(): string | undefined {
   const key = readJson<string>(KEY_STORAGE, "").trim();
@@ -18,6 +18,26 @@ export function setStoredKey(key: string): void {
   const trimmed = key.trim();
   if (trimmed) writeJson(KEY_STORAGE, trimmed);
   else removeKey(KEY_STORAGE);
+}
+
+export function getStoredFalKey(): string | undefined {
+  const key = readJson<string>(FAL_KEY_STORAGE, "").trim();
+  return key || undefined;
+}
+
+export function setStoredFalKey(key: string): void {
+  const trimmed = key.trim();
+  if (trimmed) writeJson(FAL_KEY_STORAGE, trimmed);
+  else removeKey(FAL_KEY_STORAGE);
+}
+
+/** Which provider runs a model both offer. OpenRouter unless the user picked fal. */
+export function getPreferredProvider(): ProviderId {
+  return readJson<string>(PROVIDER_STORAGE, "openrouter") === "fal" ? "fal" : "openrouter";
+}
+
+export function setPreferredProvider(provider: ProviderId): void {
+  writeJson(PROVIDER_STORAGE, provider);
 }
 
 export function requireApiKey(): string {
@@ -32,24 +52,11 @@ export function maskKey(key: string): string {
   return `${key.slice(0, 9)}…${key.slice(-4)}`;
 }
 
-export function getDefaults(): SettingsResponse["defaults"] {
-  const p = readJson<Record<string, unknown>>(DEFAULTS_STORAGE, {});
-  return {
-    imageModel: typeof p.imageModel === "string" && p.imageModel ? p.imageModel : DEFAULT_IMAGE_MODEL,
-    videoModel: typeof p.videoModel === "string" && p.videoModel ? p.videoModel : DEFAULT_VIDEO_MODEL,
-  };
-}
-
-export function setDefaults(d: Partial<SettingsResponse["defaults"]>): void {
-  const next = { ...getDefaults() };
-  if (d.imageModel) next.imageModel = d.imageModel;
-  if (d.videoModel) next.videoModel = d.videoModel;
-  writeJson(DEFAULTS_STORAGE, next);
-}
-
 export function settingsResponse(): SettingsResponse {
   const key = getStoredKey();
-  const res: SettingsResponse = { hasKey: Boolean(key), defaults: getDefaults() };
+  const falKey = getStoredFalKey();
+  const res: SettingsResponse = { hasKey: Boolean(key), hasFalKey: Boolean(falKey), preferredProvider: getPreferredProvider() };
   if (key) res.keyMasked = maskKey(key);
+  if (falKey) res.falKeyMasked = maskKey(falKey);
   return res;
 }

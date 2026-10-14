@@ -32,6 +32,14 @@ export function validateImageRequest(model: ImageModel, req: ImageGenerateReques
 
 export function validateVideoRequest(model: VideoModel, req: VideoGenerateRequest, prompt: string): void {
   if (prompt.length > MAX_PROMPT_CHARS) throw badRequest(`Prompt is longer than ${MAX_PROMPT_CHARS} characters`);
+  if (model.caps.motionControl) {
+    assertMediaIds([req.firstFrame, req.motionVideo], "The character image and the reference video");
+    if (!req.firstFrame) throw badRequest(`${model.name} needs a character image`);
+    if (!req.motionVideo) throw badRequest(`${model.name} needs a reference video`);
+    if (req.orientation !== undefined && req.orientation !== "video" && req.orientation !== "image") throw badRequest("orientation must be video or image");
+    return;
+  }
+  if (req.motionVideo) throw badRequest(`${model.name} does not take a reference video`);
   if (!(req.duration > 0) || req.duration > 120) throw badRequest("duration must be between 1 and 120 seconds");
   const refs = req.references ?? [];
   if (refs.length > MAX_REFERENCE_IMAGES) throw badRequest(`At most ${MAX_REFERENCE_IMAGES} references`);

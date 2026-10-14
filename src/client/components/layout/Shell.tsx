@@ -18,6 +18,7 @@ import { useSettings } from "@/store/settings";
 // Client-only: both read localStorage / stores on first render, so they are not server-rendered.
 const Composer = dynamic(() => import("@/components/composer/Composer").then((m) => m.Composer), { ssr: false });
 const KeyDialog = dynamic(() => import("@/components/KeyDialog").then((m) => m.KeyDialog), { ssr: false });
+const SettingsDialog = dynamic(() => import("@/components/settings/SettingsDialog").then((m) => m.SettingsDialog), { ssr: false });
 
 const STORAGE_TOAST = "storage-unavailable";
 
@@ -102,6 +103,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       </div>
       <Composer />
       <KeyDialog />
+      <SettingsDialog />
       <Lightbox />
       {/* Top-right: the floating nav sits in the centre and the composer owns the bottom edge. */}
       <Toaster
