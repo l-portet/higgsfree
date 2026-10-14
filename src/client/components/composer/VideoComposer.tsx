@@ -16,6 +16,7 @@ import { uid } from "@/lib/uid";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
 import { useUi } from "@/store/ui";
+import { Button } from "@/components/ui/Button";
 import { Chip, StaticChip } from "@/components/ui/Chip";
 import { Popover, PopoverContent, PopoverItem, PopoverLabel, PopoverTrigger } from "@/components/ui/Popover";
 import { Stepper } from "@/components/ui/Stepper";
@@ -507,15 +508,19 @@ export function VideoComposer() {
         />
       }
       promptAction={
-        // The AI Prompt Editor: rewrite the prompt with an LLM, preview a frame, use it. As tall as one prompt line; icon only on phones.
-        <Tooltip content="Rewrite the prompt with AI and preview a frame" side="top" align="end">
-          <Chip
-            icon={<Sparkles />}
-            label={<span className="hidden sm:inline">AI Prompt Editor</span>}
-            aria-label="AI Prompt Editor"
+        // The prompt editor: rewrite the prompt with an LLM, preview a frame, use it. A plain text button as tall as one
+        // prompt line, quieter than the option chips; the sparkle alone on phones.
+        <Tooltip content="Rewrite with AI, preview a frame" side="top" align="end">
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<Sparkles />}
+            aria-label="Prompt Editor"
             onClick={() => setEditorOpen(true)}
-            className="h-[33px]"
-          />
+            className="h-[33px] px-2 text-fg-subtle"
+          >
+            <span className="hidden sm:inline">Prompt Editor</span>
+          </Button>
         </Tooltip>
       }
       note={
