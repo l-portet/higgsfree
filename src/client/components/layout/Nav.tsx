@@ -30,7 +30,7 @@ function IconBox({ children }: { children: ReactNode }) {
   return <span className="inline-flex size-4 shrink-0 items-center justify-center">{children}</span>;
 }
 
-/** "Add key" with a grey dot until a key is set (opens the key dialog); then the remaining credits with a lime dot (opens Settings). */
+/** "Add key" with a grey dot until a key is set (opens the key dialog); then the remaining credits with an accent dot (opens Settings). */
 function KeyBox() {
   const settings = useSettings((s) => s.settings);
   const credits = useSettings((s) => s.credits);
@@ -96,7 +96,7 @@ function useIndicator(activeIndex: number) {
 
 /**
  * The top bar: three floating boxes, centred. The logo (home, the Video view), the four views (the active one raised,
- * its icon in lime), and the key. Tab labels collapse to icons on phones.
+ * its icon in the accent), and the key. Tab labels collapse to icons on phones.
  */
 export function Nav() {
   const pathname = usePathname() ?? "/";

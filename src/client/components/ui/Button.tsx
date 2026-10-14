@@ -14,7 +14,7 @@ const BASE =
 
 /**
  * Not ready (`aria-disabled`, still focusable so the tooltip reason is reachable): primary rests on a
- * neutral surface until the action is possible, then turns lime; no hover while resting, and children
+ * neutral surface until the action is possible, then turns to the accent; no hover while resting, and children
  * (cost estimate, icons) inherit the muted colour. Other variants simply dim. `disabled` (loading) keeps
  * the variant colours at 50 % opacity via BASE.
  */

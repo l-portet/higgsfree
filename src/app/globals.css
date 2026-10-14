@@ -85,6 +85,50 @@
   --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
+/* ---------- Accent on load ----------
+   The page opens on the lime accent above and then sweeps to blue (#5da8fd). The three accent
+   variables are registered as colors so they interpolate, and every `bg-accent`, `text-accent`,
+   `ring-accent/40`, the focus ring and the selection read them, so the whole UI shifts together. The
+   logo's tile makes the same sweep from the old brand lime (`--color-logo`, read by Logo.tsx).
+   The stops are an OKLCH hue sweep (lime, aqua, sky blue, chroma eased off mid-way so it never turns
+   neon) sampled at ease-in-out times, which is why the timing between them is `linear`. It runs once
+   per document: client-side navigation keeps the blue, a full load replays it. */
+@property --color-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #defd5d;
+}
+@property --color-accent-hover {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #d2f24c;
+}
+@property --color-on-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #141a05;
+}
+/* The logo's tile: the old brand lime until the sweep moves it to the brand blue (docs/brand/BRAND.md). */
+@property --color-logo {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #d0f81e;
+}
+
+@keyframes accent-shift {
+  0% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81e; }
+  10% { --color-accent: #dcfd5f; --color-accent-hover: #d0f24f; --color-on-accent: #141a05; --color-logo: #cef826; }
+  20% { --color-accent: #d2fd6e; --color-accent-hover: #c6f25f; --color-on-accent: #121a06; --color-logo: #c3f847; }
+  30% { --color-accent: #b9fb8c; --color-accent-hover: #acf07f; --color-on-accent: #0f1b0a; --color-logo: #a7f777; }
+  40% { --color-accent: #95f2b3; --color-accent-hover: #87e7a7; --color-on-accent: #0a1b11; --color-logo: #81efaa; }
+  50% { --color-accent: #75ddd2; --color-accent-hover: #64d2c7; --color-on-accent: #061a18; --color-logo: #64dbd0; }
+  60% { --color-accent: #56c7e6; --color-accent-hover: #3fbcdd; --color-on-accent: #021920; --color-logo: #4bc6e7; }
+  70% { --color-accent: #51b7f5; --color-accent-hover: #3aabed; --color-on-accent: #011726; --color-logo: #4db6f5; }
+  80% { --color-accent: #58adfb; --color-accent-hover: #45a1f4; --color-on-accent: #03162a; --color-logo: #57acfb; }
+  90% { --color-accent: #5ca9fd; --color-accent-hover: #4a9df6; --color-on-accent: #04152b; --color-logo: #5ca9fd; }
+  100% { --color-accent: #5da8fd; --color-accent-hover: #4b9cf6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
+}
+
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
@@ -93,6 +137,8 @@
 /* ---------- Base ---------- */
 @layer base {
   html {
+    /* `both`: lime through the delay, blue once it is done. */
+    animation: accent-shift 1.6s linear 0.5s both;
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -127,7 +173,7 @@
   ::selection {
     background-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
   }
-  /* No default (blue) focus rings; a soft lime ring on keyboard focus only. */
+  /* No default (browser blue) focus rings; a soft accent ring on keyboard focus only. */
   :focus {
     outline: none;
   }
@@ -275,5 +321,9 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  /* The accent shift is a color fade with nothing moving: keep it rather than snap after the delay. */
+  html {
+    animation-duration: 1.6s !important;
   }
 }

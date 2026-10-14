@@ -71,7 +71,7 @@ export interface GenerateButtonProps {
   onClick?: () => void;
 }
 
-/** Lime pill with the shortcut badge; a neutral surface while not ready. */
+/** Accent pill with the shortcut badge; a neutral surface while not ready. */
 export function GenerateButton({ disabledReason, submitting, reasonId, onClick }: GenerateButtonProps) {
   const notReady = Boolean(disabledReason);
   return (
