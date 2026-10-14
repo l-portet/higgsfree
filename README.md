@@ -20,6 +20,7 @@
 - **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, MiniMax H3, Wan 3.0 and more. First and last frame, style references, native audio. With a fal key: Kling 3.0 Motion Control (your character, moving like a reference video), Gemini Omni Flash, Vidu Q4, PixVerse 6 and more.
 - **Assets**: every generation with its prompt, settings and real cost. Search, download, reuse, animate an image into a video.
 - **Favorites**: press the heart on any run to keep it in one place, with folders you create: drag runs onto a folder, or pick one from the heart's menu.
+- **Video ready alerts**: a ding and / or a system notification when a video finishes, switched on in Settings › Notifications. They work while the site is open in a tab, even in the background.
 - **Your keys, your browser**: one OpenRouter key for every provider, billed at provider price, and an optional [fal](https://fal.ai) key for the models only fal has. The keys stay in this browser's localStorage, the library (every generation and its file) in its IndexedDB, and you can export it all as a zip any time. No account, no server, nothing in between.
 
 ## Quick start (local)

@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { FeedFallback } from "@/components/layout/fallbacks";
 import { useUi, type SettingsSection } from "@/store/ui";
 
-const BY_HASH: Record<string, SettingsSection> = { keys: "keys", providers: "keys", fal: "keys", openrouter: "keys", library: "library", about: "about" };
+const BY_HASH: Record<string, SettingsSection> = { keys: "keys", providers: "keys", fal: "keys", openrouter: "keys", library: "library", notifications: "notifications", about: "about" };
 
 /** Settings live in a dialog now. Old `/settings` links (and `#fal`, `#providers`…) open it over the Image view. */
 export default function SettingsRedirect() {

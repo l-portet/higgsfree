@@ -40,12 +40,18 @@ function onVisibilityChange(): void {
   void resumeJobs();
 }
 
-/** Boot the engine once per tab: sweep orphan uploads, resume jobs, start the steward. Browser only. */
-export function startEngine(opts: { onCompleted?: () => void } = {}): void {
+/**
+ * Boot the engine once per tab: sweep orphan uploads, resume jobs, start the steward. Browser only.
+ * `onCompleted` fires for every finished run; `onVideoCompleted` for a finished video, in the tab that drove it.
+ */
+export function startEngine(opts: { onCompleted?: () => void; onVideoCompleted?: (g: Generation) => void } = {}): void {
   if (started || typeof window === "undefined") return;
   started = true;
   setOnCompleted(opts.onCompleted);
-  setOnVideoCompleted(opts.onCompleted);
+  setOnVideoCompleted((g) => {
+    opts.onCompleted?.();
+    opts.onVideoCompleted?.(g);
+  });
   unsubscribe = subscribeEvents((ev) => {
     if (ev.type === "generation-deleted") cancelJob(ev.id);
     else if (ev.type === "reset") cancelAllJobs();
