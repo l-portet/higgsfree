@@ -73,7 +73,7 @@ export async function listGenerations(q: ListGenerationsQuery = {}): Promise<Lis
   let index: ListIndex;
   let prefix: (string | number)[];
   let matches = (_g: StoredGeneration): boolean => true;
-  if (q.folder !== undefined) {
+  if (typeof q.folder === "string") {
     index = "byFolder";
     prefix = [q.folder];
     matches = (g) =>
@@ -94,6 +94,11 @@ export async function listGenerations(q: ListGenerationsQuery = {}): Promise<Lis
   } else {
     index = "byCreated";
     prefix = [];
+  }
+  // `folder: null` (in no folder) rides on whichever index the other filters picked: skipped rows still page correctly.
+  if (q.folder === null) {
+    const base = matches;
+    matches = (g) => !g.folder && base(g);
   }
   // A shorter array sorts before every longer array with that prefix; "￿" sorts after every ISO date.
   const upper = cursor ? [...prefix, cursor.createdAt, ...(cursor.id !== undefined ? [cursor.id] : [])] : [...prefix, "￿"];
