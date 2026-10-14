@@ -297,6 +297,16 @@ html[data-accent-intro] ::after {
   animation: shimmer 1.6s linear infinite;
 }
 
+/* ---------- Fixed-size cards (the Image and Video feeds) ----------
+   A card in a feed cell is a size container named `cell` (GenerationCard's `cell` prop). A failed run's
+   text cannot grow the card, so more of it shows as the cell gets taller: one line of the error, two,
+   then the prompt, then more of both. Retry's label and Details show once the cell is wide enough. */
+@custom-variant cell-h-sm (@container cell (min-height: 102px));
+@custom-variant cell-h-md (@container cell (min-height: 120px));
+@custom-variant cell-h-lg (@container cell (min-height: 142px));
+@custom-variant cell-h-xl (@container cell (min-height: 180px));
+@custom-variant cell-w-md (@container cell (min-width: 200px));
+
 /* ---------- Typography scale (docs/DESIGN.md) ----------
    One utility per kind of text. Add color / weight modifiers after it
    (single-property utilities sort later, so `text-meta text-fg` wins). */

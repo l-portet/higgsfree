@@ -134,17 +134,21 @@ There is no page chrome: the app is four views under one floating nav, with one 
   line, `max-w-[400px]` with balanced wrapping; 24 px below, three example prompts 8 px apart as 528 px rows
   (`panel`, `border`, `rounded-card` (13), 11 px padding, a 58 px 4:3 gradient swatch with `rounded-thumb` (7), 13 px
   `fg-muted` text on a 19 px line). Clicking one fills the composer and focuses it.
-- Feed: masonry grid (`minmax(260px, 1fr)` from `sm`, 160 below) newest first, each card at its real ratio.
-  Pending cards show a shimmer skeleton with model name + elapsed timer. Failed cards show the provider error verbatim
-  with Retry. Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) · Reuse prompt
+- Feed: a grid of identical square cells (`minmax(260px, 1fr)` from `sm`, 160 below), newest first (`FeedGrid`).
+  Every card keeps its cell in every state, so nothing resizes or reshuffles when a run completes: media cover the
+  cell (the lightbox shows the whole frame), pending cards show a shimmer skeleton with model name + elapsed timer,
+  and failed cards show as much of the provider error and prompt as the cell's height holds, with Retry and Details
+  (the full text). The loading skeletons and the route fallback use the same cells. Assets and Favorites keep the
+  masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) · Reuse prompt
   · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
 - Composer chips: [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds reference images (up to the
   largest count any model takes; the picker dims models that cannot take what is attached).
 
 ## Video view (`/video`)
 - Same empty block ("Your video runs land here") with three example shots.
-- Feed: same grid of video cards with inline `<video muted loop playsInline>` preview on hover, duration + resolution
-  + cost in the badge, a "N rendering · usually 2–5 min" line above while clips render.
+- Feed: the same grid with identical 16:9 cells, video cards with inline `<video muted loop playsInline>` preview on
+  hover, duration + resolution + cost in the badge. One line above it, always there so the grid never moves:
+  "N rendering · usually 2–5 min" while clips render, the clip count otherwise.
 - Composer chips: [⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
   slider (ranges) or a list (fixed options) limited to the model's values; aspect ratio locks to the first frame for
   models that drop it on i2v; resolution is a list with per-option estimates; Sound is an accent toggle shown only for

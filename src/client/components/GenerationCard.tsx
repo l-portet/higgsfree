@@ -41,6 +41,12 @@ export interface GenerationCardProps {
   showType?: boolean;
   /** Can be dragged onto a Favorites folder (the drag carries the record id). */
   draggable?: boolean;
+  /**
+   * A fixed cell (CSS aspect ratio, e.g. "16 / 9"; the feeds): the card keeps that shape in every state,
+   * media cover it, and a failed run's text is clamped to what fits. Without it the card takes its
+   * output's ratio and a failed card grows with its text (the masonry grids).
+   */
+  cell?: string;
   className?: string;
 }
 
@@ -56,7 +62,7 @@ export interface GenerationCardProps {
  * is always there, matching the always-visible overlay. The heart opens the keep menu (where it is
  * kept, which folder); the overlay stays up while that menu is open.
  */
-export const GenerationCard = memo(function GenerationCard({ generation: g, onOpen, onReuse, showType, draggable, className }: GenerationCardProps) {
+export const GenerationCard = memo(function GenerationCard({ generation: g, onOpen, onReuse, showType, draggable, cell, className }: GenerationCardProps) {
   const pending = isPending(g);
   const elapsed = useElapsed(g.createdAt, pending, g.completedAt);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -120,7 +126,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
     body = (
       <>
         <div className="skeleton absolute inset-0" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-4 text-center">
+        <div className={cn("absolute inset-0 flex flex-col items-center justify-center text-center", cell ? "gap-1 p-2" : "gap-1.5 p-4")}>
           <Spinner size={18} className="mb-1 text-fg-muted" />
           <span className="max-w-full truncate text-meta font-medium text-fg">{g.modelName}</span>
           <span className="text-meta tabular-nums" aria-live="off">
@@ -136,22 +142,37 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
       </>
     );
   } else if (failed) {
+    // In a fixed cell the text has to fit the box, so the `cell-*` variants (globals.css) reveal more of it as the
+    // cell gets taller; elsewhere the card grows with it. The full text is in the lightbox (Details) and the tooltips.
     body = (
-      <div className="flex min-h-[168px] min-w-0 flex-col gap-2 p-3">
-        <div className="flex items-center gap-1.5 text-meta font-medium text-danger">
+      <div className={cn("flex min-w-0 flex-col p-3", cell ? "absolute inset-0 gap-1.5 overflow-hidden" : "min-h-[168px] gap-2")}>
+        <div className="flex items-center gap-1.5 text-meta font-medium text-danger" title={cell ? g.error : undefined}>
           <CircleAlert size={14} className="shrink-0" aria-hidden="true" />
           Generation failed
         </div>
-        {/* Two lines on phones, four from `sm:`; the full text is in the lightbox (Details) and the tooltip. */}
-        <p className="line-clamp-2 break-words text-meta sm:line-clamp-4" title={g.error}>
+        {/* Masonry: two lines on phones, four from `sm:`. A fixed cell: as many as its height holds. */}
+        <p
+          className={cn(
+            "break-words text-meta",
+            cell ? "hidden cell-h-sm:line-clamp-1 cell-h-md:line-clamp-2 cell-h-xl:line-clamp-3" : "line-clamp-2 sm:line-clamp-4",
+          )}
+          title={g.error}
+        >
           {g.error ?? "Unknown error"}
         </p>
-        <p className="line-clamp-2 break-words text-caption" title={g.prompt}>
+        <p className={cn("break-words text-caption", cell ? "hidden cell-h-lg:line-clamp-1 cell-h-xl:line-clamp-2" : "line-clamp-2")} title={g.prompt}>
           {g.prompt}
         </p>
-        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
-          <Button size="sm" variant="secondary" leftIcon={<RefreshCw />} loading={actions.retrying} onClick={() => void actions.retry()}>
-            Retry
+        <div className={cn("mt-auto flex items-center gap-1.5 pt-1", cell ? "flex-nowrap" : "flex-wrap")}>
+          <Button
+            size="sm"
+            variant="secondary"
+            leftIcon={<RefreshCw />}
+            loading={actions.retrying}
+            onClick={() => void actions.retry()}
+            aria-label={cell ? "Retry" : undefined}
+          >
+            {cell ? <span className="hidden cell-w-md:inline">Retry</span> : "Retry"}
           </Button>
           <IconButton label="Delete" size="sm" variant="danger" onClick={() => actions.setConfirmDelete(true)}>
             <Trash2 />
@@ -295,7 +316,10 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
         // `self-start`: an element with `aspect-ratio` never stretched to the grid row; keep that now the ratio is on the sizer.
         // Completed cards are edge-to-edge media with no border; pending and failed cards keep one.
         "group relative min-w-0 self-start overflow-hidden rounded-card bg-surface transition-[border-color] duration-150",
-        pending && "min-h-[168px] border border-border",
+        // A fixed cell is a size container (its ratio sets the height), queried by the failed body.
+        cell && "[container:cell/size]",
+        pending && "border border-border",
+        pending && !cell && "min-h-[168px]",
         failed && "border border-danger/25 hover:border-danger/40",
         // Completed: the media box shows a quiet placeholder until the object url resolves.
         !pending && !failed && "bg-surface-2",
@@ -303,6 +327,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
         className,
       )}
       data-status={g.status}
+      style={cell ? { aspectRatio: cell } : undefined}
       draggable={draggable || undefined}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
@@ -311,7 +336,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
       onFocus={onFocus}
       onBlur={onBlur}
     >
-      {!failed ? <div aria-hidden="true" className="w-full" style={{ aspectRatio: cardAspect(g) }} /> : null}
+      {!failed && !cell ? <div aria-hidden="true" className="w-full" style={{ aspectRatio: cardAspect(g) }} /> : null}
       {body}
       <ConfirmDialog
         open={actions.confirmDelete}

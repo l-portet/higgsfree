@@ -2,27 +2,31 @@
  * Route-shaped fallbacks, shown while a page's chunk loads (first visit only; navigations keep the previous
  * page until the next one is ready). Each mirrors its page's layout so nothing jumps when it resolves.
  */
+import { FEED_GRID_CLASSES } from "@/components/FeedGrid";
 import { Page } from "@/components/layout/Page";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-const GRID = "grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))]";
 const BUSY = { "aria-busy": true, "aria-label": "Loading" } as const;
 
-function CardGrid({ count = 8 }: { count?: number }) {
+function CardGrid({ count = 8, aspect = "3 / 4" }: { count?: number; aspect?: string }) {
   return (
-    <div className={GRID}>
+    <div className={FEED_GRID_CLASSES}>
       {Array.from({ length: count }, (_, i) => (
-        <Skeleton key={i} className="aspect-[3/4] rounded-card" />
+        <Skeleton key={i} className="rounded-card" style={{ aspectRatio: aspect }} />
       ))}
     </div>
   );
 }
 
-/** The feed views (Image, Video, Favorites) are a grid under the floating nav. */
-export function FeedFallback() {
+/**
+ * The feed views (Image, Video, Favorites) are a grid under the floating nav; the feeds pass their cell
+ * shape, and Video its status line ("2 rendering", "12 videos") so the grid lands where it will stay.
+ */
+export function FeedFallback({ aspect, statusLine }: { aspect?: string; statusLine?: boolean }) {
   return (
     <Page {...BUSY} className="flex flex-1 flex-col">
-      <CardGrid />
+      {statusLine ? <div aria-hidden="true" className="mb-4 h-5" /> : null}
+      <CardGrid aspect={aspect} />
     </Page>
   );
 }
