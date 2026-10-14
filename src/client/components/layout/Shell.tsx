@@ -23,6 +23,29 @@ const SettingsDialog = dynamic(() => import("@/components/settings/SettingsDialo
 
 const STORAGE_TOAST = "storage-unavailable";
 
+/**
+ * Turn transitions back on once the accent sweep (`accent-shift` on <html>, globals.css) is done. The
+ * static HTML starts with them off so color transitions don't trail the sweep. Already over (a slow
+ * first load) or not running at all: right away.
+ */
+function endAccentIntro(): () => void {
+  const root = document.documentElement;
+  const done = () => root.removeAttribute("data-accent-intro");
+  const sweep = typeof root.getAnimations === "function" ? root.getAnimations().find((a) => (a as CSSAnimation).animationName === "accent-shift") : undefined;
+  if (!sweep) {
+    done();
+    return () => undefined;
+  }
+  let live = true;
+  sweep.finished.then(
+    () => live && done(),
+    () => live && done(),
+  );
+  return () => {
+    live = false;
+  };
+}
+
 /** After the first completed generation in this profile, ask the browser to keep the library out of eviction. */
 function onCompleted(): void {
   if (!persistenceAsked()) void requestPersistence();
@@ -34,6 +57,7 @@ function onCompleted(): void {
  */
 function useBoot() {
   useEffect(() => {
+    const stopIntro = endAccentIntro();
     connectEvents();
     startEngine({ onCompleted });
     void useModels.getState().fetch();
@@ -68,6 +92,7 @@ function useBoot() {
     window.addEventListener("beforeunload", onBeforeUnload);
 
     return () => {
+      stopIntro();
       unsubStatus();
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("beforeunload", onBeforeUnload);

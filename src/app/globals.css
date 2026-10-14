@@ -56,6 +56,10 @@
   --animate-fade-in: fade-in 150ms ease-out;
   --animate-fade-out: fade-out 120ms ease-in forwards;
   --animate-slide-up: slide-up 200ms var(--ease-out-quart);
+  /* The wordmark next to the logo on load: opens like the hover reveal, stays 2 s while the accent
+     sweeps, then closes. No fill mode, so hover and focus own it again once it is done. */
+  --animate-wordmark-intro: wordmark-intro 2.6s 0.2s;
+  --animate-wordmark-intro-text: wordmark-intro-text 2.6s 0.2s;
 
   @keyframes pop-in {
     from { opacity: 0; transform: scale(0.96); }
@@ -77,6 +81,19 @@
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  /* 300 ms open (0 → 300 ms), held to 2.3 s, 300 ms close: the hover reveal's width and easing. */
+  @keyframes wordmark-intro {
+    0% { grid-template-columns: 0fr; animation-timing-function: var(--ease-out-quart); }
+    11.5% { grid-template-columns: 1fr; }
+    88.5% { grid-template-columns: 1fr; animation-timing-function: var(--ease-out-quart); }
+    100% { grid-template-columns: 0fr; }
+  }
+  /* The text fades in 75 ms after the box starts opening and out as it closes, like on hover. */
+  @keyframes wordmark-intro-text {
+    0%, 3% { opacity: 0; }
+    10.5%, 88.5% { opacity: 1; }
+    96%, 100% { opacity: 0; }
+  }
 }
 
 /* Fonts come from next/font (self-hosted, no Google Fonts request at runtime); the variables are set on <html>. */
@@ -91,8 +108,9 @@
    `ring-accent/40`, the focus ring and the selection read them, so the whole UI shifts together. The
    logo's tile makes the same sweep from the old brand lime (`--color-logo`, read by Logo.tsx).
    The stops are an OKLCH hue sweep (lime, aqua, sky blue, chroma eased off mid-way so it never turns
-   neon) sampled at ease-in-out times, which is why the timing between them is `linear`. It runs once
-   per document: client-side navigation keeps the blue, a full load replays it. */
+   neon), spaced by perceptual distance and eased in and out (sine) at 21 points, which is why the
+   timing between them is `linear`: the color changes at an even visible pace with no kinks. It runs
+   once per document: client-side navigation keeps the blue, a full load replays it. */
 @property --color-accent {
   syntax: "<color>";
   inherits: true;
@@ -117,16 +135,35 @@
 
 @keyframes accent-shift {
   0% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81e; }
-  10% { --color-accent: #dcfd5f; --color-accent-hover: #d0f24f; --color-on-accent: #141a05; --color-logo: #cef826; }
-  20% { --color-accent: #d2fd6e; --color-accent-hover: #c6f25f; --color-on-accent: #121a06; --color-logo: #c3f847; }
-  30% { --color-accent: #b9fb8c; --color-accent-hover: #acf07f; --color-on-accent: #0f1b0a; --color-logo: #a7f777; }
-  40% { --color-accent: #95f2b3; --color-accent-hover: #87e7a7; --color-on-accent: #0a1b11; --color-logo: #81efaa; }
-  50% { --color-accent: #75ddd2; --color-accent-hover: #64d2c7; --color-on-accent: #061a18; --color-logo: #64dbd0; }
-  60% { --color-accent: #56c7e6; --color-accent-hover: #3fbcdd; --color-on-accent: #021920; --color-logo: #4bc6e7; }
-  70% { --color-accent: #51b7f5; --color-accent-hover: #3aabed; --color-on-accent: #011726; --color-logo: #4db6f5; }
-  80% { --color-accent: #58adfb; --color-accent-hover: #45a1f4; --color-on-accent: #03162a; --color-logo: #57acfb; }
-  90% { --color-accent: #5ca9fd; --color-accent-hover: #4a9df6; --color-on-accent: #04152b; --color-logo: #5ca9fd; }
+  5% { --color-accent: #dcfd5f; --color-accent-hover: #d0f24f; --color-on-accent: #141a05; --color-logo: #cef826; }
+  10% { --color-accent: #d7fd66; --color-accent-hover: #cbf257; --color-on-accent: #131a06; --color-logo: #c9f838; }
+  15% { --color-accent: #cffd71; --color-accent-hover: #c3f262; --color-on-accent: #121a07; --color-logo: #c0f84d; }
+  20% { --color-accent: #c5fc7e; --color-accent-hover: #b8f170; --color-on-accent: #111a08; --color-logo: #b4f863; }
+  25% { --color-accent: #b8fb8d; --color-accent-hover: #abf080; --color-on-accent: #0f1b0a; --color-logo: #a6f778; }
+  30% { --color-accent: #aaf89c; --color-accent-hover: #9ded90; --color-on-accent: #0d1b0d; --color-logo: #97f58d; }
+  35% { --color-accent: #9df4ab; --color-accent-hover: #8fea9f; --color-on-accent: #0b1b0f; --color-logo: #89f1a0; }
+  40% { --color-accent: #90efb9; --color-accent-hover: #81e4ad; --color-on-accent: #0a1b12; --color-logo: #7cecb1; }
+  45% { --color-accent: #85e8c4; --color-accent-hover: #75deb9; --color-on-accent: #081a15; --color-logo: #71e6bf; }
+  50% { --color-accent: #7ae1ce; --color-accent-hover: #69d6c3; --color-on-accent: #061a17; --color-logo: #68decb; }
+  55% { --color-accent: #6ed8d6; --color-accent-hover: #5ccecb; --color-on-accent: #051a1a; --color-logo: #5fd6d5; }
+  60% { --color-accent: #62d0dd; --color-accent-hover: #4ec6d3; --color-on-accent: #03191d; --color-logo: #55cfdd; }
+  65% { --color-accent: #57c9e5; --color-accent-hover: #41bedb; --color-on-accent: #021920; --color-logo: #4dc7e5; }
+  70% { --color-accent: #51c2ec; --color-accent-hover: #39b6e3; --color-on-accent: #011822; --color-logo: #49c0ed; }
+  75% { --color-accent: #50bbf2; --color-accent-hover: #38afe9; --color-on-accent: #011825; --color-logo: #4abaf3; }
+  80% { --color-accent: #52b4f6; --color-accent-hover: #3ca9ee; --color-on-accent: #011727; --color-logo: #4fb4f7; }
+  85% { --color-accent: #56affa; --color-accent-hover: #41a4f2; --color-on-accent: #021629; --color-logo: #54affa; }
+  90% { --color-accent: #5aabfc; --color-accent-hover: #469ff4; --color-on-accent: #03162a; --color-logo: #59abfc; }
+  95% { --color-accent: #5ca9fd; --color-accent-hover: #4a9df6; --color-on-accent: #04152b; --color-logo: #5ca9fd; }
   100% { --color-accent: #5da8fd; --color-accent-hover: #4b9cf6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
+}
+
+/* No transitions while the accent sweeps. A color transition re-targeted on every frame trails the
+   sweep (the active tab's icon ran ~0.3 s behind the logo), so everything moves in step instead. The
+   attribute is in the static HTML (layout.tsx); Shell removes it when the sweep finishes. */
+html[data-accent-intro] *,
+html[data-accent-intro] ::before,
+html[data-accent-intro] ::after {
+  transition: none !important;
 }
 
 @keyframes shimmer {
@@ -138,7 +175,7 @@
 @layer base {
   html {
     /* `both`: lime through the delay, blue once it is done. */
-    animation: accent-shift 1.6s linear 0.5s both;
+    animation: accent-shift 1.2s linear 0.3s both;
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -324,6 +361,6 @@
   }
   /* The accent shift is a color fade with nothing moving: keep it rather than snap after the delay. */
   html {
-    animation-duration: 1.6s !important;
+    animation-duration: 1.2s !important;
   }
 }
