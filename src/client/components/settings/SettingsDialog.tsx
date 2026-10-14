@@ -1,17 +1,19 @@
 import type { ReactNode } from "react";
-import { HardDrive, Info, KeyRound } from "lucide-react";
+import { Bell, HardDrive, Info, KeyRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSettings } from "@/store/settings";
 import { useUi, type SettingsSection } from "@/store/ui";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { AboutCard } from "./AboutCard";
 import { ApiKeyCard } from "./ApiKeyCard";
+import { NotificationsCard } from "./NotificationsCard";
 import { ProvidersCard } from "./ProvidersCard";
 import { StorageCard } from "./StorageCard";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: "keys", label: "Keys", icon: <KeyRound size={15} aria-hidden="true" /> },
   { id: "library", label: "Library", icon: <HardDrive size={15} aria-hidden="true" /> },
+  { id: "notifications", label: "Notifications", icon: <Bell size={15} aria-hidden="true" /> },
   { id: "about", label: "About", icon: <Info size={15} aria-hidden="true" /> },
 ];
 
@@ -27,6 +29,8 @@ function SectionBody({ section }: { section: SettingsSection }) {
       );
     case "library":
       return <StorageCard />;
+    case "notifications":
+      return <NotificationsCard />;
     case "about":
       return <AboutCard />;
   }

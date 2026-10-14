@@ -6,7 +6,7 @@ import { create } from "zustand";
 import type { GenerationType, ImageParams, MotionOrientation, ProviderId, VideoParams } from "@shared/types";
 
 /** Sections of the Settings dialog, in sidebar order. */
-export type SettingsSection = "keys" | "library" | "about";
+export type SettingsSection = "keys" | "library" | "notifications" | "about";
 
 /** The small "add your key" dialog: which provider, why (one line), and what to do once the key is saved. */
 export interface KeyPrompt {

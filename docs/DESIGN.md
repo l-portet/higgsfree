@@ -196,7 +196,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   "Save and generate" when Generate opened it, "Save key" otherwise. The key is tested before it is saved; only a
   clear rejection blocks it. Footer: "All settings" opens the Settings dialog on Keys.
 - **Settings** is a dialog (`SettingsDialog`, 880 px wide, up to 640 px tall, no separate page): a 208 px sidebar on
-  `inset` with "Settings" and the sections Keys, Library, About (36 px rows,
+  `inset` with "Settings" and the sections Keys, Library, Notifications, About (36 px rows,
   `rounded-control`; the open one raised on `surface-2`), and the open section's cards on the right, shown flat
   (no card border or fill, sections separated by a divider). Below `sm` the sections become a scrolling row under the
   title. Keys: the OpenRouter key (masked key, Save / Test connection / Remove key, a Connected / Not set badge),
@@ -216,6 +216,14 @@ There is no page chrome: the app is four views under one floating nav, with one 
   note about the 7-day eviction). Then Backup: Export library… / Import… side by side; while an archive is written or
   read, a progress line ("Packing 12 / 40…", "Importing 3 / 40…") and a bar, with the other button disabled. Last,
   Delete everything (danger, confirm dialog) with a reminder that everything lives in this browser.
+- **Notifications** ("Video ready" card): two rows, each a title, a `text-meta` hint and a switch on the right (36 × 20,
+  `role="switch"`, an accent track when on). "Play a sound": a short synthesized ding (Web Audio, no file) when a
+  video finishes, with a Preview text button. "Show a notification": a system notification ("Video ready", the
+  model and the prompt, the app icon) that brings the tab forward and opens the video in the lightbox when clicked;
+  turning it on asks for permission, a blocked or unsupported browser says so in the hint, and Send a test shows one.
+  Both are off by default, stored in this browser (`higgsfree.videoAlerts`), and fire only in the tab that drove the
+  job, so several tabs give one ding. They need the site open in a tab (a background tab is fine): this is the
+  Notifications API, not Web Push, which would need a server. When both are on, the notification is silent.
 
 ## Motion & polish
 - 150ms ease-out transitions for hover/active; popovers fade+scale 4%. Skeleton shimmer 1.6s.

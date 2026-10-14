@@ -334,7 +334,7 @@ async function finishVideo(job: VideoJob, download: () => Promise<Blob>, costUsd
     if (done) {
       publish({ type: "generation", generation: toPublic(done) });
       log.info(`job ${job.id} video completed via=${job.provider} ${output.width ?? "?"}x${output.height ?? "?"} ${Math.round(elapsedMs / 1000)}s cost=${fmtCost(costUsd)}`);
-      onVideoCompleted?.();
+      onVideoCompleted?.(toPublic(done));
     }
     return true;
   } catch (err) {
@@ -348,7 +348,8 @@ async function finishVideo(job: VideoJob, download: () => Promise<Blob>, costUsd
   }
 }
 
-let onVideoCompleted: (() => void) | undefined;
-export function setOnVideoCompleted(fn: (() => void) | undefined): void {
+/** Called in the tab that finished the job (it holds the job's Web Lock), with the completed record. */
+let onVideoCompleted: ((g: Generation) => void) | undefined;
+export function setOnVideoCompleted(fn: ((g: Generation) => void) | undefined): void {
   onVideoCompleted = fn;
 }

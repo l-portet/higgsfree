@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/Tooltip";
 import { Lightbox } from "@/components/Lightbox";
 import { Nav } from "./Nav";
 import { STORAGE_PREFIX } from "@/lib/constants";
+import { announceVideoReady, primeAudioOnInteraction } from "@/lib/alerts";
 import { drivingImageCount, startEngine } from "@/lib/engine";
 import { connectEvents, subscribeEventStatus, type EventStatus } from "@/lib/live";
 import { persistenceAsked, requestPersistence } from "@/lib/storage-health";
@@ -15,6 +16,7 @@ import { useComposer } from "@/store/composer";
 import { useFolders } from "@/store/folders";
 import { useModels } from "@/store/models";
 import { useSettings } from "@/store/settings";
+import { useUi } from "@/store/ui";
 
 // Client-only: both read localStorage / stores on first render, so they are not server-rendered.
 const Composer = dynamic(() => import("@/components/composer/Composer").then((m) => m.Composer), { ssr: false });
@@ -60,7 +62,10 @@ function useBoot() {
   useEffect(() => {
     const stopIntro = playAccentIntro();
     connectEvents();
-    startEngine({ onCompleted });
+    // A finished video: the ding and the notification from Settings › Notifications. Clicking the
+    // notification brings this tab forward with the video in the lightbox.
+    startEngine({ onCompleted, onVideoCompleted: (g) => announceVideoReady(g, () => useUi.getState().openLightbox([g.id], 0)) });
+    const stopPriming = primeAudioOnInteraction();
     void useModels.getState().fetch();
     void useSettings.getState().refresh();
     // Folder names show on kept cards everywhere, not only on Favorites.
@@ -94,6 +99,7 @@ function useBoot() {
 
     return () => {
       stopIntro();
+      stopPriming();
       unsubStatus();
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("beforeunload", onBeforeUnload);

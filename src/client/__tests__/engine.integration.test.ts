@@ -13,6 +13,7 @@ import { getMediaBlob, mediaExists } from "@/lib/db/media";
 import { cancelAllJobs, resumeJobs } from "@/lib/engine";
 import { limits, timing } from "@/lib/engine/constants";
 import { INTERRUPTED_IMAGE, INTERRUPTED_SUBMIT } from "@/lib/engine/resume";
+import { setOnVideoCompleted } from "@/lib/engine/video";
 import { subscribeEvents } from "@/lib/live";
 import { resetLiveModels } from "@/lib/openrouter";
 import { setStoredKey } from "@/lib/settings";
@@ -119,6 +120,9 @@ describe("image pipeline", () => {
 
 describe("video pipeline", () => {
   it("submits image-to-video with frame_images and no aspect_ratio for Seedance, then polls, downloads and records cost", async () => {
+    // The tab that finishes the job hears about it once, with the stored record (the ding / notification hook).
+    const announced: Generation[] = [];
+    setOnVideoCompleted((done) => announced.push(done));
     const frame = await upload();
     const g = await submitVideo({ prompt: "slow push in", duration: 7.4, aspectRatio: "9:16", resolution: "720p", firstFrame: frame });
     expect(g).toMatchObject({ type: "video", status: "running", providerJobId: "vid_1", params: { duration: 7, resolution: "720p" } });
@@ -139,6 +143,9 @@ describe("video pipeline", () => {
     expect((await getMediaBlob(`${g.id}.mp4`))?.type).toBe("video/mp4");
     expect(mock.state.pollCount).toBeGreaterThanOrEqual(2);
     expect(mock.seen.find((s) => s.url.startsWith("/api/v1/videos/vid_1/content"))?.auth).toBe("Bearer test-key");
+    expect(announced).toHaveLength(1);
+    expect(announced[0]).toEqual(done);
+    setOnVideoCompleted(undefined);
   });
 
   it("surfaces the provider 400 body verbatim and keeps a failed record", async () => {
