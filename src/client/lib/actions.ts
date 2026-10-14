@@ -1,11 +1,14 @@
-/** Actions shared by the generation card and the lightbox: delete, retry, keep (favorite), animate, reuse prompt. */
+/** Actions shared by the generation card and the lightbox: delete, retry, keep (favorite, in a folder), animate, reuse prompt. */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Generation, VideoParams } from "@shared/types";
 import { describeApiError } from "@/lib/api";
+import { useFolders } from "@/store/folders";
 import { useGenerations } from "@/store/generations";
 import { useUi } from "@/store/ui";
+
+export type GenerationActions = ReturnType<typeof useGenerationActions>;
 
 export function useGenerationActions(g: Generation, onReuse?: (g: Generation) => void) {
   const router = useRouter();
@@ -39,13 +42,40 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     }
   };
 
-  const toggleFavorite = async () => {
+  /**
+   * Keep the record in a folder (`null` = All, no folder). The choice becomes the heart's default.
+   * Already there: nothing happens.
+   */
+  const keep = async (folder: string | null) => {
+    if (keeping) return;
+    const folders = useFolders.getState();
+    const wasKept = Boolean(g.favorite);
+    const wasIn = g.folder && folders.byId[g.folder] ? g.folder : null;
+    folders.setDestination(folder);
+    if (wasKept && wasIn === folder) return;
+    setKeeping(true);
+    try {
+      await useGenerations.getState().setKeep(g.id, { favorite: true, folder });
+      const name = folder ? folders.byId[folder]?.name : undefined;
+      if (!wasKept) toast.success(name ? `Kept in ${name}` : "Kept in Favorites");
+      else if (name) toast.success(`Moved to ${name}`);
+      else toast.success("Moved out of its folder");
+    } catch (err) {
+      toast.error("Couldn't update", { description: describeApiError(err) });
+    } finally {
+      setKeeping(false);
+    }
+  };
+
+  /** The heart's one-click path: keep in the last destination picked (a folder, or All). */
+  const keepDefault = () => keep(useFolders.getState().defaultDestination());
+
+  const unkeep = async () => {
     if (keeping) return;
     setKeeping(true);
-    const next = !g.favorite;
     try {
-      await useGenerations.getState().setFavorite(g.id, next);
-      toast.success(next ? "Kept in Favorites" : "Removed from Favorites");
+      await useGenerations.getState().setKeep(g.id, { favorite: false });
+      toast.success("Removed from Favorites");
     } catch (err) {
       toast.error("Couldn't update", { description: describeApiError(err) });
     } finally {
@@ -77,5 +107,5 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     router.push(g.type === "image" ? "/image" : "/video");
   };
 
-  return { confirmDelete, setConfirmDelete, deleting, retrying, keeping, remove, retry, toggleFavorite, animate, reuse };
+  return { confirmDelete, setConfirmDelete, deleting, retrying, keeping, remove, retry, keep, keepDefault, unkeep, animate, reuse };
 }

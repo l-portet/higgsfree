@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, RefreshCw, RotateCcw, Trash2, VideoOff, WandSparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -9,6 +9,7 @@ import { copyText, useElapsed, useReturnFocus } from "@/lib/hooks";
 import { useMediaUrl } from "@/lib/media-urls";
 import { isImageParams, providerLabel } from "@/lib/models";
 import { PROVIDER_NAME } from "@/lib/providers";
+import { useFolderName } from "@/store/folders";
 import { isPending, useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
 import { useUi } from "@/store/ui";
@@ -18,6 +19,7 @@ import { ConfirmDialog, dialogOverlayClasses } from "@/components/ui/Dialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { Spinner } from "@/components/ui/Spinner";
 import { ProviderTile } from "@/components/ProviderTile";
+import { KeepMenu } from "@/components/favorites/KeepMenu";
 import type { Generation } from "@shared/types";
 
 function Row({ label, children, mono }: { label: string; children: ReactNode; mono?: boolean }) {
@@ -32,6 +34,8 @@ function Row({ label, children, mono }: { label: string; children: ReactNode; mo
 
 function Details({ g }: { g: Generation }) {
   const actions = useGenerationActions(g);
+  const [keepOpen, setKeepOpen] = useState(false);
+  const folderName = useFolderName(g.folder);
   const pending = isPending(g);
   const elapsed = useElapsed(g.createdAt, pending, g.completedAt);
   const out = g.output;
@@ -150,15 +154,16 @@ function Details({ g }: { g: Generation }) {
           Reuse prompt
         </Button>
         {g.status === "completed" ? (
-          <Button
-            leftIcon={<Heart fill={g.favorite ? "currentColor" : "none"} />}
-            aria-pressed={Boolean(g.favorite)}
-            loading={actions.keeping}
-            onClick={() => void actions.toggleFavorite()}
-            className={cn(g.favorite && "text-accent")}
-          >
-            {g.favorite ? "Kept" : "Keep"}
-          </Button>
+          <KeepMenu generation={g} actions={actions} open={keepOpen} onOpenChange={setKeepOpen} side="top" align="start">
+            <Button
+              leftIcon={<Heart fill={g.favorite ? "currentColor" : "none"} />}
+              aria-pressed={Boolean(g.favorite)}
+              loading={actions.keeping}
+              className={cn("min-w-0", g.favorite && "text-accent")}
+            >
+              <span className="min-w-0 truncate">{g.favorite ? (folderName ? `Kept in ${folderName}` : "Kept") : "Keep"}</span>
+            </Button>
+          </KeepMenu>
         ) : null}
         {g.status === "failed" ? (
           <Button leftIcon={<RefreshCw />} loading={actions.retrying} onClick={() => void actions.retry()}>

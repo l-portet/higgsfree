@@ -12,6 +12,7 @@ import { drivingImageCount, startEngine } from "@/lib/engine";
 import { connectEvents, subscribeEventStatus, type EventStatus } from "@/lib/live";
 import { persistenceAsked, requestPersistence } from "@/lib/storage-health";
 import { useComposer } from "@/store/composer";
+import { useFolders } from "@/store/folders";
 import { useModels } from "@/store/models";
 import { useSettings } from "@/store/settings";
 
@@ -29,7 +30,7 @@ function onCompleted(): void {
 
 /**
  * One-time boot: the live feed and the job engine (they only need IndexedDB), OpenRouter's public
- * model catalog, and settings. Everything that touches `window` or storage stays inside the effect.
+ * model catalog, settings, and the Favorites folders. Everything that touches `window` or storage stays inside the effect.
  */
 function useBoot() {
   useEffect(() => {
@@ -37,6 +38,8 @@ function useBoot() {
     startEngine({ onCompleted });
     void useModels.getState().fetch();
     void useSettings.getState().refresh();
+    // Folder names show on kept cards everywhere, not only on Favorites.
+    void useFolders.getState().fetch();
 
     // `closed` after `connecting`: IndexedDB could not be opened (private window, blocked site storage).
     let prevStatus: EventStatus | undefined;

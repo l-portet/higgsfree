@@ -4,7 +4,7 @@
  */
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { Generation, GenerationStatus, GenerationType, ListGenerationsQuery } from "@shared/types";
+import type { Generation, GenerationStatus, GenerationType, ListGenerationsQuery, UpdateGenerationRequest } from "@shared/types";
 import * as api from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 import { subscribeEvents, subscribeEventStatus } from "@/lib/live";
@@ -22,11 +22,14 @@ export interface PageState {
 const EMPTY_PAGE: PageState = { loading: false, loaded: false };
 
 /** The filters a list is keyed by (paging state is per key). */
-export type ListQuery = Pick<ListGenerationsQuery, "type" | "status" | "favorite">;
+export type ListQuery = Pick<ListGenerationsQuery, "type" | "status" | "favorite" | "folder">;
 
 export function listKey(q: ListQuery): ListKey {
-  return `${q.type ?? "all"}:${q.status ?? "any"}${q.favorite ? ":kept" : ""}`;
+  return `${q.type ?? "all"}:${q.status ?? "any"}${q.favorite ? ":kept" : ""}${q.folder ? `:in:${q.folder}` : ""}`;
 }
+
+/** What the heart can change: kept or not, and the folder (`null` = out of its folder). */
+export type KeepPatch = Pick<UpdateGenerationRequest, "favorite" | "folder">;
 
 export function isPending(g: Pick<Generation, "status">): boolean {
   return g.status === "pending" || g.status === "running";
@@ -56,8 +59,8 @@ interface GenerationsState {
   refreshPending: () => Promise<void>;
   deleteGeneration: (id: string) => Promise<void>;
   retryGeneration: (id: string) => Promise<Generation[]>;
-  /** Flip the heart: optimistic locally, the stored record wins once the write lands. */
-  setFavorite: (id: string, favorite: boolean) => Promise<void>;
+  /** The heart and its folder: optimistic locally, the stored record wins once the write lands. */
+  setKeep: (id: string, patch: KeepPatch) => Promise<void>;
 }
 
 export const useGenerations = create<GenerationsState>()((set, get) => ({
@@ -149,14 +152,19 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
     get().remove(id);
   },
 
-  setFavorite: async (id, favorite) => {
+  setKeep: async (id, patch) => {
     const prev = get().byId[id];
     if (!prev) return;
-    const { favorite: _was, ...rest } = prev;
-    const optimistic: Generation = favorite ? { ...rest, favorite: true } : rest;
+    // Same rules as `api.updateGeneration`: a folder keeps the record, removing the heart clears the folder.
+    const { favorite: _was, folder: _in, ...rest } = prev;
+    const favorite = patch.folder ? true : (patch.favorite ?? Boolean(prev.favorite));
+    const folder = favorite ? (patch.folder === undefined ? prev.folder : (patch.folder ?? undefined)) : undefined;
+    const optimistic: Generation = { ...rest };
+    if (favorite) optimistic.favorite = true;
+    if (folder) optimistic.folder = folder;
     set((s) => ({ byId: { ...s.byId, [id]: optimistic } }));
     try {
-      get().upsert(await api.updateGeneration(id, { favorite }));
+      get().upsert(await api.updateGeneration(id, patch));
     } catch (err) {
       set((s) => (s.byId[id] === optimistic ? { byId: { ...s.byId, [id]: prev } } : s));
       throw err;
@@ -217,14 +225,14 @@ export function usePage(q: ListQuery): PageState {
   return useGenerations((s) => s.pages[key] ?? EMPTY_PAGE);
 }
 
-/** Every kept (hearted) record in the store, newest first. */
-export function useFavoriteList(): Generation[] {
+/** Every kept (hearted) record in the store, newest first; with `folder`, only the ones filed in that folder. */
+export function useFavoriteList(folder?: string): Generation[] {
   return useGenerations(
     useShallow((s) => {
       const out: Generation[] = [];
       for (const id of s.ids) {
         const g = s.byId[id];
-        if (g?.favorite) out.push(g);
+        if (g?.favorite && (folder === undefined || g.folder === folder)) out.push(g);
       }
       return out;
     }),

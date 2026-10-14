@@ -79,10 +79,42 @@ export interface Generation {
   batchIndex?: number;
   /** Kept by the user (the heart on a card); only present when true. */
   favorite?: boolean;
+  /** The Favorites folder it is filed in (a `Folder` id); only on kept records. */
+  folder?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
   elapsedMs?: number;
+}
+
+// ---------- Favorites folders ----------
+
+/** A folder on the Favorites view. A kept record is in at most one. */
+export interface Folder {
+  /** `fld_abc…` */
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** What a folder's tile shows: how many records it holds and the newest few, for the cover. */
+export interface FolderSummary {
+  count: number;
+  /** Newest first, at most `FOLDER_COVER_COUNT`. */
+  newest: Generation[];
+}
+
+export interface FoldersResponse {
+  /** Sorted by name. */
+  folders: Folder[];
+  /** By folder id. */
+  summaries: Record<string, FolderSummary>;
+}
+
+/** Create or rename a folder. */
+export interface FolderRequest {
+  name: string;
 }
 
 // ---------- Model catalog ----------
@@ -270,6 +302,8 @@ export interface ListGenerationsQuery {
   status?: GenerationStatus;
   /** Only kept (hearted) runs. */
   favorite?: boolean;
+  /** Only the records filed in this Favorites folder. */
+  folder?: string;
   limit?: number;
   /** Opaque cursor (createdAt of the last item). */
   cursor?: string;
@@ -283,6 +317,8 @@ export interface ListGenerationsResponse {
 /** The fields the UI may change on an existing record. */
 export interface UpdateGenerationRequest {
   favorite?: boolean;
+  /** File it in a folder (keeping it if it was not), or `null` to take it out of its folder. */
+  folder?: string | null;
 }
 
 export interface UploadResponse {
@@ -336,6 +372,10 @@ export type ChangeEvent =
   | { type: "generation"; generation: Generation }
   /** A record was removed (explicit delete, or a failed record replaced by a retry). */
   | { type: "generation-deleted"; id: string }
+  /** A Favorites folder was created or renamed. */
+  | { type: "folder"; folder: Folder }
+  /** A Favorites folder was deleted (its records stay kept; each is announced too). */
+  | { type: "folder-deleted"; id: string }
   /** The feed is up (library opened). */
   | { type: "hello"; pendingJobs: number }
   /** The whole library changed underneath (import, clear): drop everything and refetch. */

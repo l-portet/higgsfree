@@ -43,17 +43,25 @@ export function getDb(): Promise<IDBPDatabase<HiggsfreeDB>> {
       return Promise.reject(new DbUnavailableError("IndexedDB is not available here"));
     }
     opening = openDB<HiggsfreeDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        const generations = db.createObjectStore("generations", { keyPath: "id" });
-        generations.createIndex("byCreated", ["createdAt", "id"]);
-        generations.createIndex("byType", ["type", "createdAt", "id"]);
-        generations.createIndex("byStatus", ["status", "createdAt", "id"]);
-        generations.createIndex("byTypeStatus", ["type", "status", "createdAt", "id"]);
-        generations.createIndex("byFavorite", ["fav", "createdAt", "id"]);
-        generations.createIndex("byRef", "refs", { multiEntry: true });
-        const media = db.createObjectStore("media", { keyPath: "id" });
-        media.createIndex("byKind", "kind");
-        media.createIndex("byCreated", "createdAt");
+      // Each step upgrades from the version before it, so a library made by any older app lands on the current layout.
+      upgrade(db, oldVersion, _newVersion, tx) {
+        if (oldVersion < 1) {
+          const generations = db.createObjectStore("generations", { keyPath: "id" });
+          generations.createIndex("byCreated", ["createdAt", "id"]);
+          generations.createIndex("byType", ["type", "createdAt", "id"]);
+          generations.createIndex("byStatus", ["status", "createdAt", "id"]);
+          generations.createIndex("byTypeStatus", ["type", "status", "createdAt", "id"]);
+          generations.createIndex("byFavorite", ["fav", "createdAt", "id"]);
+          generations.createIndex("byRef", "refs", { multiEntry: true });
+          const media = db.createObjectStore("media", { keyPath: "id" });
+          media.createIndex("byKind", "kind");
+          media.createIndex("byCreated", "createdAt");
+        }
+        if (oldVersion < 2) {
+          // Favorites folders, and the index a folder view pages on (records without a folder are not in it).
+          tx.objectStore("generations").createIndex("byFolder", ["folder", "createdAt", "id"]);
+          db.createObjectStore("folders", { keyPath: "id" });
+        }
       },
       blocked() {
         log.warn("library database upgrade is blocked by another open tab");

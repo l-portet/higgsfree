@@ -1,10 +1,11 @@
 /** Export → import round trip into a fresh library, idempotent re-import, and the guards around bad archives. */
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Generation } from "@shared/types";
+import type { Folder, Generation } from "@shared/types";
 import { buildArchive, importLibrary } from "..";
 import { closeDb } from "../../db/index";
-import { getAllGenerations, insertGenerations, toPublic, toStored } from "../../db/generations";
+import { listFolders, putFolder } from "../../db/folders";
+import { getAllGenerations, insertGenerations, patchGeneration, toPublic, toStored } from "../../db/generations";
 import { getMediaBlob, putMedia } from "../../db/media";
 import { PNG_2X2 } from "../../../__tests__/mock-openrouter";
 
@@ -66,9 +67,9 @@ describe("export + import", () => {
 
   it("exports a scope and can leave uploads out", async () => {
     const favorites = await buildArchive({ scope: "favorites" });
-    expect(favorites.manifest.counts).toEqual({ generations: 1, media: 2 });
+    expect(favorites.manifest.counts).toEqual({ generations: 1, media: 2, folders: 0 });
     const videos = await buildArchive({ scope: "video", includeUploads: false });
-    expect(videos.manifest.counts).toEqual({ generations: 1, media: 1 });
+    expect(videos.manifest.counts).toEqual({ generations: 1, media: 1, folders: 0 });
   });
 
   it("skips a completed record whose file is missing, drops dangling inputs, and rejects foreign archives", async () => {
@@ -94,5 +95,43 @@ describe("export + import", () => {
     await expect(importLibrary(await make([], { format: "something-else", version: 1 }))).rejects.toMatchObject({ status: 400, error: "Not a higgsfree library archive" });
     await expect(importLibrary(await make([], { ...manifest, version: 99 }))).rejects.toMatchObject({ status: 400, error: expect.stringContaining("newer app") });
     await expect(importLibrary(new Blob([new Uint8Array([1, 2, 3])]))).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe("folders in the archive", () => {
+  it("round-trips folders and filing, files into a same-named folder here, and drops a filing whose folder is missing", async () => {
+    const travel: Folder = { id: "fld_travel0001", name: "Travel", createdAt: ts, updatedAt: ts };
+    await putFolder(travel);
+    await patchGeneration(A.id, { folder: travel.id });
+    const { blob, manifest } = await buildArchive();
+    expect(manifest.counts).toEqual({ generations: 3, media: 3, folders: 1 });
+
+    freshLibrary();
+    const result = await importLibrary(blob);
+    expect(result).toMatchObject({ imported: 3, folders: 1 });
+    expect(await listFolders()).toEqual([travel]);
+    expect((await getAllGenerations()).find((g) => g.id === A.id)).toMatchObject({ favorite: true, folder: travel.id });
+
+    // A library that already has a "travel" folder under another id: the archive's records file into that one.
+    freshLibrary();
+    const mine: Folder = { id: "fld_mine000001", name: "travel", createdAt: later, updatedAt: later };
+    await putFolder(mine);
+    const merged = await importLibrary(blob);
+    expect(merged).toMatchObject({ imported: 3, folders: 0 });
+    expect(await listFolders()).toEqual([mine]);
+    expect((await getAllGenerations()).find((g) => g.id === A.id)?.folder).toBe(mine.id);
+
+    // An older archive (no folders.json) whose record points at a folder that is not here: kept, in All.
+    freshLibrary();
+    const zip = await import("@zip.js/zip.js");
+    const w = new zip.ZipWriter<Blob>(new zip.BlobWriter("application/zip"), { level: 0 });
+    await w.add("manifest.json", new zip.TextReader(JSON.stringify({ ...manifest, counts: { generations: 1, media: 0 } })));
+    await w.add("generations.json", new zip.TextReader(JSON.stringify([{ ...C, favorite: true, folder: "fld_ghost00001" }])));
+    const old = await importLibrary(await w.close());
+    expect(old).toMatchObject({ imported: 1, folders: 0 });
+    const c = (await getAllGenerations()).find((g) => g.id === C.id);
+    expect(c?.favorite).toBe(true);
+    expect(c?.folder).toBeUndefined();
+    expect(await listFolders()).toEqual([]);
   });
 });

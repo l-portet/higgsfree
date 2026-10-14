@@ -1,9 +1,10 @@
-/** The IndexedDB layout: records with the indexes the list queries need, and media Blobs by id. */
+/** The IndexedDB layout: records with the indexes the list queries need, media Blobs by id, and the Favorites folders. */
 import type { DBSchema } from "idb";
-import type { Generation } from "@shared/types";
+import type { Folder, Generation } from "@shared/types";
 
 export const DB_NAME = "higgsfree";
-export const DB_VERSION = 1;
+/** v2: the `folders` store and the `byFolder` index (see `upgrade` in index.ts). */
+export const DB_VERSION = 2;
 
 /** Row shape; `toPublic` strips the internal fields. */
 export interface StoredGeneration extends Generation {
@@ -36,6 +37,8 @@ export interface HiggsfreeDB extends DBSchema {
       byStatus: [string, string, string];
       byTypeStatus: [string, string, string, string];
       byFavorite: [number, string, string];
+      /** `[folder, createdAt, id]`; records without a folder are not in it. */
+      byFolder: [string, string, string];
       byRef: string;
     };
   };
@@ -43,5 +46,9 @@ export interface HiggsfreeDB extends DBSchema {
     key: string;
     value: MediaRow;
     indexes: { byKind: string; byCreated: string };
+  };
+  folders: {
+    key: string;
+    value: Folder;
   };
 }

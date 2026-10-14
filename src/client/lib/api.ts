@@ -5,6 +5,10 @@
  */
 import type {
   CreditsResponse,
+  Folder,
+  FolderRequest,
+  FoldersResponse,
+  FolderSummary,
   GenerateResponse,
   Generation,
   ImageGenerateRequest,
@@ -22,10 +26,12 @@ import type {
 } from "@shared/types";
 import { imageCatalog, videoCatalog } from "./catalog";
 import { cachedCredits, fetchCredits, invalidateCredits } from "./credits";
-import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic } from "./db/generations";
+import { countInFolder, getFolder as readFolder, listFolders as readFolders, putFolder, removeFolder } from "./db/folders";
+import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic, type GenerationPatch } from "./db/generations";
 import { listUploads, putMedia } from "./db/media";
 import { cancelJob, retryGeneration as engineRetry, submitImageBatch, submitVideo } from "./engine";
 import { ApiClientError, badRequest, isKeyRejected, notFound } from "./errors";
+import { compareFolders, FOLDER_COVER_COUNT, folderNameKey, newFolderId, normalizeFolderName } from "./folders";
 import { detectImage } from "./image-meta";
 import { publish } from "./live";
 import * as fal from "./fal";
@@ -114,10 +120,23 @@ export async function getGeneration(id: string): Promise<Generation> {
   return toPublic(row);
 }
 
-/** Client-editable fields only (the heart); status, output and friends belong to the engine. */
+/**
+ * Client-editable fields only (the heart and its folder); status, output and friends belong to the
+ * engine. Filing in a folder keeps the record; removing the heart takes it out of its folder.
+ */
 export async function updateGeneration(id: string, body: UpdateGenerationRequest): Promise<Generation> {
-  if (body.favorite === undefined) throw badRequest("Nothing to update");
-  const row = await patchGeneration(id, { favorite: body.favorite });
+  if (body.favorite === undefined && body.folder === undefined) throw badRequest("Nothing to update");
+  const patch: GenerationPatch = {};
+  if (body.favorite !== undefined) patch.favorite = body.favorite;
+  if (body.folder) {
+    if (body.favorite === false) throw badRequest("A record in a folder is a kept one");
+    if (!(await readFolder(body.folder))) throw notFound("Folder not found");
+    patch.favorite = true;
+    patch.folder = body.folder;
+  } else if (body.folder === null || body.favorite === false) {
+    patch.folder = undefined;
+  }
+  const row = await patchGeneration(id, patch);
   if (!row) throw notFound("Generation not found");
   const generation = toPublic(row);
   publish({ type: "generation", generation });
@@ -139,6 +158,58 @@ export async function deleteGeneration(id: string): Promise<{ ok: true }> {
 
 export async function retryGeneration(id: string): Promise<GenerateResponse> {
   return { generations: await engineRetry(id) };
+}
+
+// ---------- favorites folders ----------
+
+/** Every folder, sorted by name, with what its tile shows (count and the newest records for the cover). */
+export async function listFolders(): Promise<FoldersResponse> {
+  const folders = (await readFolders()).sort(compareFolders);
+  const summaries: Record<string, FolderSummary> = {};
+  for (const f of folders) {
+    const [count, page] = await Promise.all([countInFolder(f.id), readGenerations({ folder: f.id, limit: FOLDER_COVER_COUNT })]);
+    summaries[f.id] = { count, newest: page.items };
+  }
+  return { folders, summaries };
+}
+
+/** The cleaned name, or a 400 / 409 when it is empty or another folder (not `except`) already has it. */
+function checkFolderName(name: string, existing: Folder[], except?: string): string {
+  const clean = normalizeFolderName(name);
+  if (!clean) throw badRequest("Give the folder a name");
+  const key = folderNameKey(clean);
+  if (existing.some((f) => f.id !== except && folderNameKey(f.name) === key)) throw new ApiClientError(409, `There is already a folder named “${clean}”`);
+  return clean;
+}
+
+export async function createFolder(body: FolderRequest): Promise<Folder> {
+  const name = checkFolderName(body.name, await readFolders());
+  const now = new Date().toISOString();
+  const folder: Folder = { id: newFolderId(), name, createdAt: now, updatedAt: now };
+  await putFolder(folder);
+  publish({ type: "folder", folder });
+  return folder;
+}
+
+export async function renameFolder(id: string, body: FolderRequest): Promise<Folder> {
+  const existing = await readFolders();
+  const prev = existing.find((f) => f.id === id);
+  if (!prev) throw notFound("Folder not found");
+  const name = checkFolderName(body.name, existing, id);
+  if (name === prev.name) return prev;
+  const folder: Folder = { ...prev, name, updatedAt: new Date().toISOString() };
+  await putFolder(folder);
+  publish({ type: "folder", folder });
+  return folder;
+}
+
+/** Delete a folder. Its records stay kept, and each one is announced so open views drop the folder tag. */
+export async function deleteFolder(id: string): Promise<{ ok: true }> {
+  const res = await removeFolder(id);
+  if (!res) throw notFound("Folder not found");
+  publish({ type: "folder-deleted", id });
+  for (const generation of res.cleared) publish({ type: "generation", generation });
+  return { ok: true };
 }
 
 // ---------- uploads ----------
@@ -202,7 +273,7 @@ export async function getStorageStats(): Promise<StorageStats> {
 
 // ---------- the whole library ----------
 
-/** "Delete everything": both stores emptied, every tab told to start over. */
+/** "Delete everything": every store emptied (records, files, folders), every tab told to start over. */
 export async function deleteLibrary(): Promise<void> {
   await clearLibrary();
   publish({ type: "reset" });

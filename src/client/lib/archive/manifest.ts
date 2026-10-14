@@ -1,5 +1,6 @@
-/** The archive format (`higgsfree-library` v1) and the sanitizer every imported record goes through. */
-import type { Generation, GenerationInputs, GenerationStatus, GenerationType, MediaRef } from "@shared/types";
+/** The archive format (`higgsfree-library` v1) and the sanitizers every imported record and folder go through. */
+import type { Folder, Generation, GenerationInputs, GenerationStatus, GenerationType, MediaRef } from "@shared/types";
+import { isFolderId, normalizeFolderName } from "../folders";
 import { isGenerationId, isMediaId } from "../media-ids";
 
 export const ARCHIVE_FORMAT = "higgsfree-library";
@@ -10,7 +11,8 @@ export interface ArchiveManifest {
   version: number;
   exportedAt: string;
   app: { version: string };
-  counts: { generations: number; media: number };
+  /** `folders` is absent in archives made before Favorites folders. */
+  counts: { generations: number; media: number; folders?: number };
   /** Media bytes in the archive. */
   bytes: number;
 }
@@ -94,7 +96,11 @@ export function sanitizeRecord(v: unknown): Generation | undefined {
   if (o.provider === "openrouter" || o.provider === "fal") g.provider = o.provider;
   const batchIndex = num(o.batchIndex);
   if (batchIndex !== undefined) g.batchIndex = batchIndex;
-  if (o.favorite === true) g.favorite = true;
+  if (o.favorite === true) {
+    g.favorite = true;
+    // Kept only if the folder is in the library once the import is done (the importer checks).
+    if (isFolderId(o.folder)) g.folder = o.folder;
+  }
   const completedAt = iso(o.completedAt);
   if (completedAt) g.completedAt = completedAt;
   const elapsedMs = num(o.elapsedMs);
@@ -105,4 +111,14 @@ export function sanitizeRecord(v: unknown): Generation | undefined {
     g.completedAt = updatedAt;
   }
   return g;
+}
+
+/** A folder out of `folders.json`: a checked id, a cleaned non-empty name, dates. */
+export function sanitizeFolder(v: unknown): Folder | undefined {
+  if (typeof v !== "object" || v === null) return undefined;
+  const o = v as Record<string, unknown>;
+  const name = typeof o.name === "string" ? normalizeFolderName(o.name) : "";
+  const createdAt = iso(o.createdAt);
+  if (!isFolderId(o.id) || !name || !createdAt) return undefined;
+  return { id: o.id, name, createdAt, updatedAt: iso(o.updatedAt) ?? createdAt };
 }
