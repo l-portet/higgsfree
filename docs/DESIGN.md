@@ -98,7 +98,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
   Each box is 46 px tall: `surface`, 1 px `border`, `rounded-chrome` (15), `shadow-float` (a hairline of top light
   inside, a soft drop outside).
   - **Logo box**: 46 × 46, the brand tile at 30 px; links to the Video view (the default). On hover or
-    focus it stretches to reveal the "higgsfree" wordmark.
+    focus it stretches to reveal the "higgsfree" wordmark. On load it does that once by itself: opens 0.2 s in
+    (300 ms, the hover's easing), stays open 2 s while the accent sweeps, then closes. Only where the whole word
+    fits beside the other boxes (from 430 px wide with the tab labels collapsed, from 700 px with them shown);
+    narrower screens keep the compact box. Reduced motion skips it.
   - **Views**: Video · Image · Assets · Favorites as 36 px tabs (`rounded-control`, `px-3`, `gap-2`, 2 px apart) in a
     4 px padded box. Labels 13 px medium, `-0.01em`. Icons sit in a 16 px box with 1.5 px strokes, sized to match the
     mock (14 px frames, a 12 px heart); the video frame, the tray and the key are drawn in `components/icons/nav.tsx`.
@@ -211,9 +214,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
 
 ## Motion & polish
 - 150ms ease-out transitions for hover/active; popovers fade+scale 4%. Skeleton shimmer 1.6s.
-- **Accent on load.** Every page load opens on the lime accent and, after 0.5 s, sweeps it to blue (`#5da8fd`) over
-  1.6 s: an OKLCH hue sweep through a soft aqua, eased in and out, applied to the three accent variables on `html`
-  (`accent-shift` in `globals.css`), so every accent element shifts together. Client-side navigation keeps the blue.
+- **Accent on load.** Every page load opens on the lime accent and, after 0.3 s, sweeps it to blue (`#5da8fd`) over
+  1.2 s: an OKLCH hue sweep through a soft aqua, spaced by perceptual distance and eased in and out, applied to the
+  accent variables on `html` (`accent-shift` in `globals.css`), so every accent element shifts together.
+  Transitions are off until it ends (`data-accent-intro`), so no element trails behind. Client-side navigation keeps the blue.
   It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same sweep, from the
   old brand lime (`#d0f81e`) to the brand blue, through `--color-logo`; the glyph stays ink.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.

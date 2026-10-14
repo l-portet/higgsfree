@@ -53,7 +53,8 @@ all-caps display headings (`text-display`), where it is set in caps with the res
 - Clear space around the tile and the lockup: half a tile on every side. `lockup-dark.svg` has
   16 units of padding baked in because the panel itself is the boundary.
 - Top bar: the tile alone at 30 px, centred in a 46 px box with 15 px corners, so the tile's 7 px corners stay
-  concentric at the 8 px inset. No wordmark in the app chrome.
+  concentric at the 8 px inset. The wordmark shows in the chrome only as that box's reveal (hover, focus,
+  and 2 s on each page load).
 - README and social: `lockup-dark.svg` at 300 px wide; `og-image.png` 1200 x 630.
 
 ## Colour
