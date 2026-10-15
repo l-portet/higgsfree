@@ -254,9 +254,11 @@ There is no page chrome: the app is four views under one floating nav, with one 
   It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same move, from the
   old brand lime (`#d0f81e`) to the brand green, on its own slower clock (2.4 s, sine ease): a lime tile over the
   green one fades out (`logo-intro`), an opacity animation the compositor runs, so a busy main thread never makes
-  the tile stutter; a large solid tile at the accent's pace read as a jump. Meanwhile the glyph morphs from a swirl
-  into the F (`docs/brand/mark-morph.json`, played by `MarkMorphGlyph` from the start of that fade at the file's
-  60 fps): the static HTML draws the swirl, so the page opens on it, and the last frame is the F exactly where the
-  static mark draws it. Reduced motion, or a visit after the intro, shows the F.
+  the tile stutter; a large solid tile at the accent's pace read as a jump. Meanwhile a scribble crawls into the F
+  (`docs/brand/mark-crawl.json`, frames 30 to 246 of its `crawl` marker at 60 fps, 3.6 s from the start of that
+  fade). lottie-web's light SVG build plays it (`MarkCrawl`), loaded in the background only while the intro is
+  pending. The static HTML draws the scribble, so the page opens on it, and the player takes over from that same
+  frame; at the end the static path returns as the F, exactly where the static mark draws it, and the player is
+  destroyed. Reduced motion, or a visit after the intro, shows the F without loading the player.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.
 - Mobile: nav collapses to icons; video panel stacks above the canvas; prompt bar goes full-width.

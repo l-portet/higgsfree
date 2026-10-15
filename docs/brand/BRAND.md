@@ -35,7 +35,7 @@ never trace or redraw the glyph again.
 | `lockup-mono.svg` | `currentColor` F + wordmark |
 | `icon-maskable.svg` | Source of `public/icon-maskable-512.png` |
 | `og-image.svg` | Source of `public/og-image.png` |
-| `mark-morph.json` | Lottie (60 fps, 512 px artboard): a swirl that becomes the F. The nav plays it once on load (`lib/mark-morph.ts`, a small player for this file's features) |
+| `mark-crawl.json` | Lottie (60 fps, 512 px artboard): a scribble that crawls into the F. The nav plays its `crawl` marker once on load (`components/MarkCrawl.tsx`, lottie-web), with the ink repainted `#171717`; its first and last frames are inlined in `lib/mark-crawl.ts` |
 
 The wordmark in the SVGs is outlined (Inter Tight 700, tracking -0.01 em, kerned), so it renders
 identically without the font. In the app the wordmark is live text (`Logo variant="lockup"`).
@@ -98,7 +98,7 @@ rsvg-convert -w 1200 -h 630 docs/brand/og-image.svg      -o public/og-image.png
 - Recolour the tile or the glyph, or swap their colours (no green F on black tile). The nav tile's
   load sweep above is the only exception.
 - Add a gradient, glow, shadow, outline, bevel or rotation. Do not animate it in the product
-  beyond that colour sweep and the load morph (`mark-morph.json`: the swirl becomes the F as the tile
+  beyond that colour sweep and the load crawl (`mark-crawl.json`: a scribble crawls into the F as the tile
   turns green; it always comes to rest on the F, placed exactly where the static mark draws it).
 - Stretch it, re-trace it, thin or thicken the stroke, or close or open the loop.
 - Set the wordmark in another face, weight or case, or split its colours.
