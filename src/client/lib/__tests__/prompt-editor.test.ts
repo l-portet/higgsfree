@@ -12,7 +12,8 @@ import {
   MAX_RECREATE_VIDEO_BYTES,
   PREVIEW_IMAGE_MODEL,
   PROMPT_EDITOR_MODEL,
-  previewAspect,
+  STORYBOARD_FRAMES,
+  storyboardLayout,
   RECREATE_MODEL,
   RECREATE_SYSTEM_PROMPT,
   REWRITE_SYSTEM_PROMPT,
@@ -70,14 +71,30 @@ describe("request bodies", () => {
   it("previews with the latest fast GPT Image at low quality, the video's ratio, and the first frame as a reference", () => {
     expect(PROMPT_EDITOR_MODEL.id).toBe("openai/gpt-6-luna");
     expect(PREVIEW_IMAGE_MODEL.id).toBe("openai/gpt-image-2.5-flare");
-    const p = buildPreviewBody(" neon market ", "16:9");
-    expect(p).toMatchObject({ model: "openai/gpt-image-2.5-flare", aspect_ratio: "16:9", quality: "low" });
-    expect(p.prompt.endsWith("\n\nneon market")).toBe(true);
+    const p = buildPreviewBody(" neon market ", storyboardLayout("16:9"));
+    expect(p).toMatchObject({ model: "openai/gpt-image-2.5-flare", aspect_ratio: "4:3", quality: "low" });
+    expect(STORYBOARD_FRAMES).toBe(6);
+    expect(p.prompt).toContain("A storyboard of 6 frames from one video, in a grid of 2 columns and 3 rows");
+    expect(p.prompt).toContain("from the first moment of the shot to the last");
+    expect(p.prompt.endsWith("\n\nThe video:\nneon market")).toBe(true);
+    expect(p.prompt).not.toContain("reference image");
     expect(p).not.toHaveProperty("input_references");
-    expect(buildPreviewBody("x", "9:16", "data:image/png;base64,AA").input_references).toEqual([{ type: "image_url", image_url: { url: "data:image/png;base64,AA" } }]);
-    expect(previewAspect("16:9")).toBe("16:9");
-    expect(previewAspect("9:21")).toBe("9:16");
-    expect(previewAspect(undefined)).toBe("16:9");
+    const withRef = buildPreviewBody("x", storyboardLayout("9:16"), "data:image/png;base64,AA");
+    expect(withRef.input_references).toEqual([{ type: "image_url", image_url: { url: "data:image/png;base64,AA" } }]);
+    expect(withRef.prompt).toContain("The first frame matches the reference image.");
+    expect(withRef.prompt).toContain("3 columns and 2 rows");
+    // Frames close to the video's shape: picture ratio × rows / columns.
+    expect(storyboardLayout("16:9")).toEqual({ canvas: "4:3", cols: 2, rows: 3 });
+    expect(storyboardLayout("9:16")).toEqual({ canvas: "3:4", cols: 3, rows: 2 });
+    expect(storyboardLayout("1:1")).toEqual({ canvas: "3:2", cols: 3, rows: 2 });
+    expect(storyboardLayout(undefined)).toEqual(storyboardLayout("16:9"));
+    for (const ar of ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "9:21"] as const) {
+      const l = storyboardLayout(ar);
+      const [cw, ch] = l.canvas.split(":").map(Number);
+      const [vw, vh] = ar.split(":").map(Number);
+      expect(l.cols * l.rows).toBe(6);
+      expect(Math.abs(Math.log((((cw ?? 1) / (ch ?? 1)) * l.rows) / l.cols / ((vw ?? 1) / (vh ?? 1))))).toBeLessThan(0.25);
+    }
   });
 
   it("asks the latest Gemini to watch the clip inline, in static mode, with the run's context and the instruction", () => {
@@ -185,16 +202,17 @@ describe("api", () => {
     await expect(api.recreateVideoPrompt({ file: mp4, instruction: "" })).rejects.toMatchObject({ status: 401 });
   });
 
-  it("previews a frame through the native images API, with the attached first frame, and returns a data URL", async () => {
+  it("previews six frames in one picture through the native images API, with the attached first frame, and returns a data URL", async () => {
     const frame = (await api.upload(new Blob([PNG_2X2], { type: "image/png" }))).media.id;
     const calls = stubFetch(() => json(200, { data: [{ b64_json: PNG_BASE64, media_type: "image/png" }], usage: { cost: 0.006 } }));
-    const res = await api.previewVideoFrame({ prompt: "neon market", aspectRatio: "9:21", firstFrame: frame });
+    const res = await api.previewVideoFrames({ prompt: "neon market", aspectRatio: "9:21", firstFrame: frame });
     expect(res).toEqual({ dataUrl: `data:image/png;base64,${PNG_BASE64}`, costUsd: 0.006 });
     expect(calls[0]?.url).toBe("/api/v1/images");
-    expect(calls[0]?.body).toMatchObject({ model: "openai/gpt-image-2.5-flare", aspect_ratio: "9:16", quality: "low" });
+    // 9:21: 3 × 2 on a 2:3 picture gives 0.44 frames, the closest to the video's 0.43.
+    expect(calls[0]?.body).toMatchObject({ model: "openai/gpt-image-2.5-flare", aspect_ratio: "2:3", quality: "low" });
     expect((calls[0]?.body.input_references as { image_url: { url: string } }[])[0]?.image_url.url).toBe(`data:image/png;base64,${PNG_BASE64}`);
-    await expect(api.previewVideoFrame({ prompt: "  " })).rejects.toMatchObject({ status: 400 });
+    await expect(api.previewVideoFrames({ prompt: "  " })).rejects.toMatchObject({ status: 400 });
     stubFetch(() => json(200, { data: [{ b64_json: btoa("not an image") }] }));
-    await expect(api.previewVideoFrame({ prompt: "x" })).rejects.toMatchObject({ status: 502 });
+    await expect(api.previewVideoFrames({ prompt: "x" })).rejects.toMatchObject({ status: 502 });
   });
 });

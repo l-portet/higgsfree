@@ -41,7 +41,7 @@ import * as fal from "./fal";
 import { MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-ids";
 import { revokeAllMediaUrls } from "./media-urls";
 import { chatText, listLiveModels, nativeImage } from "./openrouter";
-import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, MAX_RECREATE_VIDEO_BYTES, previewAspect, type RewriteContext } from "./prompt-editor";
+import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, MAX_RECREATE_VIDEO_BYTES, storyboardLayout, type RewriteContext } from "./prompt-editor";
 import { getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setStoredFalKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
 import { detectVideo } from "./video-meta";
@@ -282,12 +282,12 @@ export interface PreviewRequest {
   firstFrame?: string;
 }
 
-/** A quick still of the shot (low quality, not saved to the library), as a data URL. */
-export async function previewVideoFrame(req: PreviewRequest, opts: { signal?: AbortSignal } = {}): Promise<{ dataUrl: string; costUsd?: number }> {
+/** One picture with six frames of the shot, start to end (low quality, not saved to the library), as a data URL. */
+export async function previewVideoFrames(req: PreviewRequest, opts: { signal?: AbortSignal } = {}): Promise<{ dataUrl: string; costUsd?: number }> {
   const key = requireApiKey();
   if (!req.prompt.trim()) throw badRequest("Write a prompt first");
   const ref = req.firstFrame ? await inputDataUrl(req.firstFrame) : undefined;
-  const res = await nativeImage(key, buildPreviewBody(req.prompt, previewAspect(req.aspectRatio), ref), opts);
+  const res = await nativeImage(key, buildPreviewBody(req.prompt, storyboardLayout(req.aspectRatio), ref), opts);
   invalidateCredits();
   const bytes = base64ToBytes(res.b64);
   const meta = detectImage(bytes);

@@ -153,33 +153,59 @@ export function buildRecreateBody(videoDataUrl: string, instruction: string, ctx
   };
 }
 
-/** The ratios GPT Image 2.5 Flare takes; the video's ratio when it is one of them, else the closest. */
+/** The ratios GPT Image 2.5 Flare takes. */
 const PREVIEW_ASPECTS: readonly ImageAspectRatio[] = ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"];
 
-export function previewAspect(ar: VideoAspectRatio | undefined): ImageAspectRatio {
-  if (!ar) return "16:9";
-  if ((PREVIEW_ASPECTS as readonly string[]).includes(ar)) return ar as ImageAspectRatio;
-  const [w, h] = ar.split(":").map(Number);
-  const target = w && h ? w / h : 16 / 9;
-  let best: ImageAspectRatio = "16:9";
+export const STORYBOARD_FRAMES = 6;
+
+/** How the six frames sit in the one preview picture: the picture's ratio and the grid. */
+export interface StoryboardLayout {
+  canvas: ImageAspectRatio;
+  cols: 2 | 3;
+  rows: 2 | 3;
+}
+
+const ratioOf = (r: string): number => {
+  const [w, h] = r.split(":").map(Number);
+  return w && h ? w / h : 16 / 9;
+};
+
+/**
+ * The grid and picture whose frames come closest to the video's own shape: a landscape video gets 2 columns of
+ * 3 rows on a 4:3 picture (2:1 frames), a portrait one 3 columns of 2 rows on 3:4 (1:2 frames), a square one
+ * 3 × 2 on 3:2 (square frames). A frame's ratio is the picture's times rows over columns.
+ */
+export function storyboardLayout(ar: VideoAspectRatio | undefined): StoryboardLayout {
+  const target = Math.log(ratioOf(ar ?? "16:9"));
+  let best: StoryboardLayout = { canvas: "4:3", cols: 2, rows: 3 };
   let bestDiff = Infinity;
-  for (const a of PREVIEW_ASPECTS) {
-    const [aw, ah] = a.split(":").map(Number);
-    const diff = Math.abs(Math.log((aw ?? 1) / (ah ?? 1)) - Math.log(target));
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      best = a;
+  for (const canvas of PREVIEW_ASPECTS) {
+    for (const [cols, rows] of [[2, 3], [3, 2]] as const) {
+      const diff = Math.abs(Math.log((ratioOf(canvas) * rows) / cols) - target);
+      if (diff < bestDiff - 1e-9) {
+        bestDiff = diff;
+        best = { canvas, cols, rows };
+      }
     }
   }
   return best;
 }
 
-/** A still that shows the look of the shot; with the first frame as a reference when one is attached. */
-export function buildPreviewBody(prompt: string, aspect: ImageAspectRatio, referenceDataUrl?: string): NativeImageBody {
-  const lead = referenceDataUrl
-    ? "A single still frame from a video that starts from the reference image, a few seconds in. No captions or borders."
-    : "A single still frame from the video shot described below, a few seconds in. No captions or borders.";
-  const body: NativeImageBody = { model: PREVIEW_IMAGE_MODEL.id, prompt: `${lead}\n\n${prompt.trim()}`, aspect_ratio: aspect, quality: "low" };
+/**
+ * One picture with six frames of the shot in a grid, from its first moment to its last, to preview how the
+ * video unfolds; with the first frame as a reference (and the first panel) when one is attached.
+ */
+export function buildPreviewBody(prompt: string, layout: StoryboardLayout, referenceDataUrl?: string): NativeImageBody {
+  const lead = [
+    `A storyboard of ${STORYBOARD_FRAMES} frames from one video, in a grid of ${layout.cols} columns and ${layout.rows} rows, read left to right and top to bottom.`,
+    "The frames run in order from the first moment of the shot to the last, evenly spaced in time, so the grid shows how the video unfolds: the action and the camera move progress from frame to frame.",
+    "The same subjects, setting, lighting and style in every frame, like stills from one continuous take.",
+    referenceDataUrl ? "The first frame matches the reference image." : "",
+    "Thin, even gaps between the frames; no numbers, captions, labels, text or borders.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const body: NativeImageBody = { model: PREVIEW_IMAGE_MODEL.id, prompt: `${lead}\n\nThe video:\n${prompt.trim()}`, aspect_ratio: layout.canvas, quality: "low" };
   if (referenceDataUrl) body.input_references = [{ type: "image_url", image_url: { url: referenceDataUrl } }];
   return body;
 }

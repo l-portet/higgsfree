@@ -507,8 +507,8 @@ export function VideoComposer() {
         />
       }
       secondaryControl={
-        // The prompt editor (rewrite the prompt with an LLM, preview a frame, use it): a sparkle square under the "+".
-        <Tooltip content="Prompt Editor: rewrite with AI, preview a frame" side="right">
+        // The prompt editor (rewrite the prompt with an LLM, preview the shot, use it): a sparkle square under the "+".
+        <Tooltip content="Prompt Editor: rewrite with AI, preview the shot" side="right">
           <AddButton aria-label="Prompt Editor" onClick={() => setEditorOpen(true)}>
             <Sparkles size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
           </AddButton>

@@ -253,7 +253,7 @@ OpenRouter's live catalogs (14 and 15 Oct 2026) as the newest of their kind:
 | Role | Model | Why |
 |---|---|---|
 | Rewrite the prompt | `openai/gpt-6-luna` (GPT-6 Luna, 22 Sep 2026) | GPT-6's fast, cost-efficient tier: $0.05 / $0.25 per million tokens in / out. Asked for low reasoning. |
-| Preview a frame | `openai/gpt-image-2.5-flare` (GPT Image 2.5 Flare, Sep 2026) | The speed tier of GPT Image 2.5 (Sunburst is the precision tier). Asked for `quality: "low"`. |
+| Preview the shot (6 frames in one picture) | `openai/gpt-image-2.5-flare` (GPT Image 2.5 Flare, Sep 2026) | The speed tier of GPT Image 2.5 (Sunburst is the precision tier). Asked for `quality: "low"`. |
 | Recreate a video | `google/gemini-4-argon` (Gemini 4 Argon, 13 Oct 2026) | The newest Gemini that takes video input (`input_modalities` has `video`): Google's flagship reasoning model, asked for low reasoning effort. $2 / $10 per million tokens; a 10 s clip is a few thousand tokens. `google/gemini-3.8-flash` (Sep 2026, $0.75 / $3.75) is the faster, cheaper swap. |
 
 When a newer tier ships, change the id there and the name shown in the dialog follows.
