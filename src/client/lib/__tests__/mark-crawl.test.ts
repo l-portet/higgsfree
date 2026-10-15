@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import crawlJson from "../../../../docs/brand/mark-crawl.json";
 import { readFileSync } from "node:fs";
 import { MARK_PATH } from "../mark";
-import { CRAWL_TILE_VIEWBOX, CRAWL_TO_TILE, crawlSegment, hexToLottie, LOTTIE_INK, recolor, START_D } from "../mark-crawl";
+import { CRAWL_TILE_VIEWBOX, CRAWL_TO_TILE, crawlSegment, hexToLottie, LOTTIE_INK, recolor, replayData, START_D } from "../mark-crawl";
 
 type Vec = [number, number];
 interface Shape {
@@ -21,6 +21,7 @@ interface Item {
   r?: number;
   s?: { k: { t: number; s: number[] }[] };
   e?: { k: { t: number; s: number[] }[] };
+  w?: { k: number };
 }
 interface Layer {
   nm: string;
@@ -107,5 +108,99 @@ describe("mark crawl", () => {
       expect(svg, f).toContain(`d="${MARK_PATH}"`);
       expect(svg, f).not.toContain("evenodd");
     }
+  });
+});
+
+describe("the click replay", () => {
+  const replay = replayData(crawlJson);
+  const replayed = replay.layers as unknown as Layer[];
+  const named = (ls: Layer[], nm: string) => ls.find((l) => l.nm === nm)!;
+  const group = (l: Layer, nm: string) => items(l.shapes).find((x) => x.ty === "gr" && x.nm === nm)!;
+  const of = (g: Item, ty: string) => g.it!.find((x) => x.ty === ty)!;
+  /** A keyed value at `t` (linear, or held). */
+  const at = (p: unknown, t: number): number => {
+    const { a, k } = p as { a: number; k: number | number[] | { t: number; s: number[]; h?: number }[] };
+    if (!a) return Array.isArray(k) ? (k[0] as number) : (k as number);
+    const keys = k as { t: number; s: number[]; h?: number }[];
+    const j = Math.max(0, keys.findLastIndex((x) => x.t <= t));
+    const [x, y] = [keys[j]!, keys[j + 1]];
+    if (!y || x.h || t <= x.t) return x.s[0]!;
+    return x.s[0]! + ((y.s[0]! - x.s[0]!) * (t - x.t)) / (y.t - x.t);
+  };
+
+  it("swaps the scribble for the F and body A for an exit through the crossbar; the rest is the file's own", () => {
+    expect(replayed.map((l) => l.nm)).toEqual(["F", "crawl", "F exit"]);
+    expect(named(replayed, "F")).toEqual(layer("F"));
+    const crawl = named(replayed, "crawl");
+    expect(crawl.shapes[0]!.it!.map((x) => x.nm)).toEqual(["exit", "body F", "tail cut", "Transform"]);
+    expect(group(crawl, "body F")).toEqual(group(layer("crawl"), "body F"));
+    expect(crawlSegment(replay)).toEqual([30, 246]);
+    expect(layers.map((l) => l.nm)).toEqual(["F", "crawl", "scribble"]);
+  });
+
+  it("starts on the whole F, eats it from its start, and has eaten it when the exit takes the tail over", () => {
+    const exit = named(replayed, "F exit");
+    const g = group(exit, "F exit");
+    const path = of(g, "sh").ks!.k as Shape;
+    expect(path.c).toBe(true);
+    expect(path.v).toEqual(shape("F").v);
+    const tm = of(g, "tm") as unknown as { s: unknown; e: unknown; o: unknown };
+    expect(at(tm.s, 30)).toBe(0);
+    expect(at(tm.e, 30)).toBeCloseTo(100, 6);
+    let left = Infinity;
+    for (let t = 30; t <= 123; t++) {
+      expect(at(tm.e, t)).toBeLessThanOrEqual(left + 1e-9);
+      left = at(tm.e, t);
+    }
+    // At the hand-off only the closing segment, the crossbar's square end, is left: no area.
+    expect(left).toBeLessThan(2);
+    expect(exit.op).toBe(layer("scribble").op + 1);
+  });
+
+  it("leaves through the crossbar's end, as thick as it is, and joins body F's track outside the box", () => {
+    const exit = group(named(replayed, "crawl"), "exit");
+    const track = of(exit, "sh").ks!.k as Shape;
+    const f = shape("F");
+    const [c0, c1] = [f.v[0]!, f.v[f.v.length - 1]!];
+    expect(track.v[0]![0]).toBeLessThan(c0[0]);
+    expect(track.v[0]![1]).toBeCloseTo((c0[1] + c1[1]) / 2, 6);
+    expect(of(exit, "st").w!.k).toBeCloseTo(Math.hypot(c0[0] - c1[0], c0[1] - c1[1]), 6);
+    for (const [x, y] of track.v.slice(1)) expect(x > 512 || y < 0).toBe(true);
+    const bodyF = of(group(layer("crawl"), "body F"), "sh").ks!.k as Shape;
+    expect(track.v.at(-1)).toEqual(bodyF.v[0]);
+    const tm = of(exit, "tm");
+    expect(at(tm.e, 30)).toBeLessThan(5);
+    expect(at(tm.e, 96)).toBe(100);
+    expect(at(tm.s, 122)).toBe(0);
+    expect(at(tm.s, 123)).toBeGreaterThan(0);
+  });
+
+  it("shares no object between its parts (lottie-web rewrites paths in place as it loads them)", () => {
+    const seen = new Set<object>();
+    const shared: string[] = [];
+    const walk = (x: unknown, at: string) => {
+      if (x === null || typeof x !== "object") return;
+      if (seen.has(x)) shared.push(at);
+      seen.add(x);
+      for (const [k, v] of Object.entries(x)) walk(v, `${at}.${k}`);
+    };
+    walk(replay, "replay");
+    expect(shared).toEqual([]);
+    // Nor with the file it was built from.
+    const original = new Set<object>();
+    const collect = (x: unknown) => {
+      if (x === null || typeof x !== "object") return;
+      original.add(x);
+      Object.values(x).forEach(collect);
+    };
+    collect(crawlJson);
+    expect([...seen].filter((x) => original.has(x))).toEqual([]);
+  });
+
+  it("drops the tail-cut wedge's stretch on the scribble's exit, where nothing follows it", () => {
+    const times = (l: Layer) => (of(group(l, "tail cut"), "sh").ks!.k as { t: number }[]).map((k) => k.t);
+    const before = times(layer("crawl"));
+    expect(before).toEqual(expect.arrayContaining([123, 124]));
+    expect(times(named(replayed, "crawl"))).toEqual(before.filter((t) => t !== 123 && t !== 124));
   });
 });

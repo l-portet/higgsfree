@@ -103,7 +103,8 @@ rsvg-convert -w 1200 -h 630 docs/brand/og-image.svg      -o public/og-image.png
   load sweep above is the only exception.
 - Add a gradient, glow, shadow, outline, bevel or rotation. Do not animate it in the product
   beyond that colour sweep and the load crawl (`mark-crawl.json`: a scribble crawls into the F as the tile
-  turns green; its last frame is the mark itself).
+  turns green; its last frame is the mark itself), and its replay when the nav's logo is clicked (the F
+  crawls out to the right and back in from the left, ending on the mark).
 - Stretch it, re-trace it, thin or thicken the stroke, or close or open the loop.
 - Set the wordmark in another face, weight or case, or split its colours.
 - Use the F as a letter in running text or as a generic icon (button, badge, status).
