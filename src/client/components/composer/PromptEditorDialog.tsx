@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
-import { CircleAlert, Clapperboard, FileVideo, ImageIcon, RefreshCw, Sparkles, Undo2, Upload, X } from "lucide-react";
+import { ChevronDown, CircleAlert, Clapperboard, FileVideo, ImageIcon, RefreshCw, SlidersHorizontal, Sparkles, Undo2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import type { VideoAspectRatio } from "@shared/types";
 import * as api from "@/lib/api";
@@ -8,14 +8,16 @@ import { cn } from "@/lib/cn";
 import { dragHasFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
 import { formatBytes, formatUsd } from "@/lib/format";
 import { useReturnFocus } from "@/lib/hooks";
+import { readPreviewConfig, writePreviewConfig } from "@/lib/preview-config";
 import {
   MAX_PROMPT_CHARS,
   MAX_RECREATE_VIDEO_BYTES,
-  PREVIEW_IMAGE_MODEL,
+  previewModel,
   PROMPT_EDITOR_MODEL,
   RECREATE_MODEL,
   STORYBOARD_FRAMES,
   storyboardLayout,
+  type PreviewConfig,
   type RewriteContext,
 } from "@/lib/prompt-editor";
 import { useSettings } from "@/store/settings";
@@ -24,8 +26,11 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import { OverlayBadge } from "@/components/ui/Badge";
+import { Popover, PopoverContent, PopoverItem, PopoverTrigger } from "@/components/ui/Popover";
 import { Spinner } from "@/components/ui/Spinner";
 import { Textarea } from "@/components/ui/Textarea";
+import { PreviewConfigForm } from "./PreviewConfigForm";
 
 /** One click, one rewrite: the asks people make most. */
 const SUGGESTIONS = ["More cinematic", "Add camera motion", "More detail", "Make it shorter"] as const;
@@ -191,6 +196,10 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState<string | undefined>();
   const [video, setVideo] = useState<SourceVideo | null>(null);
+  // The preview's configuration lives in this browser; "Edit configuration" opens the form above the button.
+  const [previewConfig, setPreviewConfig] = useState<PreviewConfig>(() => readPreviewConfig());
+  const [configOpen, setConfigOpen] = useState(false);
+  const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
   const writeAbort = useRef<AbortController | null>(null);
   const previewAbort = useRef<AbortController | null>(null);
   const instructionRef = useRef<HTMLInputElement>(null);
@@ -207,6 +216,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
       setPreview(null);
       setPreviewError(undefined);
       setVideo(null);
+      setConfigOpen(false);
       return;
     }
     writeAbort.current?.abort();
@@ -290,7 +300,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
     setPreviewing(true);
     setPreviewError(undefined);
     try {
-      const res = await api.previewVideoFrames({ prompt: trimmed, aspectRatio, firstFrame }, { signal: controller.signal });
+      const res = await api.previewVideoFrames({ prompt: trimmed, aspectRatio, firstFrame, config: previewConfig }, { signal: controller.signal });
       setPreview({ dataUrl: res.dataUrl, costUsd: res.costUsd, prompt: trimmed });
       void useSettings.getState().refreshCredits();
     } catch (err) {
@@ -361,7 +371,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
             AI Prompt Editor
           </DialogTitle>
           <DialogDescription>
-            Rewrite the prompt with {PROMPT_EDITOR_MODEL.name} and preview the shot with {PREVIEW_IMAGE_MODEL.name}, or write one from a video with{" "}
+            Rewrite the prompt with {PROMPT_EDITOR_MODEL.name} and preview the shot with {previewModel(previewConfig.model).name}, or write one from a video with{" "}
             {RECREATE_MODEL.name}. All run on your OpenRouter key.
           </DialogDescription>
           <div role="group" aria-label="Mode" className="mt-3 flex w-fit gap-0.5 rounded-control border border-border bg-surface-2 p-1">
@@ -494,6 +504,9 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
                   ) : !previewing ? (
                     <ImageIcon size={24} strokeWidth={1.5} className="text-fg-faint" aria-hidden="true" />
                   ) : null}
+                  {preview?.costUsd !== undefined && !previewing ? (
+                    <OverlayBadge className="absolute bottom-1.5 right-1.5 tabular-nums">{formatUsd(preview.costUsd)}</OverlayBadge>
+                  ) : null}
                   {previewing ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-meta">
                       <Spinner size={18} className="text-fg-muted" />
@@ -502,28 +515,56 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
                   ) : null}
                 </div>
               </div>
-              <Button
-                variant="secondary"
-                leftIcon={preview ? <RefreshCw /> : <ImageIcon />}
-                onClick={() => void makePreview()}
-                loading={previewing}
-                disabled={!trimmed || writing}
-                className="mt-3"
-              >
-                {preview ? (stale ? "Preview the new prompt" : "Another preview") : `Preview ${STORYBOARD_FRAMES} frames`}
-              </Button>
+              <div className="mt-3">
+                {configOpen ? (
+                  <PreviewConfigForm
+                    config={previewConfig}
+                    onChange={(c) => setPreviewConfig(writePreviewConfig(c))}
+                    onDone={() => setConfigOpen(false)}
+                    layout={layout}
+                    hasFirstFrame={Boolean(firstFrame)}
+                    disabled={previewing}
+                  />
+                ) : null}
+                {/* A split button: preview on the left, the configuration menu on the chevron. */}
+                <div role="group" aria-label="Preview" className="flex">
+                  <Button
+                    variant="secondary"
+                    leftIcon={preview ? <RefreshCw /> : <ImageIcon />}
+                    onClick={() => void makePreview()}
+                    loading={previewing}
+                    disabled={!trimmed || writing}
+                    className="min-w-0 flex-1 rounded-r-none"
+                  >
+                    <span className="truncate">{preview ? (stale ? "Preview the new prompt" : "Another preview") : `Preview ${STORYBOARD_FRAMES} frames`}</span>
+                  </Button>
+                  <Popover open={previewMenuOpen} onOpenChange={setPreviewMenuOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="secondary" aria-label="Preview options" className="-ml-px rounded-l-none px-2.5">
+                        <ChevronDown aria-hidden="true" className="transition-transform duration-150 [[data-state=open]>&]:rotate-180" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="end" className="w-[208px]">
+                      <PopoverItem
+                        role={undefined}
+                        onClick={() => {
+                          setPreviewMenuOpen(false);
+                          setConfigOpen(true);
+                        }}
+                      >
+                        <SlidersHorizontal size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
+                        <span className="flex-1">Edit configuration</span>
+                      </PopoverItem>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
               {previewError ? (
                 <p role="alert" className="mt-2 flex items-start gap-1.5 rounded-control border border-danger/25 bg-danger/5 p-2.5 text-meta">
                   <CircleAlert size={14} className="mt-px shrink-0 text-danger" aria-hidden="true" />
                   <span className="whitespace-pre-wrap break-words">{previewError}</span>
                 </p>
               ) : null}
-              <p className="mt-2 text-caption tabular-nums">
-                {preview?.costUsd !== undefined ? `${formatUsd(preview.costUsd)} · ` : ""}
-                {PREVIEW_IMAGE_MODEL.name}, low quality: one picture with {STORYBOARD_FRAMES} frames from start to end, a quick look at the shot, not the video.
-                {firstFrame ? " Uses your first frame as a reference." : ""} Not saved.
-                {stale ? " The prompt changed since this preview." : ""}
-              </p>
             </section>
           )}
         </div>

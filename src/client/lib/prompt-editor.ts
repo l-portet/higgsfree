@@ -8,7 +8,7 @@
  * - Gemini 4 Argon (13 Oct 2026): the newest Gemini that takes video input, for "Recreate video"; a
  *   flagship reasoning model, asked for low reasoning effort. Gemini 3.8 Flash is the cheaper swap.
  */
-import type { ImageAspectRatio, VideoAspectRatio } from "@shared/types";
+import type { ImageAspectRatio, ImageSize, VideoAspectRatio } from "@shared/types";
 import type { ChatTextBody, ChatTextPart, NativeImageBody } from "./payloads";
 
 export const PROMPT_EDITOR_MODEL = { id: "openai/gpt-6-luna", name: "GPT-6 Luna" } as const;
@@ -191,21 +191,97 @@ export function storyboardLayout(ar: VideoAspectRatio | undefined): StoryboardLa
   return best;
 }
 
+// ---------- the preview's configuration ----------
+
+export type PreviewQuality = NonNullable<NativeImageBody["quality"]>;
+
+/** A model the preview can run on: its options as OpenRouter's image catalog lists them (15 Oct 2026). */
+export interface PreviewModel {
+  id: string;
+  name: string;
+  /** One line for the picker. */
+  note: string;
+  qualities?: readonly PreviewQuality[];
+  resolutions?: readonly ImageSize[];
+}
+
+/** Every one of these takes the grid's ratios (1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9) and reference images. */
+export const PREVIEW_MODELS: readonly PreviewModel[] = [
+  { id: PREVIEW_IMAGE_MODEL.id, name: PREVIEW_IMAGE_MODEL.name, note: "Fastest, priced per token", qualities: ["auto", "low", "medium", "high", "xhigh", "max"] },
+  { id: "openai/gpt-image-2.5-sunburst", name: "GPT Image 2.5 Sunburst", note: "More detail, slower", qualities: ["auto", "low", "medium", "high", "xhigh", "max"] },
+  { id: "google/gemini-nano-banana-2.1", name: "Nano Banana 2.1", note: "Keeps characters consistent", resolutions: ["1K", "2K", "4K"] },
+  { id: "bytedance-seed/seedream-5-0-flash", name: "Seedream 5.0 Flash", note: "Flat $0.018 per picture", resolutions: ["1K", "2K"] },
+];
+
+export const previewModel = (id: string): PreviewModel => PREVIEW_MODELS.find((m) => m.id === id) ?? (PREVIEW_MODELS[0] as PreviewModel);
+
+/** The storyboard instructions; `{frames}`, `{columns}` and `{rows}` are filled in for each picture. */
+export const DEFAULT_STORYBOARD_INSTRUCTIONS = [
+  "A storyboard of {frames} frames from one video, in a grid of {columns} columns and {rows} rows, read left to right and top to bottom.",
+  "The frames run in order from the first moment of the shot to the last, evenly spaced in time, so the grid shows how the video unfolds: the action and the camera move progress from frame to frame.",
+  "The same subjects, setting, lighting and style in every frame, like stills from one continuous take.",
+  "Thin, even gaps between the frames; no numbers, captions, labels, text or borders.",
+].join(" ");
+
+const MAX_INSTRUCTIONS_CHARS = 4000;
+
+export interface PreviewConfig {
+  model: string;
+  /** GPT Image models. */
+  quality?: PreviewQuality;
+  /** Nano Banana, Seedream. */
+  resolution?: ImageSize;
+  /** Send the attached first frame (or character image) as a reference, and ask for it as the first panel. */
+  useReference: boolean;
+  instructions: string;
+}
+
+export const DEFAULT_PREVIEW_CONFIG: PreviewConfig = { model: PREVIEW_IMAGE_MODEL.id, quality: "low", useReference: true, instructions: DEFAULT_STORYBOARD_INSTRUCTIONS };
+
+/** A model's own default: GPT Image at low quality, the others at their smallest resolution. */
+function modelDefaults(m: PreviewModel): Pick<PreviewConfig, "quality" | "resolution"> {
+  return m.qualities ? { quality: "low" } : m.resolutions ? { resolution: m.resolutions[0] } : {};
+}
+
+/** Whatever was stored (or edited) as a valid config: a known model, an option that model lists, real instructions. */
+export function normalizePreviewConfig(raw: unknown): PreviewConfig {
+  const o = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const model = previewModel(typeof o.model === "string" ? o.model : DEFAULT_PREVIEW_CONFIG.model);
+  const out: PreviewConfig = {
+    model: model.id,
+    useReference: o.useReference !== false,
+    instructions: typeof o.instructions === "string" && o.instructions.trim() ? o.instructions.slice(0, MAX_INSTRUCTIONS_CHARS) : DEFAULT_STORYBOARD_INSTRUCTIONS,
+    ...modelDefaults(model),
+  };
+  if (model.qualities?.includes(o.quality as PreviewQuality)) out.quality = o.quality as PreviewQuality;
+  if (model.resolutions?.includes(o.resolution as ImageSize)) out.resolution = o.resolution as ImageSize;
+  return out;
+}
+
+/** Switch model, keeping what still applies and taking the new model's defaults for the rest. */
+export function withPreviewModel(config: PreviewConfig, id: string): PreviewConfig {
+  const { quality: _q, resolution: _r, ...rest } = config;
+  return normalizePreviewConfig({ ...rest, model: id, ...modelDefaults(previewModel(id)) });
+}
+
+const fill = (template: string, values: Record<string, number>): string => template.replace(/\{(frames|columns|rows)\}/g, (_, k: string) => String(values[k]));
+
 /**
  * One picture with six frames of the shot in a grid, from its first moment to its last, to preview how the
- * video unfolds; with the first frame as a reference (and the first panel) when one is attached.
+ * video unfolds, run as the configuration says; with the first frame as a reference (and the first panel)
+ * when one is attached and the configuration uses it.
  */
-export function buildPreviewBody(prompt: string, layout: StoryboardLayout, referenceDataUrl?: string): NativeImageBody {
-  const lead = [
-    `A storyboard of ${STORYBOARD_FRAMES} frames from one video, in a grid of ${layout.cols} columns and ${layout.rows} rows, read left to right and top to bottom.`,
-    "The frames run in order from the first moment of the shot to the last, evenly spaced in time, so the grid shows how the video unfolds: the action and the camera move progress from frame to frame.",
-    "The same subjects, setting, lighting and style in every frame, like stills from one continuous take.",
-    referenceDataUrl ? "The first frame matches the reference image." : "",
-    "Thin, even gaps between the frames; no numbers, captions, labels, text or borders.",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const body: NativeImageBody = { model: PREVIEW_IMAGE_MODEL.id, prompt: `${lead}\n\nThe video:\n${prompt.trim()}`, aspect_ratio: layout.canvas, quality: "low" };
-  if (referenceDataUrl) body.input_references = [{ type: "image_url", image_url: { url: referenceDataUrl } }];
+export function buildPreviewBody(prompt: string, layout: StoryboardLayout, config: PreviewConfig = DEFAULT_PREVIEW_CONFIG, referenceDataUrl?: string): NativeImageBody {
+  const model = previewModel(config.model);
+  const ref = config.useReference ? referenceDataUrl : undefined;
+  const lead = fill(config.instructions.trim() || DEFAULT_STORYBOARD_INSTRUCTIONS, { frames: STORYBOARD_FRAMES, columns: layout.cols, rows: layout.rows });
+  const body: NativeImageBody = {
+    model: model.id,
+    prompt: `${lead}${ref ? " The first frame matches the reference image." : ""}\n\nThe video:\n${prompt.trim()}`,
+    aspect_ratio: layout.canvas,
+  };
+  if (model.qualities && config.quality && model.qualities.includes(config.quality)) body.quality = config.quality;
+  if (model.resolutions && config.resolution && model.resolutions.includes(config.resolution)) body.resolution = config.resolution;
+  if (ref) body.input_references = [{ type: "image_url", image_url: { url: ref } }];
   return body;
 }

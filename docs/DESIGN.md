@@ -166,8 +166,12 @@ There is no page chrome: the app is four views under one floating nav, with one 
   (More cinematic, Add camera motion, More detail, Make it shorter); GPT-6 Luna's rewrite streams into the field.
   On the right, "Preview · 6 frames": always one picture with six frames of the shot in a grid, start to end (2 × 3
   for a landscape video, 3 × 2 for a portrait or square one, so each frame keeps about the video's shape; a portrait
-  picture is 300 px tall). GPT Image 2.5 Flare at low quality, with the first frame as a reference (and first
-  panel) when one is attached, its cost, and a note that it is a quick look, not saved. Recreate video: the right column is a dashed drop zone ("Drop a video, or choose one", MP4 / MOV /
+  picture is 300 px tall), its real cost as an overlay badge in the corner. Under it, a split button: "Preview 6
+  frames" and a chevron that opens a one-item menu, Edit configuration. That shows the configuration form above
+  the button (`PreviewConfigForm`, on `inset`): the model (GPT Image 2.5 Flare by default, Sunburst, Nano Banana 2.1,
+  Seedream 5.0 Flash, each with a one-line note), its quality (GPT Image, Low by default) or resolution (the
+  others), a "First frame as reference" switch, and the storyboard instructions in a field where `{frames}`,
+  `{columns}` and `{rows}` are filled in; Reset and Done. Saved in this browser (`higgsfree.promptEditor.preview`). Recreate video: the right column is a dashed drop zone ("Drop a video, or choose one", MP4 / MOV /
   WebM up to 15 MB), then the clip in a player with Replace and Remove; the field takes optional instructions
   ("same shot with a cat") and Describe video sends the clip to Gemini 4 Argon, whose detailed prompt (people,
   setting, camera, light, sound, and every spoken line quoted word for word with its speaker) streams into the
