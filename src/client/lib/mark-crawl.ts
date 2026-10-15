@@ -64,7 +64,7 @@ export function recolor<T>(data: T, from: readonly number[], to: readonly number
   return walk(data) as T;
 }
 
-// ---------- The click replay ----------
+// ---------- The hover replay ----------
 
 type Vec = [number, number];
 interface Path {
@@ -164,7 +164,7 @@ const keyed = (frames: { t: number; v: number }[]): Prop<number[]> => ({
 const EXIT_OVERLAP = 10;
 
 /**
- * The click replay: the F crawls once around the box, as the scribble does on load. Its tail eats the F from
+ * The hover replay: the F crawls once around the box, as the scribble does on load. Its tail eats the F from
  * its start while its head slides out of the crossbar on the right, runs round the outside and comes back in
  * from the left to draw the F again, the file's own second half, untouched. Built from the file itself:
  *

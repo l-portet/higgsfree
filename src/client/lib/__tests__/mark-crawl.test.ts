@@ -111,7 +111,7 @@ describe("mark crawl", () => {
   });
 });
 
-describe("the click replay", () => {
+describe("the hover replay", () => {
   const replay = replayData(crawlJson);
   const replayed = replay.layers as unknown as Layer[];
   const named = (ls: Layer[], nm: string) => ls.find((l) => l.nm === nm)!;
