@@ -12,8 +12,12 @@ import {
   MAX_RECREATE_VIDEO_BYTES,
   PREVIEW_IMAGE_MODEL,
   PROMPT_EDITOR_MODEL,
+  DEFAULT_PREVIEW_CONFIG,
+  normalizePreviewConfig,
+  PREVIEW_MODELS,
   STORYBOARD_FRAMES,
   storyboardLayout,
+  withPreviewModel,
   RECREATE_MODEL,
   RECREATE_SYSTEM_PROMPT,
   REWRITE_SYSTEM_PROMPT,
@@ -79,7 +83,7 @@ describe("request bodies", () => {
     expect(p.prompt.endsWith("\n\nThe video:\nneon market")).toBe(true);
     expect(p.prompt).not.toContain("reference image");
     expect(p).not.toHaveProperty("input_references");
-    const withRef = buildPreviewBody("x", storyboardLayout("9:16"), "data:image/png;base64,AA");
+    const withRef = buildPreviewBody("x", storyboardLayout("9:16"), DEFAULT_PREVIEW_CONFIG, "data:image/png;base64,AA");
     expect(withRef.input_references).toEqual([{ type: "image_url", image_url: { url: "data:image/png;base64,AA" } }]);
     expect(withRef.prompt).toContain("The first frame matches the reference image.");
     expect(withRef.prompt).toContain("3 columns and 2 rows");
@@ -95,6 +99,40 @@ describe("request bodies", () => {
       expect(l.cols * l.rows).toBe(6);
       expect(Math.abs(Math.log((((cw ?? 1) / (ch ?? 1)) * l.rows) / l.cols / ((vw ?? 1) / (vh ?? 1))))).toBeLessThan(0.25);
     }
+  });
+
+  it("runs the preview as configured: model, its own option, the reference switch and the instructions", () => {
+    expect(PREVIEW_MODELS.map((m) => m.id)).toEqual(["openai/gpt-image-2.5-flare", "openai/gpt-image-2.5-sunburst", "google/gemini-nano-banana-2.1", "bytedance-seed/seedream-5-0-flash"]);
+    const layout = storyboardLayout("16:9");
+    const sunburst = buildPreviewBody("p", layout, { ...DEFAULT_PREVIEW_CONFIG, model: "openai/gpt-image-2.5-sunburst", quality: "high" });
+    expect(sunburst).toMatchObject({ model: "openai/gpt-image-2.5-sunburst", quality: "high", aspect_ratio: "4:3" });
+    expect(sunburst).not.toHaveProperty("resolution");
+    const nano = withPreviewModel(DEFAULT_PREVIEW_CONFIG, "google/gemini-nano-banana-2.1");
+    expect(nano).toEqual({ model: "google/gemini-nano-banana-2.1", resolution: "1K", useReference: true, instructions: DEFAULT_PREVIEW_CONFIG.instructions });
+    const nanoBody = buildPreviewBody("p", layout, { ...nano, resolution: "2K" });
+    expect(nanoBody).toMatchObject({ model: "google/gemini-nano-banana-2.1", resolution: "2K" });
+    expect(nanoBody).not.toHaveProperty("quality");
+    // Reference off: no image sent and no first-panel sentence, even with a frame attached.
+    const noRef = buildPreviewBody("p", layout, { ...DEFAULT_PREVIEW_CONFIG, useReference: false }, "data:image/png;base64,AA");
+    expect(noRef).not.toHaveProperty("input_references");
+    expect(noRef.prompt).not.toContain("reference image");
+    // Custom instructions, with the grid filled in.
+    const custom = buildPreviewBody("p", storyboardLayout("9:16"), { ...DEFAULT_PREVIEW_CONFIG, instructions: "Comic page, {frames} panels, {columns} wide by {rows} tall." });
+    expect(custom.prompt).toBe("Comic page, 6 panels, 3 wide by 2 tall.\n\nThe video:\np");
+  });
+
+  it("keeps only valid stored configurations", () => {
+    expect(normalizePreviewConfig(undefined)).toEqual(DEFAULT_PREVIEW_CONFIG);
+    // An unknown model falls back to Flare, which does list "max".
+    expect(normalizePreviewConfig({ model: "acme/gone", quality: "max" })).toEqual({ ...DEFAULT_PREVIEW_CONFIG, quality: "max" });
+    // An option the model does not list falls back to its default; GPT quality never leaks into a resolution model.
+    expect(normalizePreviewConfig({ model: "bytedance-seed/seedream-5-0-flash", resolution: "4K", quality: "high" })).toEqual({
+      model: "bytedance-seed/seedream-5-0-flash",
+      resolution: "1K",
+      useReference: true,
+      instructions: DEFAULT_PREVIEW_CONFIG.instructions,
+    });
+    expect(normalizePreviewConfig({ useReference: false, instructions: "   " })).toEqual({ ...DEFAULT_PREVIEW_CONFIG, useReference: false });
   });
 
   it("asks the latest Gemini to watch the clip inline, in static mode, with the run's context and the instruction", () => {
@@ -211,6 +249,11 @@ describe("api", () => {
     // 9:21: 3 × 2 on a 2:3 picture gives 0.44 frames, the closest to the video's 0.43.
     expect(calls[0]?.body).toMatchObject({ model: "openai/gpt-image-2.5-flare", aspect_ratio: "2:3", quality: "low" });
     expect((calls[0]?.body.input_references as { image_url: { url: string } }[])[0]?.image_url.url).toBe(`data:image/png;base64,${PNG_BASE64}`);
+    // The configuration's model and option go out; with the reference switched off, the frame stays home.
+    await api.previewVideoFrames({ prompt: "neon market", aspectRatio: "16:9", firstFrame: frame, config: { ...DEFAULT_PREVIEW_CONFIG, model: "google/gemini-nano-banana-2.1", resolution: "2K", quality: undefined, useReference: false } });
+    expect(calls[1]?.body).toMatchObject({ model: "google/gemini-nano-banana-2.1", resolution: "2K", aspect_ratio: "4:3" });
+    expect(calls[1]?.body).not.toHaveProperty("input_references");
+    expect(calls[1]?.body).not.toHaveProperty("quality");
     await expect(api.previewVideoFrames({ prompt: "  " })).rejects.toMatchObject({ status: 400 });
     stubFetch(() => json(200, { data: [{ b64_json: btoa("not an image") }] }));
     await expect(api.previewVideoFrames({ prompt: "x" })).rejects.toMatchObject({ status: 502 });

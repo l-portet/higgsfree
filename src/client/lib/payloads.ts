@@ -33,7 +33,7 @@ export interface NativeImageBody {
   aspect_ratio?: ImageAspectRatio;
   resolution?: ImageSize;
   /** Models whose catalog entry lists `quality` (GPT Image); only the prompt editor's preview sends it. */
-  quality?: "low" | "medium" | "high";
+  quality?: "auto" | "low" | "medium" | "high" | "xhigh" | "max";
   input_references?: { type: "image_url"; image_url: { url: string } }[];
 }
 

@@ -170,8 +170,10 @@ bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrames` / `api.recreateVideo
   `usage.cost` in the last chunk, then `data: [DONE]`. An `error` chunk mid-stream is a 502 with OpenRouter's
   message; a non-2xx before the stream is the usual `ApiClientError`. A reply that is not `text/event-stream`
   (a buffering proxy) is read whole. `chatText` in `openrouter.ts`; 90 s timeout.
-- Preview: the native images API with `{ model: "openai/gpt-image-2.5-flare", prompt, aspect_ratio, quality: "low",
-  input_references? }` (`quality` is in that model's catalog entry). Always one picture with 6 frames of the shot
+- Preview: the native images API with `{ model, prompt, aspect_ratio, quality? | resolution?, input_references? }`,
+  as the dialog's configuration says (default `openai/gpt-image-2.5-flare` at `quality: "low"`). `quality` only for
+  the GPT Image models and `resolution` only for the others, each from the values the model's catalog entry lists;
+  the instructions are the user's template with `{frames}`, `{columns}` and `{rows}` filled in. Always one picture with 6 frames of the shot
   in a grid, first moment to last (`storyboardLayout` picks the grid and the picture's ratio so each frame comes
   close to the video's shape: 16:9 → 2 × 3 on 4:3, 9:16 → 3 × 2 on 3:4, 1:1 → 3 × 2 on 3:2). The first frame is
   the one reference when attached, and the prompt asks for it as the first panel.
