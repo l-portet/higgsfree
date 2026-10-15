@@ -258,7 +258,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   (`docs/brand/mark-crawl.json`, frames 30 to 246 of its `crawl` marker at 60 fps, 3.6 s from the start of that
   fade). lottie-web's light SVG build plays it (`MarkCrawl`), loaded in the background only while the intro is
   pending. The static HTML draws the scribble, so the page opens on it, and the player takes over from that same
-  frame; at the end the static path returns as the F, exactly where the static mark draws it, and the player is
-  destroyed. Reduced motion, or a visit after the intro, shows the F without loading the player.
+  frame; at the end the static path returns as the mark (the file's last frame is the logo's path) and the
+  player is destroyed. Reduced motion, or a visit after the intro, shows the F without loading the player.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.
 - Mobile: nav collapses to icons; video panel stacks above the canvas; prompt bar goes full-width.
