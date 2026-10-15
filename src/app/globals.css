@@ -90,8 +90,8 @@
    The page opens on the old lime and, once it is up, sweeps to the resting green (#5dfd8c). The three
    accent variables are registered as colors so they interpolate, and every `bg-accent`, `text-accent`,
    `ring-accent/40`, the focus ring and the selection read them, so the whole UI shifts together. The
-   logo's tile makes the same sweep from the old brand lime, on its own slower clock (`logo-shift`,
-   `--color-logo`, read by Logo.tsx).
+   logo's tile makes the same move from the old brand lime as a compositor opacity fade (`logo-intro`
+   below), on its own slower clock.
    `data-accent-intro` on <html> drives it. It is in the static HTML (layout.tsx), so the first paint is
    lime. Shell sets it to "play" once the app has hydrated and painted a frame: the lime holds 0.4 s
    more, then the sweep runs. A clock started at first style instead would run out before a slow first
@@ -118,25 +118,16 @@
   inherits: true;
   initial-value: #021c09;
 }
-/* The logo's tile: the brand green at rest (docs/brand/BRAND.md), the old brand lime before the sweep. */
-@property --color-logo {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #5dfd8c;
-}
 
 /* Before and during the intro: the old lime (the sweep's first stop). */
 html[data-accent-intro] {
   --color-accent: #defd5d;
   --color-accent-hover: #d2f24c;
   --color-on-accent: #141a05;
-  --color-logo: #d0f81e;
 }
 /* `both`: lime through the delay, the last stop until Shell removes the attribute. */
 html[data-accent-intro="play"] {
-  animation:
-    accent-shift 1.2s linear 0.4s both,
-    logo-shift 2.4s linear 0.4s both;
+  animation: accent-shift 1.2s linear 0.4s both;
 }
 
 @keyframes accent-shift {
@@ -182,50 +173,21 @@ html[data-accent-intro="play"] {
   97.5% { --color-accent: #5dfd8c; --color-accent-hover: #4ef181; --color-on-accent: #021c09; }
   100% { --color-accent: #5dfd8c; --color-accent-hover: #4ef181; --color-on-accent: #021c09; }
 }
-/* The logo's tile on its own, slower clock: a big solid block changing at the accent's pace read as a jump. Twice
-   as long, with a sine ease (a flatter peak than smootherstep), spaced by perceptual distance along its own path. */
-@keyframes logo-shift {
-  0% { --color-logo: #d0f81e; }
-  2.5% { --color-logo: #d0f81e; }
-  5% { --color-logo: #cff820; }
-  7.5% { --color-logo: #cff822; }
-  10% { --color-logo: #cef825; }
-  12.5% { --color-logo: #cdf828; }
-  15% { --color-logo: #cbf82b; }
-  17.5% { --color-logo: #c9f92f; }
-  20% { --color-logo: #c7f933; }
-  22.5% { --color-logo: #c5f937; }
-  25% { --color-logo: #c3f93c; }
-  27.5% { --color-logo: #c0f940; }
-  30% { --color-logo: #bdfa44; }
-  32.5% { --color-logo: #bafa48; }
-  35% { --color-logo: #b7fa4c; }
-  37.5% { --color-logo: #b3fa51; }
-  40% { --color-logo: #b0fb55; }
-  42.5% { --color-logo: #acfb59; }
-  45% { --color-logo: #a8fb5c; }
-  47.5% { --color-logo: #a4fb60; }
-  50% { --color-logo: #a0fb64; }
-  52.5% { --color-logo: #9bfc68; }
-  55% { --color-logo: #97fc6b; }
-  57.5% { --color-logo: #92fc6e; }
-  60% { --color-logo: #8efc72; }
-  62.5% { --color-logo: #8afc75; }
-  65% { --color-logo: #85fc77; }
-  67.5% { --color-logo: #81fc7a; }
-  70% { --color-logo: #7cfd7d; }
-  72.5% { --color-logo: #78fd7f; }
-  75% { --color-logo: #74fd81; }
-  77.5% { --color-logo: #70fd83; }
-  80% { --color-logo: #6dfd85; }
-  82.5% { --color-logo: #69fd87; }
-  85% { --color-logo: #66fd88; }
-  87.5% { --color-logo: #64fd89; }
-  90% { --color-logo: #61fd8a; }
-  92.5% { --color-logo: #5ffd8b; }
-  95% { --color-logo: #5efd8c; }
-  97.5% { --color-logo: #5dfd8c; }
-  100% { --color-logo: #5dfd8c; }
+/* The logo's tile: the green tile sits under a lime one (Logo.tsx, `intro`), and the lime fades out on its own
+   slower clock. An opacity fade runs on the compositor, so the tile stays smooth even while the main thread is
+   busy (a library decoding video posters right after load); it is twice the accent's length, with a sine ease. */
+html[data-accent-intro] .logo-intro {
+  opacity: 1;
+}
+html[data-accent-intro="play"] .logo-intro {
+  animation: logo-intro 2.4s cubic-bezier(0.37, 0, 0.63, 1) 0.4s both;
+}
+html:not([data-accent-intro]) .logo-intro {
+  opacity: 0;
+}
+@keyframes logo-intro {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 /* No transitions until the sweep is over. A color transition re-targeted on every frame trails the
@@ -439,6 +401,9 @@ html[data-accent-intro] ::after {
   }
   /* The accent shift is a color fade with nothing moving: keep it rather than snap after the delay. */
   html[data-accent-intro="play"] {
-    animation-duration: 1.2s, 2.4s !important;
+    animation-duration: 1.2s !important;
+  }
+  html[data-accent-intro="play"] .logo-intro {
+    animation-duration: 2.4s !important;
   }
 }

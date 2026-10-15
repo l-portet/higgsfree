@@ -240,8 +240,9 @@ There is no page chrome: the app is four views under one floating nav, with one 
   in `globals.css`), so every accent element shifts together. `data-accent-intro` in the static HTML holds the lime;
   Shell sets it to `play` after hydration and removes it at the end. That way a slow first paint never skips the
   lime. Transitions are off until it ends, so no element trails behind. Client-side navigation keeps the green.
-  It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same sweep, from the
-  old brand lime (`#d0f81e`) to the brand green, on its own slower clock (`logo-shift`, 2.4 s, sine ease, through
-  `--color-logo`): a large solid tile at the accent's pace read as a jump. The glyph stays ink.
+  It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same move, from the
+  old brand lime (`#d0f81e`) to the brand green, on its own slower clock (2.4 s, sine ease): a lime tile over the
+  green one fades out (`logo-intro`), an opacity animation the compositor runs, so a busy main thread never makes
+  the tile stutter; a large solid tile at the accent's pace read as a jump. The glyph stays ink.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.
 - Mobile: nav collapses to icons; video panel stacks above the canvas; prompt bar goes full-width.

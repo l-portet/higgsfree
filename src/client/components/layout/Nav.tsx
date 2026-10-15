@@ -115,7 +115,7 @@ export function Nav() {
           aria-label="higgsfree home"
           className={cn(BOX, "px-[7px] transition-colors duration-150 hover:border-border-strong focus-visible:border-border-strong")}
         >
-          <Logo variant="mark" size={30} />
+          <Logo variant="mark" size={30} intro />
           <span aria-hidden="true" className="hidden whitespace-nowrap pl-2.5 pr-2 font-display text-[15px] font-bold leading-normal tracking-[-0.01em] text-fg md:block">
             higgsfree
           </span>
