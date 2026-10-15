@@ -14,7 +14,8 @@ import {
   PREVIEW_IMAGE_MODEL,
   PROMPT_EDITOR_MODEL,
   RECREATE_MODEL,
-  previewAspect,
+  STORYBOARD_FRAMES,
+  storyboardLayout,
   type RewriteContext,
 } from "@/lib/prompt-editor";
 import { useSettings } from "@/store/settings";
@@ -173,7 +174,7 @@ function VideoSource({ video, onPick, onClear, disabled }: { video: SourceVideo 
 
 /**
  * The video composer's prompt editor, in two modes. Rewrite: an LLM rewrites the prompt (streamed into the
- * field, with Undo) and a fast image model previews a still of the shot. Recreate video: a video model watches
+ * field, with Undo) and a fast image model previews the shot as one picture with six frames, start to end. Recreate video: a video model watches
  * a clip you drop in and writes the prompt that recreates it, with your instructions. "Use prompt" hands the
  * text back. Every call runs on OpenRouter with the user's key and shows its real cost; nothing is saved.
  */
@@ -223,8 +224,8 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
   const trimmed = draft.trim();
   const recreate = mode === "recreate";
   const busy = writing || previewing;
-  const ratio = previewAspect(aspectRatio);
-  const [rw, rh] = ratio.split(":").map(Number);
+  const layout = storyboardLayout(aspectRatio);
+  const [rw, rh] = layout.canvas.split(":").map(Number);
   const portrait = (rw ?? 16) < (rh ?? 9);
 
   /** One streamed write into the field, whichever model does it; the text before it goes on the Undo stack. */
@@ -289,7 +290,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
     setPreviewing(true);
     setPreviewError(undefined);
     try {
-      const res = await api.previewVideoFrame({ prompt: trimmed, aspectRatio, firstFrame }, { signal: controller.signal });
+      const res = await api.previewVideoFrames({ prompt: trimmed, aspectRatio, firstFrame }, { signal: controller.signal });
       setPreview({ dataUrl: res.dataUrl, costUsd: res.costUsd, prompt: trimmed });
       void useSettings.getState().refreshCredits();
     } catch (err) {
@@ -360,7 +361,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
             AI Prompt Editor
           </DialogTitle>
           <DialogDescription>
-            Rewrite the prompt with {PROMPT_EDITOR_MODEL.name} and preview a frame with {PREVIEW_IMAGE_MODEL.name}, or write one from a video with{" "}
+            Rewrite the prompt with {PROMPT_EDITOR_MODEL.name} and preview the shot with {PREVIEW_IMAGE_MODEL.name}, or write one from a video with{" "}
             {RECREATE_MODEL.name}. All run on your OpenRouter key.
           </DialogDescription>
           <div role="group" aria-label="Mode" className="mt-3 flex w-fit gap-0.5 rounded-control border border-border bg-surface-2 p-1">
@@ -454,7 +455,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
             {recreate ? (
               <p className="mt-2 text-caption">
                 {RECREATE_MODEL.name} watches the clip and writes a detailed prompt for the run you set up (model, length, ratio), with every
-                spoken line word for word. Switch to Rewrite to tweak it or preview a frame.
+                spoken line word for word. Switch to Rewrite to tweak it or preview it.
               </p>
             ) : (
               <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Quick changes">
@@ -476,9 +477,9 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
             </section>
           ) : (
             /* ---------- the preview ---------- */
-            <section className="flex min-w-0 flex-col" aria-label="Preview frame">
+            <section className="flex min-w-0 flex-col" aria-label="Preview">
               <div className="mb-1.5 flex h-7 items-center">
-                <span className="text-label">Preview frame</span>
+                <span className="text-label">Preview · {STORYBOARD_FRAMES} frames</span>
               </div>
               <div className={cn("flex items-center justify-center", portrait && "h-[300px]")}>
                 <div
@@ -489,14 +490,14 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
                   style={{ aspectRatio: `${rw ?? 16} / ${rh ?? 9}` }}
                 >
                   {preview ? (
-                    <img src={preview.dataUrl} alt={`Preview of: ${preview.prompt.slice(0, 120)}`} className={cn("size-full object-cover", previewing && "opacity-40")} />
+                    <img src={preview.dataUrl} alt={`${STORYBOARD_FRAMES} frames of: ${preview.prompt.slice(0, 120)}`} className={cn("size-full object-cover", previewing && "opacity-40")} />
                   ) : !previewing ? (
                     <ImageIcon size={24} strokeWidth={1.5} className="text-fg-faint" aria-hidden="true" />
                   ) : null}
                   {previewing ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-meta">
                       <Spinner size={18} className="text-fg-muted" />
-                      Drawing a frame…
+                      Drawing {STORYBOARD_FRAMES} frames…
                     </div>
                   ) : null}
                 </div>
@@ -509,7 +510,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
                 disabled={!trimmed || writing}
                 className="mt-3"
               >
-                {preview ? (stale ? "Preview the new prompt" : "Another preview") : "Preview frame"}
+                {preview ? (stale ? "Preview the new prompt" : "Another preview") : `Preview ${STORYBOARD_FRAMES} frames`}
               </Button>
               {previewError ? (
                 <p role="alert" className="mt-2 flex items-start gap-1.5 rounded-control border border-danger/25 bg-danger/5 p-2.5 text-meta">
@@ -519,7 +520,7 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
               ) : null}
               <p className="mt-2 text-caption tabular-nums">
                 {preview?.costUsd !== undefined ? `${formatUsd(preview.costUsd)} · ` : ""}
-                {PREVIEW_IMAGE_MODEL.name}, low quality: a quick look at the shot, not the video.
+                {PREVIEW_IMAGE_MODEL.name}, low quality: one picture with {STORYBOARD_FRAMES} frames from start to end, a quick look at the shot, not the video.
                 {firstFrame ? " Uses your first frame as a reference." : ""} Not saved.
                 {stale ? " The prompt changed since this preview." : ""}
               </p>

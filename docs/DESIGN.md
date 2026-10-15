@@ -159,14 +159,15 @@ There is no page chrome: the app is four views under one floating nav, with one 
   in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
 
 - **AI Prompt Editor**: in the video composer, a sparkle square under the `+` (same 33 px `rounded-control` button,
-  6 px below it; tooltip "Prompt Editor: rewrite with AI, preview a frame"); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px) with a
+  6 px below it; tooltip "Prompt Editor: rewrite with AI, preview the shot"); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px) with a
   segmented mode switch under the title, Rewrite · Recreate video. The prompt is on the left in both modes, in an
   editable field seeded from the composer, with Undo and a line naming who wrote it last and the real cost.
   Rewrite: a "change" field with Rewrite (Write when the prompt is empty) and four quick changes as small chips
   (More cinematic, Add camera motion, More detail, Make it shorter); GPT-6 Luna's rewrite streams into the field.
-  On the right, a preview frame at the video's ratio (a portrait one is 300 px tall): GPT Image 2.5 Flare at low
-  quality, with the first frame as a reference when one is attached, its cost, and a note that it is a quick look,
-  not saved. Recreate video: the right column is a dashed drop zone ("Drop a video, or choose one", MP4 / MOV /
+  On the right, "Preview · 6 frames": always one picture with six frames of the shot in a grid, start to end (2 × 3
+  for a landscape video, 3 × 2 for a portrait or square one, so each frame keeps about the video's shape; a portrait
+  picture is 300 px tall). GPT Image 2.5 Flare at low quality, with the first frame as a reference (and first
+  panel) when one is attached, its cost, and a note that it is a quick look, not saved. Recreate video: the right column is a dashed drop zone ("Drop a video, or choose one", MP4 / MOV /
   WebM up to 15 MB), then the clip in a player with Replace and Remove; the field takes optional instructions
   ("same shot with a cat") and Describe video sends the clip to Gemini 4 Argon, whose detailed prompt (people,
   setting, camera, light, sound, and every spoken line quoted word for word with its speaker) streams into the

@@ -163,7 +163,7 @@ Discovered image models (anything in `/api/v1/images/models` without a curated e
 ## Prompt editor (video composer)
 
 Two calls, both with the user's key, neither saved to the library (`src/client/lib/prompt-editor.ts` builds the
-bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
+bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrames` / `api.recreateVideoPrompt` make the calls):
 - Rewrite: `POST /api/v1/chat/completions` with
   `{ model: "openai/gpt-6-luna", messages: [system, user], stream: true, max_tokens: 2500, reasoning: { effort: "low", exclude: true }, usage: { include: true } }`.
   The reply is server-sent events: `data: {json}` lines with `choices[0].delta.content`, `:` keep-alive comments,
@@ -171,8 +171,10 @@ bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
   message; a non-2xx before the stream is the usual `ApiClientError`. A reply that is not `text/event-stream`
   (a buffering proxy) is read whole. `chatText` in `openrouter.ts`; 90 s timeout.
 - Preview: the native images API with `{ model: "openai/gpt-image-2.5-flare", prompt, aspect_ratio, quality: "low",
-  input_references? }` (`quality` is in that model's catalog entry). The video's ratio when Flare lists it, else
-  the closest; the first frame as the one reference when attached.
+  input_references? }` (`quality` is in that model's catalog entry). Always one picture with 6 frames of the shot
+  in a grid, first moment to last (`storyboardLayout` picks the grid and the picture's ratio so each frame comes
+  close to the video's shape: 16:9 → 2 × 3 on 4:3, 9:16 → 3 × 2 on 3:4, 1:1 → 3 × 2 on 3:2). The first frame is
+  the one reference when attached, and the prompt asks for it as the first panel.
 - Recreate video: the same streamed chat call with `model: "google/gemini-4-argon"`, `max_tokens: 4000` (a detailed
   description as long as the video needs, every spoken line quoted word for word) and a user message in parts,
   `[{ type: "text", text }, { type: "video_url", video_url: { url: dataUrl, processing: "static" } }]`. The clip
