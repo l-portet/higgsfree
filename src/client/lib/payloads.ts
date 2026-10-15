@@ -39,10 +39,19 @@ export interface NativeImageBody {
 
 // ---------- text ----------
 
+/** A user message part for a text completion: text, or a video for a model that watches one (docs/OPENROUTER.md). */
+export type ChatTextPart =
+  | { type: "text"; text: string }
+  | {
+      type: "video_url";
+      /** `processing`: Gemini's mode; `static` samples a short clip in one pass (fastest), `agentic` navigates a long one. */
+      video_url: { url: string; processing?: "static" | "agentic" };
+    };
+
 /** `POST /api/v1/chat/completions` for text, streamed (the prompt editor). */
 export interface ChatTextBody {
   model: string;
-  messages: { role: "system" | "user"; content: string }[];
+  messages: { role: "system" | "user"; content: string | ChatTextPart[] }[];
   stream: true;
   max_tokens: number;
   /** Little thinking for a short rewrite, and none of it in the stream. */

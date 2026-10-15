@@ -173,3 +173,10 @@ bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
 - Preview: the native images API with `{ model: "openai/gpt-image-2.5-flare", prompt, aspect_ratio, quality: "low",
   input_references? }` (`quality` is in that model's catalog entry). The video's ratio when Flare lists it, else
   the closest; the first frame as the one reference when attached.
+- Recreate video: the same streamed chat call with `model: "google/gemini-4-argon"` and a user message in parts,
+  `[{ type: "text", text }, { type: "video_url", video_url: { url: dataUrl, processing: "static" } }]`. The clip
+  goes inline as a base64 data URL (OpenRouter only passes http(s) video urls to a few providers, and Gemini on
+  AI Studio takes YouTube links only); the file is sniffed first (`video-meta.ts`: MP4, QuickTime, WebM) and
+  capped at 15 MB (Gemini's inline request limit is 20 MB). The data URL's type is `video/mp4`, `video/webm` or
+  `video/mov`: OpenRouter and Gemini both spell QuickTime that way, not `video/quicktime`. `processing: "static"`
+  is Gemini's one-pass mode for short clips (`agentic` navigates long ones). 4 min timeout.

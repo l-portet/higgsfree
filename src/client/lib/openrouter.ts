@@ -208,9 +208,13 @@ interface ChatTextChunk {
  * chunk mid-stream is a 502 carrying OpenRouter's message; `usage.cost` arrives in the last chunk. A
  * reply that is not a stream (a proxy that buffers) is read whole.
  */
-export async function chatText(key: string, body: ChatTextBody, opts: { signal?: AbortSignal; onText?: (text: string) => void } = {}): Promise<ChatTextResult> {
+export async function chatText(
+  key: string,
+  body: ChatTextBody,
+  opts: { signal?: AbortSignal; onText?: (text: string) => void; timeoutMs?: number } = {},
+): Promise<ChatTextResult> {
   const target = assertProviderOrigin("/api/v1/chat/completions");
-  const signal = anySignal([AbortSignal.timeout(90_000), opts.signal]);
+  const signal = anySignal([AbortSignal.timeout(opts.timeoutMs ?? 90_000), opts.signal]);
   let res: Response;
   try {
     res = await fetch(target, { method: "POST", headers: headers(key), body: JSON.stringify(body), signal });
