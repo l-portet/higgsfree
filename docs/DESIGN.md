@@ -168,7 +168,8 @@ There is no page chrome: the app is four views under one floating nav, with one 
   quality, with the first frame as a reference when one is attached, its cost, and a note that it is a quick look,
   not saved. Recreate video: the right column is a dashed drop zone ("Drop a video, or choose one", MP4 / MOV /
   WebM up to 15 MB), then the clip in a player with Replace and Remove; the field takes optional instructions
-  ("same shot with a cat") and Describe video sends the clip to Gemini 4 Argon, whose prompt streams into the
+  ("same shot with a cat") and Describe video sends the clip to Gemini 4 Argon, whose detailed prompt (people,
+  setting, camera, light, sound, and every spoken line quoted word for word with its speaker) streams into the
   field. The draft is shared, so Recreate then Rewrite tweaks and previews it. Footer: Cancel and Use prompt (the
   only accent button), which puts the text in the composer. Every call runs on the OpenRouter key; without one,
   the key dialog opens and the action runs once the key is saved. Errors show verbatim under each half.

@@ -453,8 +453,8 @@ export function PromptEditorDialog({ open, onOpenChange, prompt, context, aspect
             </form>
             {recreate ? (
               <p className="mt-2 text-caption">
-                {RECREATE_MODEL.name} watches the clip and writes a prompt for the run you set up (model, length, ratio). Switch to Rewrite to
-                tweak it or preview a frame.
+                {RECREATE_MODEL.name} watches the clip and writes a detailed prompt for the run you set up (model, length, ratio), with every
+                spoken line word for word. Switch to Rewrite to tweak it or preview a frame.
               </p>
             ) : (
               <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Quick changes">

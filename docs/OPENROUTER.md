@@ -165,7 +165,7 @@ Discovered image models (anything in `/api/v1/images/models` without a curated e
 Two calls, both with the user's key, neither saved to the library (`src/client/lib/prompt-editor.ts` builds the
 bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
 - Rewrite: `POST /api/v1/chat/completions` with
-  `{ model: "openai/gpt-6-luna", messages: [system, user], stream: true, max_tokens: 1500, reasoning: { effort: "low", exclude: true }, usage: { include: true } }`.
+  `{ model: "openai/gpt-6-luna", messages: [system, user], stream: true, max_tokens: 2500, reasoning: { effort: "low", exclude: true }, usage: { include: true } }`.
   The reply is server-sent events: `data: {json}` lines with `choices[0].delta.content`, `:` keep-alive comments,
   `usage.cost` in the last chunk, then `data: [DONE]`. An `error` chunk mid-stream is a 502 with OpenRouter's
   message; a non-2xx before the stream is the usual `ApiClientError`. A reply that is not `text/event-stream`
@@ -173,7 +173,8 @@ bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
 - Preview: the native images API with `{ model: "openai/gpt-image-2.5-flare", prompt, aspect_ratio, quality: "low",
   input_references? }` (`quality` is in that model's catalog entry). The video's ratio when Flare lists it, else
   the closest; the first frame as the one reference when attached.
-- Recreate video: the same streamed chat call with `model: "google/gemini-4-argon"` and a user message in parts,
+- Recreate video: the same streamed chat call with `model: "google/gemini-4-argon"`, `max_tokens: 4000` (a detailed
+  description of up to ~300 words, every spoken line quoted word for word) and a user message in parts,
   `[{ type: "text", text }, { type: "video_url", video_url: { url: dataUrl, processing: "static" } }]`. The clip
   goes inline as a base64 data URL (OpenRouter only passes http(s) video urls to a few providers, and Gemini on
   AI Studio takes YouTube links only); the file is sniffed first (`video-meta.ts`: MP4, QuickTime, WebM) and
