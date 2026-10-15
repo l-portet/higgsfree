@@ -5,20 +5,24 @@ truth; `src/client/components/Logo.tsx` and the icons in `public/` are derived f
 
 ## The mark
 
-A **looped script F**, black on a green tile. The top stroke is a soft wave, the stem drops into
-a closed loop at the bottom left, and a straight crossbar cuts to the right. It is the F of
-"free", drawn by hand rather than set in a font.
+A **looped script F**, black on a green tile. The top stroke is a soft wave ending in a rounded
+tip, the stem drops into a closed loop at the bottom left, and a straight crossbar cuts to the
+right. It is the F of "free", drawn by hand rather than set in a font.
 
-`logo-source.png` is the original artwork (1254 x 1254, on the old lime tile). Every other file was traced from it once
-into a single vector path, which matches the original to 99.7 % of its pixels. Use the vectors;
-never trace or redraw the glyph again.
+`logo-source.png` is the original artwork (1254 x 1254, on the old lime tile). The F was traced
+from it, then redrawn as the last frame of the load animation (`mark-crawl.json`), which rounded
+the tip of the wave; that frame is the mark. Every file here draws the same single path
+(`MARK_PATH` in `src/client/lib/mark.ts`, kept in sync by a test). Use the vectors; never trace
+or redraw the glyph again.
 
 ### Geometry
 
-- 64 unit tile. In the supplied composition the glyph spans x 12.6..51.8 and y 12.4..50.9, so it
-  fills 61 % of the tile width, sitting a hair above and right of centre as drawn. Keep that
-  placement; scaled variants scale about the tile centre (32, 32).
-- One path, `fill-rule="evenodd"` (the loop is a hole). No strokes, gradients, shadows or glow.
+- 64 unit tile. The glyph spans x 12.6..53.3 and y 12.4..50.9, so it fills 64 % of the tile
+  width, sitting a hair above and right of centre as drawn. Keep that placement; scaled variants
+  scale about the tile centre (32, 32).
+- One path: a single outline that winds around the loop, filled with the default nonzero rule
+  (it leaves the loop open). Never `evenodd`, which punches holes where the outline overlaps
+  itself. No strokes, gradients, shadows or glow.
 - Tile corners: square in `mark-square.svg` (as supplied, and for iOS, which masks itself);
   `rx` 15/64 everywhere the app draws the tile itself (`mark.svg`, favicon, PWA icons, the nav).
 
@@ -78,7 +82,7 @@ all-caps display headings (`text-display`), where it is set in caps with the res
 | `favicon-16.png`, `favicon-32.png` | `favicon.svg` | |
 | `apple-touch-icon.png` (180) | `mark-square.svg` | iOS applies its own corner mask |
 | `icon-192.png`, `icon-512.png` | `mark.svg` | Rounded tile, transparent corners |
-| `icon-maskable-512.png` | `icon-maskable.svg` | Full bleed, glyph scaled 0.8x so its farthest point sits at 35 % of the side from the centre, inside the 40 % safe circle |
+| `icon-maskable-512.png` | `icon-maskable.svg` | Full bleed, glyph scaled 0.8x so its farthest point (the wave's tip) sits at 34.5 % of the side from the centre, inside the 40 % safe circle |
 | `og-image.png` | `og-image.svg` | Lockup on `#0a0a0a` with the one-line descriptor |
 
 Regenerate by rasterising the vectors, never by resampling a PNG:
@@ -99,7 +103,7 @@ rsvg-convert -w 1200 -h 630 docs/brand/og-image.svg      -o public/og-image.png
   load sweep above is the only exception.
 - Add a gradient, glow, shadow, outline, bevel or rotation. Do not animate it in the product
   beyond that colour sweep and the load crawl (`mark-crawl.json`: a scribble crawls into the F as the tile
-  turns green; it always comes to rest on the F, placed exactly where the static mark draws it).
+  turns green; its last frame is the mark itself).
 - Stretch it, re-trace it, thin or thicken the stroke, or close or open the loop.
 - Set the wordmark in another face, weight or case, or split its colours.
 - Use the F as a letter in running text or as a generic icon (button, badge, status).

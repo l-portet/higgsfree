@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
-import { CRAWL_TILE_VIEWBOX, CRAWL_TO_TILE, crawlSegment, END_D, hexToLottie, LOTTIE_INK, recolor, START_D } from "@/lib/mark-crawl";
+import { MARK_PATH } from "@/lib/mark";
+import { CRAWL_TILE_VIEWBOX, CRAWL_TO_TILE, crawlSegment, hexToLottie, LOTTIE_INK, recolor, START_D } from "@/lib/mark-crawl";
 
 const PLAYER_CLASS = "block size-full";
 
@@ -10,7 +11,7 @@ const PLAYER_CLASS = "block size-full";
  * The nav logo with its load animation: the tile fades from the old lime to the green (`logo-intro`, globals.css)
  * while a scribble crawls into the F (docs/brand/mark-crawl.json). The static HTML draws the scribble; while the
  * intro is pending, lottie-web and the file load in the background and take over that path from the same frame,
- * then play once the fade starts. At the end the static path comes back as the F and the player is destroyed.
+ * then play once the fade starts. At the end the static path comes back as the mark and the player is destroyed.
  * Already past the intro, or with reduced motion, it draws the F and never loads the player.
  */
 export function MarkCrawl({ size, tile, lime, ink, className }: { size: number; tile: string; lime: string; ink: string; className?: string }) {
@@ -23,7 +24,9 @@ export function MarkCrawl({ size, tile, lime, ink, className }: { size: number; 
     const box = boxRef.current;
     if (!path || !box) return;
     const rest = () => {
-      path.setAttribute("d", END_D);
+      // The crawl's last frame is the mark itself, already in tile units.
+      path.removeAttribute("transform");
+      path.setAttribute("d", MARK_PATH);
       path.style.visibility = "";
     };
     if (!root.hasAttribute("data-accent-intro") || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
