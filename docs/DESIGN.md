@@ -97,11 +97,9 @@ There is no page chrome: the app is four views under one floating nav, with one 
 - **Top bar**: three boxes floating 12 px from the top, centred, 8 px apart, over the content (`fixed`, `z-40`).
   Each box is 46 px tall: `surface`, 1 px `border`, `rounded-chrome` (15), `shadow-float` (a hairline of top light
   inside, a soft drop outside).
-  - **Logo box**: 46 × 46, the brand tile at 30 px; links to the Video view (the default). On hover or
-    focus it stretches to reveal the "higgsfree" wordmark. On load it does that once by itself: opens 0.2 s in
-    (300 ms, the hover's easing), stays open 2 s while the accent sweeps, then closes. Only where the whole word
-    fits beside the other boxes (from 430 px wide with the tab labels collapsed, from 700 px with them shown);
-    narrower screens keep the compact box. Reduced motion skips it.
+  - **Logo box**: the brand tile at 30 px with the "higgsfree" wordmark beside it (Inter Tight 15 px bold), always,
+    from `md` (768 px); below it the box is the 46 × 46 tile alone (no room beside the tab labels, and phones need
+    the space). Links to the Video view (the default).
   - **Views**: Video · Image · Assets · Favorites as 36 px tabs (`rounded-control`, `px-3`, `gap-2`, 2 px apart) in a
     4 px padded box. Labels 13 px medium, `-0.01em`. Icons sit in a 16 px box with 1.5 px strokes, sized to match the
     mock (14 px frames, a 12 px heart); the video frame, the tray and the key are drawn in `components/icons/nav.tsx`.
