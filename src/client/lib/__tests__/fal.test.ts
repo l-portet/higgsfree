@@ -98,6 +98,26 @@ describe("buildFalVideoPayload", () => {
     expect(() => buildFalVideoPayload(video("fal/vidu-q4"), { prompt: "p", duration: 5 }, {})).toThrow("needs a first frame");
   });
 
+  it("FLUX.3 Video Draft: one endpoint per job, both frames to the first-last-frame one", () => {
+    const draft = video("fal/flux-3-video-draft");
+    expect(buildFalVideoPayload(draft, { prompt: "p", duration: 12, aspectRatio: "21:9", resolution: "720p", audio: true }, {})).toEqual({
+      endpoint: "blackforestlabs/flux-3/text-to-video/draft",
+      input: { prompt: "p", duration: 12, aspect_ratio: "21:9", generate_audio: true },
+      params: { duration: 12, aspectRatio: "21:9", audio: true },
+    });
+    expect(buildFalVideoPayload(draft, { prompt: "p", duration: 5, aspectRatio: "9:16" }, { firstFrame: "data:f" })).toEqual({
+      endpoint: "blackforestlabs/flux-3/image-to-video/draft",
+      input: { prompt: "p", duration: 5, image_url: "data:f" },
+      params: { duration: 5 },
+    });
+    expect(buildFalVideoPayload(draft, { prompt: "p", duration: 30, audio: false }, { firstFrame: "data:f", lastFrame: "data:l" })).toEqual({
+      endpoint: "blackforestlabs/flux-3/first-last-frame-to-video/draft",
+      input: { prompt: "p", duration: 20, start_image_url: "data:f", end_image_url: "data:l", generate_audio: false },
+      params: { duration: 20, audio: false },
+    });
+    expect(() => buildFalVideoPayload(draft, { prompt: "p", duration: 5 }, { lastFrame: "data:l" })).toThrow("needs a first frame with the last frame");
+  });
+
   it("motion control: character image, reference video, orientation; the prompt is optional", () => {
     const motion = video("fal/kling-v3-pro-motion-control");
     expect(buildFalVideoPayload(motion, { prompt: " ", duration: 5 }, { firstFrame: "data:c", motionVideo: "https://cdn/ref.mp4" })).toEqual({

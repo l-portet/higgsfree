@@ -133,14 +133,16 @@ is stored in the record's `params`.
 
 - The endpoint is `imageToVideo` when a first or last frame is attached, otherwise `textToVideo`. A model
   without the one it needs is a 400 ("… on fal does not take a first frame", "… on fal needs a first
-  frame").
+  frame"). A route with `firstLastFrameToVideo` (FLUX.3 Video Draft) sends a job with a last frame there
+  instead; it needs the first frame too ("… on fal needs a first frame with the last frame").
 - `prompt` (trimmed, sent even when empty), then the route's `extra` fields (MiniMax H3 Max:
   `prompt_expansion_mode: "balanced"`).
 - `duration` is snapped to the catalog's values (`snapDuration`), then written as the route says:
   `"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`. No `duration` on the route: not sent.
 - Frames are data URLs. The first frame goes in `imageField` (`image_url` by default, `start_image_url`
   for Kling 3.0 Pro and Standard), the last frame in `end_image_url`, only with `endImage: true`
-  (otherwise a 400).
+  (otherwise a 400). On the `firstLastFrameToVideo` endpoint they are `start_image_url` and
+  `end_image_url`.
 - `aspect_ratio`: `aspect: "always"` sends it with or without a frame, `aspect: "text"` only for
   text-to-video, no `aspect` never. `omitAspectRatioOnI2v` still drops it when a frame is attached.
 - `resolution`: the requested one if the model lists it, else the model's default, mapped through

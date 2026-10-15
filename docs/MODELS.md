@@ -108,7 +108,7 @@ text-to-video again in Oct 2026, so it is offered; a rejection shows the provide
 
 Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced above Wan 3.0.
 
-Not on OpenRouter: Gemini Omni Flash and Kling 3.0 Motion Control run on fal (see
+Not on OpenRouter: Gemini Omni Flash, Kling 3.0 Motion Control and FLUX.3 Video Draft run on fal (see
 [fal models](#fal-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
@@ -144,6 +144,7 @@ brackets are the values fal receives when they differ from the app's.
 | Model | Id | fal endpoints | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
 | **Gemini Omni Flash 1.1** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1` | `google/gemini-omni-flash/v1.1/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | 3–10 (default 8) | 16:9, 9:16 |
+| **FLUX.3 Video Draft** <sub>NEW</sub> <sub>FAST</sub> | `fal/flux-3-video-draft` | `blackforestlabs/flux-3/text-to-video/draft` · `…/image-to-video/draft` · `…/first-last-frame-to-video/draft` ² | ✓ | ✓ | ✓ | ✓ | 720p (not sent) | 5–20 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † |
 | **Kling O3 Pro** <sub>NEW</sub> | `fal/kling-o3-pro` | `fal-ai/kling-video/o3/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **Kling 3.0 Turbo** <sub>FAST</sub> | `fal/kling-v3-turbo-pro` | `fal-ai/kling-video/v3/turbo/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | – | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **PixVerse 6** <sub>NEW</sub> | `fal/pixverse-v6` | `fal-ai/pixverse/v6/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | ✓ ¹ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
@@ -152,8 +153,11 @@ brackets are the values fal receives when they differ from the app's.
 | **Luma Ray 3.2** | `fal/luma-ray-3.2` | `luma/agent/ray/v3.2/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p (default 720p) | 5, 10 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 |
 
 ¹ Sent as `generate_audio_switch`; the others use `generate_audio`.
+² FLUX.3 Video's fast, cheaper preview (fal lists $0.06/s, against $0.17/s for FLUX.3 Video at 720p).
+A first frame alone goes to `image-to-video/draft`; a first and a last frame go to
+`first-last-frame-to-video/draft` (`firstLastFrameToVideo`); a last frame alone is refused.
 
-Durations go out as numbers (Gemini Omni Flash, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
+Durations go out as numbers (Gemini Omni Flash, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
 seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`).
 
 **Motion control** (`caps.motionControl`): a character image plus a reference video, and an optional
