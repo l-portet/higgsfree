@@ -261,10 +261,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
   frame; at the end the static path returns as the mark (the file's last frame is the logo's path) and the
   player is destroyed. Reduced motion, or a visit after the intro, shows the F without loading the player.
   The file's ribbon runs one loop around the box: the scribble's head leaves on the right, runs round the
-  outside and comes back in from the left to draw the F, while its tail eats the scribble. A click on the home
+  outside and comes back in from the left to draw the F, while its tail eats the scribble. Hovering the home
   link replays that loop with the F in place of the scribble (`replayData` in `lib/mark-crawl.ts`): the F is
   eaten from its start while the ribbon slides out through the crossbar, then comes back in from the left and
   draws the F as on load (from frame 130 on, pixel for pixel the load animation). Same 3.6 s, no colour change;
-  ignored while it or the intro plays, and under reduced motion.
+  once per hover (a mouse or pen, not a tap), ignored while it or the intro plays, and under reduced motion.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.
 - Mobile: nav collapses to icons; video panel stacks above the canvas; prompt bar goes full-width.

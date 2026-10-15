@@ -29,9 +29,9 @@ const loadPlayer = (): Promise<[Lottie, Crawl]> =>
  * then play once the fade starts. At the end the static path comes back as the mark and the player is destroyed.
  * Already past the intro, or with reduced motion, it draws the F and never loads the player.
  *
- * A click on the link around it (the nav's home link) replays the crawl with the F instead of the scribble: the
- * ribbon slides out to the right and comes back in from the left (`replayData`). Not while something plays, nor
- * with reduced motion.
+ * Hovering the link around it (the nav's home link) replays the crawl with the F instead of the scribble: the
+ * ribbon slides out to the right and comes back in from the left (`replayData`). Once per hover, not while
+ * something plays, not for touch (a tap is a navigation), nor with reduced motion.
  */
 export function MarkCrawl({ size, tile, lime, ink, className }: { size: number; tile: string; lime: string; ink: string; className?: string }) {
   const pathRef = useRef<SVGPathElement>(null);
@@ -44,7 +44,7 @@ export function MarkCrawl({ size, tile, lime, ink, className }: { size: number; 
     if (!path || !box) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     let disposed = false;
-    /** The intro or a replay is on screen or loading; a click waits for the static mark. */
+    /** The intro or a replay is on screen or loading; a hover waits for the static mark. */
     let busy = false;
     let anim: AnimationItem | null = null;
 
@@ -121,8 +121,8 @@ export function MarkCrawl({ size, tile, lime, ink, className }: { size: number; 
     }
 
     // ---------- The replay ----------
-    const replay = () => {
-      if (busy || disposed || reduced.matches) return;
+    const replay = (e: PointerEvent) => {
+      if (e.pointerType === "touch" || busy || disposed || reduced.matches) return;
       busy = true;
       void loadPlayer().then(
         ([lottie, raw]) => {
@@ -140,11 +140,11 @@ export function MarkCrawl({ size, tile, lime, ink, className }: { size: number; 
       );
     };
     const trigger = box.closest("a") ?? box.parentElement;
-    trigger?.addEventListener("click", replay);
+    trigger?.addEventListener("pointerenter", replay);
 
     return () => {
       disposed = true;
-      trigger?.removeEventListener("click", replay);
+      trigger?.removeEventListener("pointerenter", replay);
       document.removeEventListener("animationstart", onAnimationStart);
       observer.disconnect();
       anim?.destroy();
