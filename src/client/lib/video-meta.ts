@@ -4,6 +4,26 @@ export interface VideoFormat {
   mime: string;
 }
 
+/** A clip's length in seconds, as the browser reads it from the file's header. `undefined` when it cannot. */
+export function readVideoDuration(file: Blob, timeoutMs = 5000): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    const done = (seconds?: number) => {
+      clearTimeout(timer);
+      video.removeAttribute("src");
+      URL.revokeObjectURL(url);
+      resolve(seconds !== undefined && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined);
+    };
+    const timer = setTimeout(() => done(), timeoutMs);
+    video.preload = "metadata";
+    video.muted = true;
+    video.onloadedmetadata = () => done(video.duration);
+    video.onerror = () => done();
+    video.src = url;
+  });
+}
+
 export function detectVideo(bytes: Uint8Array): VideoFormat | undefined {
   if (bytes.length >= 12 && String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp") {
     const brand = String.fromCharCode(...bytes.subarray(8, 12));

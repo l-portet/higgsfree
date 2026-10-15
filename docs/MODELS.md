@@ -28,7 +28,8 @@ Curated today: 19 image models (8 of them fal-only) and 39 video models, of whic
   are best-effort; the UI says so, and if the provider rejects a value its 400 body is shown
   verbatim (it usually lists the supported values).
 - Costs are **estimates** (`estCostUsd` / `estCostPerSecUsd`). The real number is `usage.cost`
-  from OpenRouter, recorded on every generation.
+  from OpenRouter, recorded on every generation. Runs on fal are estimated from fal's own prices
+  instead ([fal models](#fal-models)).
 
 ## Image models
 
@@ -132,8 +133,12 @@ any duration is hidden the same way.
 With a fal key these run on fal ([FAL.md](FAL.md) has the request rules). **fal-only** models
 (`falOnly: true`) are not on OpenRouter: their ids (`fal/<name>`) are the app's own, not fal endpoint
 ids, and their options are curated, since the app reads no catalog from fal. None of them is
-verified yet, and none has a cost estimate: fal shows prices only to a signed-in key, and it reports
-no cost with a result.
+verified yet.
+
+Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint (`FAL_PRICES` in
+`src/shared/fal-prices.ts`, read from each endpoint's page on 15 Oct 2026), not the catalog's
+OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about twice
+OpenRouter's rate on fal). fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 

@@ -219,12 +219,31 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 - The app reads no catalog from fal. fal-only models use their curated options; a model both offer takes
   OpenRouter's live options, mapped through its fal route.
 
+## Cost estimates
+
+The composer estimates a run on fal from fal's list prices, not the catalog's (those are OpenRouter's).
+
+- `FAL_PRICES` (`src/shared/fal-prices.ts`) has a price for every endpoint a route names, read from the
+  endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026; a test checks it covers every
+  endpoint, size and resolution the catalog offers. fal's pricing API needs a key and gives one unit
+  price per endpoint, without the tiers below, so the app does not read it.
+- A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on
+  Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4), per image (by size, or by the
+  output size the ratio asks for, as on GPT Image), or per started megapixel of 1024 x 1024 (FLUX.1
+  [dev] and [schnell], Z-Image, Qwen).
+- `estimateFalImageCost` / `estimateFalVideoCost` (`src/client/lib/fal-pricing.ts`) build the payload
+  the run would send and price it: the endpoint the frames pick (Luma and FLUX.3 Video Draft differ by
+  endpoint), the resolution and duration sent, audio on unless turned off. A request the builder refuses
+  has no estimate.
+- Motion control is priced by the reference video's length, read by the browser when the video is
+  added. A video brought back from a draft has no known length, so no estimate.
+- Quality and size defaults are fal's (GPT Image at high, Ideogram at medium); GPT Image edits also pay
+  for their input images, which the estimate leaves out.
+
 ## Known gaps
 
-- **No cost estimates for fal-only models.** fal publishes prices only to a signed-in key (the pricing
-  API the key test calls), so their `estCostUsd` / `estCostPerSecUsd` are empty and the composer shows
-  no estimate. fal returns no cost with a result either, so runs on fal record none. A model both
-  providers offer shows no estimate when fal will run it (the catalog's prices are OpenRouter's).
+- **Runs on fal record no cost.** fal returns none with a result; only the estimate before the run
+  says what it should cost.
 - **Style references are not sent to fal.** A video with style references is refused on fal; prefer
   OpenRouter in Settings for it.
 - **No multipart uploads.** Reference videos above 90 MB are refused.

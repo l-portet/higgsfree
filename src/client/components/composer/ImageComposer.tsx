@@ -7,6 +7,7 @@ import { DEFAULT_IMAGE_MODEL, estimateImageCost } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { estimateFalImageCost } from "@/lib/fal-pricing";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles } from "@/lib/files";
 import { formatUsd, pluralize, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
@@ -171,9 +172,13 @@ export function ImageComposer() {
           ? "Enter a prompt"
           : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
 
-  // The catalog's estimates are OpenRouter's prices; fal publishes none without a signed-in key.
+  // OpenRouter's prices from the catalog, or fal's list prices for the request fal would get.
   const runsOnFal = keyGate.runsOnFal;
-  const estimate = model && !runsOnFal ? estimateImageCost(model, size, count) : undefined;
+  const estimate = !model
+    ? undefined
+    : runsOnFal
+      ? estimateFalImageCost(model, { aspectRatio, size }, count, refCount > 0)
+      : estimateImageCost(model, size, count);
 
   const submit = async () => {
     if (!model || disabledReason || submitting) return;
