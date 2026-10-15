@@ -2,7 +2,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { chatText } from "@/lib/openrouter";
-import { buildPreviewBody, buildRewriteBody, cleanRewrite, DEFAULT_INSTRUCTION, PREVIEW_IMAGE_MODEL, PROMPT_EDITOR_MODEL, previewAspect, REWRITE_SYSTEM_PROMPT } from "@/lib/prompt-editor";
+import {
+  buildPreviewBody,
+  buildRecreateBody,
+  buildRewriteBody,
+  cleanRewrite,
+  DEFAULT_INSTRUCTION,
+  DEFAULT_RECREATE_INSTRUCTION,
+  MAX_RECREATE_VIDEO_BYTES,
+  PREVIEW_IMAGE_MODEL,
+  PROMPT_EDITOR_MODEL,
+  previewAspect,
+  RECREATE_MODEL,
+  RECREATE_SYSTEM_PROMPT,
+  REWRITE_SYSTEM_PROMPT,
+} from "@/lib/prompt-editor";
 import { setStoredKey } from "@/lib/settings";
 import { PNG_2X2, PNG_BASE64 } from "../../__tests__/mock-openrouter";
 
@@ -66,6 +80,20 @@ describe("request bodies", () => {
     expect(previewAspect(undefined)).toBe("16:9");
   });
 
+  it("asks the latest Gemini to watch the clip inline, in static mode, with the run's context and the instruction", () => {
+    expect(RECREATE_MODEL.id).toBe("google/gemini-4-argon");
+    const b = buildRecreateBody("data:video/mp4;base64,AAAA", " same shot with a cat ", { modelName: "Seedance 2.5", duration: 5, aspectRatio: "16:9" });
+    expect(b).toMatchObject({ model: "google/gemini-4-argon", stream: true, reasoning: { effort: "low", exclude: true }, usage: { include: true } });
+    expect(b.messages[0]).toEqual({ role: "system", content: RECREATE_SYSTEM_PROMPT });
+    const parts = b.messages[1]?.content;
+    expect(Array.isArray(parts)).toBe(true);
+    if (!Array.isArray(parts)) throw new Error("parts");
+    expect(parts[0]).toEqual({ type: "text", text: "The prompt is for: Seedance 2.5 · 5 s · 16:9\n\nInstruction: same shot with a cat" });
+    expect(parts[1]).toEqual({ type: "video_url", video_url: { url: "data:video/mp4;base64,AAAA", processing: "static" } });
+    const bare = buildRecreateBody("data:video/webm;base64,AAAA", "   ").messages[1]?.content;
+    expect(Array.isArray(bare) && bare[0]?.type === "text" ? bare[0].text : "").toBe(`Instruction: ${DEFAULT_RECREATE_INSTRUCTION}`);
+  });
+
   it("takes fences, labels and wrapping quotes off the reply", () => {
     expect(cleanRewrite('  "A slow dolly shot."  ')).toBe("A slow dolly shot.");
     expect(cleanRewrite("```\nA slow dolly shot.\n```")).toBe("A slow dolly shot.");
@@ -115,6 +143,30 @@ describe("api", () => {
     await expect(api.rewriteVideoPrompt({ prompt: "x", instruction: "" })).rejects.toMatchObject({ status: 502 });
     setStoredKey("");
     await expect(api.rewriteVideoPrompt({ prompt: "x", instruction: "" })).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("recreates a prompt from a sniffed video sent inline (QuickTime as video/mov), refusing other files and oversize ones", async () => {
+    const ftyp = (brand: string) => Uint8Array.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, ...Array.from(brand, (c) => c.charCodeAt(0)), 0, 0, 0, 0, 0, 0, 0, 0]);
+    const mp4 = new Blob([ftyp("isom")], { type: "video/mp4" });
+    const mov = new Blob([ftyp("qt  ")], { type: "video/quicktime" });
+    const calls = stubFetch(() => sse([chunk("A slow push-in on"), chunk(" a cat."), "data: [DONE]\n\n"]));
+    const seen: string[] = [];
+    const res = await api.recreateVideoPrompt({ file: mp4, instruction: "", context: { duration: 5 } }, { onText: (t) => seen.push(t) });
+    expect(res).toEqual({ prompt: "A slow push-in on a cat." });
+    expect(seen.at(-1)).toBe("A slow push-in on a cat.");
+    const parts = (calls[0]?.body.messages as { content: unknown }[])[1]?.content as { type: string; video_url?: { url: string; processing?: string } }[];
+    expect(parts[1]?.video_url?.url.startsWith("data:video/mp4;base64,")).toBe(true);
+    expect(parts[1]?.video_url?.processing).toBe("static");
+    await api.recreateVideoPrompt({ file: mov, instruction: "" });
+    const movParts = (calls[1]?.body.messages as { content: unknown }[])[1]?.content as { video_url?: { url: string } }[];
+    expect(movParts[1]?.video_url?.url.startsWith("data:video/mov;base64,")).toBe(true);
+    await expect(api.recreateVideoPrompt({ file: new Blob([PNG_2X2], { type: "image/png" }), instruction: "" })).rejects.toMatchObject({ status: 400 });
+    await expect(api.recreateVideoPrompt({ file: new Blob([]), instruction: "" })).rejects.toMatchObject({ status: 400 });
+    const big = new Blob([new Uint8Array(MAX_RECREATE_VIDEO_BYTES + 1)], { type: "video/mp4" });
+    await expect(api.recreateVideoPrompt({ file: big, instruction: "" })).rejects.toMatchObject({ status: 413 });
+    expect(calls).toHaveLength(2);
+    setStoredKey("");
+    await expect(api.recreateVideoPrompt({ file: mp4, instruction: "" })).rejects.toMatchObject({ status: 401 });
   });
 
   it("previews a frame through the native images API, with the attached first frame, and returns a data URL", async () => {

@@ -159,14 +159,19 @@ There is no page chrome: the app is four views under one floating nav, with one 
   in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
 
 - **AI Prompt Editor**: in the video composer, a sparkle square under the `+` (same 33 px `rounded-control` button,
-  6 px below it; tooltip "Prompt Editor: rewrite with AI, preview a frame"); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px): the prompt on the left in an
-  editable field seeded from the composer, a "change" field with Rewrite (Write when the prompt is empty) and four
-  quick changes as small chips (More cinematic, Add camera motion, More detail, Make it shorter); GPT-6 Luna's
-  rewrite streams into the field, with Undo and a line naming the model and the real cost. On the right, a preview
-  frame at the video's ratio (a portrait one is 300 px tall): GPT Image 2.5 Flare at low quality, with the first
-  frame as a reference when one is attached, its cost, and a note that it is a quick look, not saved. Footer: Cancel
-  and Use prompt (the only accent button), which puts the text in the composer. Both calls run on the OpenRouter key;
-  without one, the key dialog opens and the action runs once the key is saved. Errors show verbatim under each half.
+  6 px below it; tooltip "Prompt Editor: rewrite with AI, preview a frame"); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px) with a
+  segmented mode switch under the title, Rewrite · Recreate video. The prompt is on the left in both modes, in an
+  editable field seeded from the composer, with Undo and a line naming who wrote it last and the real cost.
+  Rewrite: a "change" field with Rewrite (Write when the prompt is empty) and four quick changes as small chips
+  (More cinematic, Add camera motion, More detail, Make it shorter); GPT-6 Luna's rewrite streams into the field.
+  On the right, a preview frame at the video's ratio (a portrait one is 300 px tall): GPT Image 2.5 Flare at low
+  quality, with the first frame as a reference when one is attached, its cost, and a note that it is a quick look,
+  not saved. Recreate video: the right column is a dashed drop zone ("Drop a video, or choose one", MP4 / MOV /
+  WebM up to 15 MB), then the clip in a player with Replace and Remove; the field takes optional instructions
+  ("same shot with a cat") and Describe video sends the clip to Gemini 4 Argon, whose prompt streams into the
+  field. The draft is shared, so Recreate then Rewrite tweaks and previews it. Footer: Cancel and Use prompt (the
+  only accent button), which puts the text in the composer. Every call runs on the OpenRouter key; without one,
+  the key dialog opens and the action runs once the key is saved. Errors show verbatim under each half.
 ## Assets view (`/assets`)
 - Empty: "Nothing generated yet" with one line, no toolbar.
 - Otherwise a count line ("9 generations · 410 KB") with Select at the right, a toolbar of type chips (All · Images ·

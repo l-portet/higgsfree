@@ -30,7 +30,7 @@ import { cachedCredits, fetchCredits, invalidateCredits } from "./credits";
 import { countInFolder, getFolder as readFolder, listFolders as readFolders, putFolder, removeFolder } from "./db/folders";
 import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic, type GenerationPatch } from "./db/generations";
 import { listUploads, putMedia } from "./db/media";
-import { base64ToBytes, toDataUrl } from "./data-url";
+import { base64ToBytes, blobToDataUrl, toDataUrl } from "./data-url";
 import { cancelJob, retryGeneration as engineRetry, submitImageBatch, submitVideo } from "./engine";
 import { inputDataUrl } from "./engine/inputs";
 import { ApiClientError, badRequest, isKeyRejected, notFound } from "./errors";
@@ -41,7 +41,7 @@ import * as fal from "./fal";
 import { MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-ids";
 import { revokeAllMediaUrls } from "./media-urls";
 import { chatText, listLiveModels, nativeImage } from "./openrouter";
-import { buildPreviewBody, buildRewriteBody, cleanRewrite, previewAspect, type RewriteContext } from "./prompt-editor";
+import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, MAX_RECREATE_VIDEO_BYTES, previewAspect, type RewriteContext } from "./prompt-editor";
 import { getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setStoredFalKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
 import { detectVideo } from "./video-meta";
@@ -231,6 +231,43 @@ export async function rewriteVideoPrompt(req: RewriteRequest, opts: { signal?: A
   const res = await chatText(key, buildRewriteBody(req.prompt, req.instruction, req.context), {
     signal: opts.signal,
     onText: opts.onText ? (t) => opts.onText?.(cleanRewrite(t)) : undefined,
+  });
+  invalidateCredits();
+  const prompt = cleanRewrite(res.text);
+  if (!prompt) throw new ApiClientError(502, "The model returned an empty prompt. Try again.");
+  return res.costUsd !== undefined ? { prompt, costUsd: res.costUsd } : { prompt };
+}
+
+export interface RecreateRequest {
+  /** The video to recreate (MP4, MOV or WebM, up to `MAX_RECREATE_VIDEO_BYTES`). */
+  file: Blob;
+  /** "Same shot with a cat", or empty for the closest recreation. */
+  instruction: string;
+  context?: RewriteContext;
+}
+
+/** OpenRouter's and Gemini's name for QuickTime is `video/mov`, not the browser's `video/quicktime`. */
+const RECREATE_MIME: Record<string, string> = { mp4: "video/mp4", mov: "video/mov", webm: "video/webm" };
+
+/**
+ * Watch a video and write the prompt that recreates it, with the editor's video model (OpenRouter, the user's
+ * key); `onText` streams the text so far. The file is sniffed and sent inline as a data URL, so the clip has to
+ * be short. Nothing is stored.
+ */
+export async function recreateVideoPrompt(req: RecreateRequest, opts: { signal?: AbortSignal; onText?: (text: string) => void } = {}): Promise<{ prompt: string; costUsd?: number }> {
+  const key = requireApiKey();
+  if (req.file.size === 0) throw badRequest("Empty file");
+  if (req.file.size > MAX_RECREATE_VIDEO_BYTES) throw new ApiClientError(413, `Video is over ${Math.round(MAX_RECREATE_VIDEO_BYTES / 1024 / 1024)} MB. Trim or compress it first.`);
+  const head = new Uint8Array(await req.file.slice(0, 64).arrayBuffer());
+  const format = detectVideo(head);
+  if (!format) throw badRequest("Unsupported video type: only MP4, MOV and WebM are accepted");
+  const mime = RECREATE_MIME[format.ext] ?? format.mime;
+  const dataUrl = await blobToDataUrl(new Blob([req.file], { type: mime }));
+  const res = await chatText(key, buildRecreateBody(dataUrl, req.instruction, req.context), {
+    signal: opts.signal,
+    onText: opts.onText ? (t) => opts.onText?.(cleanRewrite(t)) : undefined,
+    // The upload and the watching take a while; the stream itself keeps the request alive.
+    timeoutMs: 4 * 60_000,
   });
   invalidateCredits();
   const prompt = cleanRewrite(res.text);

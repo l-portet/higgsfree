@@ -2,15 +2,20 @@
  * The video composer's AI Prompt Editor: which models it uses and the request bodies it sends.
  * Pure (no fetch, no DOM) so it can be unit tested; the calls are in `api.ts`.
  *
- * Models, from OpenRouter's live catalogs on 14 Oct 2026 (docs/MODELS.md):
+ * Models, from OpenRouter's live catalogs (docs/MODELS.md):
  * - GPT-6 Luna (Sep 2026): the fast, cost-efficient tier of GPT-6 ($0.05 / $0.25 per million tokens).
  * - GPT Image 2.5 Flare (Sep 2026): the speed tier of GPT Image 2.5, asked for `quality: "low"`.
+ * - Gemini 4 Argon (13 Oct 2026): the newest Gemini that takes video input, for "Recreate video"; a
+ *   flagship reasoning model, asked for low reasoning effort. Gemini 3.8 Flash is the cheaper swap.
  */
 import type { ImageAspectRatio, VideoAspectRatio } from "@shared/types";
-import type { ChatTextBody, NativeImageBody } from "./payloads";
+import type { ChatTextBody, ChatTextPart, NativeImageBody } from "./payloads";
 
 export const PROMPT_EDITOR_MODEL = { id: "openai/gpt-6-luna", name: "GPT-6 Luna" } as const;
 export const PREVIEW_IMAGE_MODEL = { id: "openai/gpt-image-2.5-flare", name: "GPT Image 2.5 Flare" } as const;
+export const RECREATE_MODEL = { id: "google/gemini-4-argon", name: "Gemini 4 Argon" } as const;
+/** The video goes inline as base64 (Gemini's inline limit is 20 MB of request); 15 MB leaves room for the encoding. */
+export const MAX_RECREATE_VIDEO_BYTES = 15 * 1024 * 1024;
 
 /** A rewrite is one paragraph; the cap leaves room for the (low) reasoning that counts toward it. */
 const MAX_TOKENS = 1500;
@@ -92,6 +97,47 @@ export function cleanRewrite(text: string): string {
     if (s.length > 1 && s.startsWith(open) && s.endsWith(close)) s = s.slice(open.length, -close.length).trim();
   }
   return s.slice(0, MAX_PROMPT_CHARS);
+}
+
+// ---------- Recreate video ----------
+
+export const RECREATE_SYSTEM_PROMPT = [
+  "You watch a short video and write the prompt that would make an AI video generation model recreate it.",
+  "Reply with the prompt only: no preamble, no quotes, no markdown, no lists, no notes.",
+  "One paragraph of plain English, usually 60 to 150 words.",
+  "Describe what is actually in the video, in this order: the subject and what it does, the setting, the camera (shot size, angle and movement, cuts if any), lighting and mood, the visual style (film look, animation, color grade), and the pacing.",
+  "Be concrete about motion and timing: what moves, how fast, and what changes from the first second to the last.",
+  "The prompt is for a clip of the given length: when the video is longer, describe its most characteristic stretch of that length as one continuous shot.",
+  "Do not name real people, brands or copyrighted characters; describe them generically.",
+  "Do not mention on-screen text, captions, logos or watermarks unless they are part of the shot.",
+  "When the instruction asks for a change (another subject, setting, style or camera), write the prompt for the changed video and keep everything else as in the original.",
+  "Write in the language of the instruction, or in English when there is none.",
+].join(" ");
+
+/** The instruction used when the user asks for the prompt without saying more. */
+export const DEFAULT_RECREATE_INSTRUCTION = "Write the prompt that recreates this video as closely as possible.";
+
+/** The video as a data URL plus what the composer is set to, so the prompt fits the run it is for. */
+export function buildRecreateBody(videoDataUrl: string, instruction: string, ctx: RewriteContext = {}): ChatTextBody {
+  const ask = instruction.trim() || DEFAULT_RECREATE_INSTRUCTION;
+  const run = describeRun(ctx);
+  const text = [run ? `The prompt is for: ${run}` : "", `Instruction: ${ask}`].filter(Boolean).join("\n\n");
+  const content: ChatTextPart[] = [
+    { type: "text", text },
+    // `static`: one pass at a fixed frame rate, the fast mode for a short clip.
+    { type: "video_url", video_url: { url: videoDataUrl, processing: "static" } },
+  ];
+  return {
+    model: RECREATE_MODEL.id,
+    messages: [
+      { role: "system", content: RECREATE_SYSTEM_PROMPT },
+      { role: "user", content },
+    ],
+    stream: true,
+    max_tokens: MAX_TOKENS,
+    reasoning: { effort: "low", exclude: true },
+    usage: { include: true },
+  };
 }
 
 /** The ratios GPT Image 2.5 Flare takes; the video's ratio when it is one of them, else the closest. */
