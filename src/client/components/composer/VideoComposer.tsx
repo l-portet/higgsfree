@@ -7,12 +7,14 @@ import { DEFAULT_VIDEO_MODEL, estimateVideoCost, snapDuration } from "@shared/mo
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { estimateFalVideoCost } from "@/lib/fal-pricing";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
 import { formatUsd, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { isVideoAspectRatio, isVideoResolution } from "@/lib/models";
 import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
+import { readVideoDuration } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
 import { useUi } from "@/store/ui";
@@ -94,6 +96,8 @@ interface MotionClip {
   id: string;
   name: string;
   mediaId: string;
+  /** Its length in seconds, when the browser could read it: the clip's length, which prices the run. */
+  durationSec?: number;
 }
 
 function clipFromMedia(mediaId: string, name = "video"): MotionClip {
@@ -229,8 +233,8 @@ export function VideoComposer() {
   /** Store a reference video (MP4 / MOV / WebM, sniffed and size-checked by the library). */
   const addMotion = useCallback(async (file: File) => {
     try {
-      const res = await api.uploadVideo(file);
-      setMotion({ id: uid(), name: file.name, mediaId: res.media.id });
+      const [res, durationSec] = await Promise.all([api.uploadVideo(file), readVideoDuration(file)]);
+      setMotion({ id: uid(), name: file.name, mediaId: res.media.id, durationSec });
     } catch (err) {
       toast.error("Couldn't add the video", { description: describeApiError(err) });
     }
@@ -332,14 +336,27 @@ export function VideoComposer() {
               : null
           : (modelReason(model) ?? (!i2v && !trimmed ? "Enter a prompt" : null));
 
-  // The catalog's estimates are OpenRouter's prices; fal publishes none without a signed-in key.
+  // OpenRouter's prices from the catalog, or fal's list prices for the request fal would get (its endpoint
+  // depends on the frames, its price on the audio too).
   const runsOnFal = keyGate.runsOnFal;
-  const estimateFor = useCallback(
-    (d: number) => (model && !runsOnFal ? estimateVideoCost(model, d, resolution) : undefined),
-    [model, resolution, runsOnFal],
+  const hasFirst = Boolean(firstFrame);
+  const hasLast = showLast && Boolean(lastFrame);
+  const estimateAt = useCallback(
+    (d: number, r: VideoResolution | undefined) =>
+      !model
+        ? undefined
+        : runsOnFal
+          ? estimateFalVideoCost(model, { duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast })
+          : estimateVideoCost(model, d, r),
+    [model, runsOnFal, aspectRatio, sound, hasFirst, hasLast],
   );
-  // Motion control: the clip is as long as the reference video, so there is no duration to price.
-  const perClip = motionMode ? undefined : estimateFor(duration);
+  const estimateFor = useCallback((d: number) => estimateAt(d, resolution), [estimateAt, resolution]);
+  // Motion control: the clip is as long as the reference video, priced once its length is known.
+  const perClip = motionMode
+    ? model && runsOnFal
+      ? estimateFalVideoCost(model, { duration: 0, motionSec: motion?.durationSec })
+      : undefined
+    : estimateFor(duration);
   const estimate = perClip !== undefined ? perClip * count : undefined;
 
   const submit = async () => {
@@ -616,7 +633,7 @@ export function VideoComposer() {
                   <div role="listbox" aria-label="Resolution">
                     <PopoverLabel>Resolution</PopoverLabel>
                     {model.resolutions.map((r) => {
-                      const est = runsOnFal ? undefined : estimateVideoCost(model, duration, r);
+                      const est = estimateAt(duration, r);
                       return (
                         <PopoverItem
                           key={r}

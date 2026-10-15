@@ -1,0 +1,117 @@
+/**
+ * fal's list prices for every endpoint the catalog routes to, as each endpoint's page
+ * (`fal.ai/models/<endpoint>/llms.txt`) gave them on 15 Oct 2026. They are the app's estimates for runs on
+ * fal, as `estCostUsd` / `estCostPerSecUsd` are for OpenRouter. fal has no public catalog to refresh them
+ * from: its pricing API needs a key and gives one unit price per endpoint, without the resolution, audio
+ * and quality tiers below. `src/client/lib/fal-pricing.ts` prices a request with them.
+ */
+import type { ImageAspectRatio, ImageSize, VideoResolution } from "./types.ts";
+
+/** USD, the same at every resolution or by the app's resolution (fal's value when it differs is noted). */
+export type ByResolution = number | Partial<Record<VideoResolution, number>>;
+
+export type FalPrice =
+  | {
+      /** Per second of output video. */
+      unit: "second";
+      usd: ByResolution;
+      /** With the audio track on, when it costs more. */
+      audioUsd?: ByResolution;
+      /** A limited-time rate, used up to and including `until` (YYYY-MM-DD, UTC). */
+      promo?: { until: string; usd: ByResolution };
+    }
+  | {
+      unit: "image";
+      usd: number | Partial<Record<ImageSize, number>>;
+      /** When the price depends on the output size: by the aspect ratio the app asks for (`auto`: fal's default size). */
+      byAspect?: Partial<Record<ImageAspectRatio, number>>;
+    }
+  | {
+      /** Per megapixel of output (1024 x 1024 pixels), rounded up, at least one. */
+      unit: "megapixel";
+      usd: number;
+    };
+
+const NANO_BANANA_PRO: FalPrice = { unit: "image", usd: { "1K": 0.15, "2K": 0.15, "4K": 0.3 } };
+const NANO_BANANA_2: FalPrice = { unit: "image", usd: { "1K": 0.08, "2K": 0.12, "4K": 0.16 } };
+// Billed in tokens at high quality (fal's default); these are fal's per-size figures for high.
+const GPT_IMAGE_2: FalPrice = {
+  unit: "image",
+  usd: 0.211,
+  byAspect: { auto: 0.145, "1:1": 0.211, "4:3": 0.145, "3:4": 0.145, "3:2": 0.165, "2:3": 0.165, "16:9": 0.158, "9:16": 0.158 },
+};
+// High quality (fal's default): 1024 x 1024 (also the default size) or any other size.
+const GPT_IMAGE_1_5: FalPrice = { unit: "image", usd: 0.2, byAspect: { auto: 0.133, "1:1": 0.133 } };
+const KLING_V3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.168 };
+const KLING_V3_STANDARD: FalPrice = { unit: "second", usd: 0.084, audioUsd: 0.126 };
+const SEEDANCE_2_5: FalPrice = { unit: "second", usd: { "480p": 0.2205, "720p": 0.473, "1080p": 1.164 } };
+const MINIMAX_H3: FalPrice = { unit: "second", usd: { "480p": 0.05, "768p": 0.06, "2K": 0.13, "4K": 0.16 } };
+const MINIMAX_H3_MAX: FalPrice = {
+  unit: "second",
+  usd: { "480p": 0.05, "768p": 0.08, "1080p": 0.16 },
+  promo: { until: "2026-10-15", usd: { "480p": 0.03, "768p": 0.048, "1080p": 0.096 } },
+};
+const GEMINI_OMNI_FLASH: FalPrice = { unit: "second", usd: { "720p": 0.1, "1080p": 0.15, "4K": 0.3 } };
+const FLUX_3_DRAFT: FalPrice = { unit: "second", usd: 0.06 };
+const KLING_O3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.14 };
+const PIXVERSE_6: FalPrice = { unit: "second", usd: { "720p": 0.045, "1080p": 0.09 }, audioUsd: { "720p": 0.06, "1080p": 0.115 } };
+// 2K and 4K are fal's 1440p and 2160p.
+const LTX_2_3: FalPrice = { unit: "second", usd: { "1080p": 0.08, "2K": 0.16, "4K": 0.32 } };
+
+export const FAL_PRICES: Record<string, FalPrice> = {
+  // ---------- image ----------
+  "fal-ai/nano-banana-pro": NANO_BANANA_PRO,
+  "fal-ai/nano-banana-pro/edit": NANO_BANANA_PRO,
+  "fal-ai/nano-banana-2": NANO_BANANA_2,
+  "fal-ai/nano-banana-2/edit": NANO_BANANA_2,
+  "openai/gpt-image-2": GPT_IMAGE_2,
+  "openai/gpt-image-2/edit": GPT_IMAGE_2,
+  "fal-ai/flux-pro/kontext/text-to-image": { unit: "image", usd: 0.04 },
+  "fal-ai/flux-pro/kontext": { unit: "image", usd: 0.04 },
+  "fal-ai/flux-pro/v1.1-ultra": { unit: "image", usd: 0.06 },
+  // Medium quality (fal's default); the size does not change the price.
+  "ideogram/v4.5": { unit: "image", usd: 0.06 },
+  "ideogram/v4.5/edit": { unit: "image", usd: 0.06 },
+  "fal-ai/gpt-image-1.5": GPT_IMAGE_1_5,
+  "fal-ai/gpt-image-1.5/edit": GPT_IMAGE_1_5,
+  "fal-ai/qwen-image-edit-2511": { unit: "megapixel", usd: 0.03 },
+  "fal-ai/z-image/turbo": { unit: "megapixel", usd: 0.005 },
+  "fal-ai/flux/dev": { unit: "megapixel", usd: 0.025 },
+  "fal-ai/flux/schnell": { unit: "megapixel", usd: 0.003 },
+
+  // ---------- video ----------
+  "bytedance/seedance-2.5/text-to-video": SEEDANCE_2_5,
+  "bytedance/seedance-2.5/image-to-video": SEEDANCE_2_5,
+  "minimax/h3/text-to-video": MINIMAX_H3,
+  "minimax/h3/image-to-video": MINIMAX_H3,
+  "minimax/h3-max/text-to-video": MINIMAX_H3_MAX,
+  "minimax/h3-max/image-to-video": MINIMAX_H3_MAX,
+  "fal-ai/kling-video/v3/pro/text-to-video": KLING_V3_PRO,
+  "fal-ai/kling-video/v3/pro/image-to-video": KLING_V3_PRO,
+  "fal-ai/kling-video/v3/standard/text-to-video": KLING_V3_STANDARD,
+  "fal-ai/kling-video/v3/standard/image-to-video": KLING_V3_STANDARD,
+  // Per second of the result, which is as long as the reference video.
+  "fal-ai/kling-video/v3/pro/motion-control": { unit: "second", usd: 0.168 },
+  "fal-ai/kling-video/v3/standard/motion-control": { unit: "second", usd: 0.126 },
+  "google/gemini-omni-flash/v1.1/text-to-video": GEMINI_OMNI_FLASH,
+  "google/gemini-omni-flash/v1.1/image-to-video": GEMINI_OMNI_FLASH,
+  "blackforestlabs/flux-3/text-to-video/draft": FLUX_3_DRAFT,
+  "blackforestlabs/flux-3/image-to-video/draft": FLUX_3_DRAFT,
+  "blackforestlabs/flux-3/first-last-frame-to-video/draft": FLUX_3_DRAFT,
+  "fal-ai/kling-video/o3/pro/text-to-video": KLING_O3_PRO,
+  "fal-ai/kling-video/o3/pro/image-to-video": KLING_O3_PRO,
+  "fal-ai/kling-video/v3/turbo/pro/text-to-video": { unit: "second", usd: 0.14 },
+  "fal-ai/kling-video/v3/turbo/pro/image-to-video": { unit: "second", usd: 0.14 },
+  "fal-ai/pixverse/v6/text-to-video": PIXVERSE_6,
+  "fal-ai/pixverse/v6/image-to-video": PIXVERSE_6,
+  "fal-ai/vidu/q4/image-to-video": {
+    unit: "second",
+    usd: { "720p": 0.095, "1080p": 0.12, "2K": 0.19, "4K": 0.39 },
+    promo: { until: "2026-11-30", usd: { "720p": 0.0665, "1080p": 0.084, "2K": 0.133, "4K": 0.273 } },
+  },
+  "fal-ai/ltx-2.3/text-to-video": LTX_2_3,
+  "fal-ai/ltx-2.3/image-to-video": LTX_2_3,
+  // fal prices Luma per 5 or 10 s clip, the same per second for both; image-to-video costs less.
+  "luma/agent/ray/v3.2/text-to-video": { unit: "second", usd: { "720p": 0.2, "1080p": 0.4 } },
+  "luma/agent/ray/v3.2/image-to-video": { unit: "second", usd: { "720p": 0.06, "1080p": 0.24 } },
+};

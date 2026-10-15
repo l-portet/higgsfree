@@ -45,7 +45,7 @@ Open http://localhost:3000 and paste your key behind **Add key** (top right). Th
 - **Every model is listed, whatever keys you have.** Pick one whose provider has no key and a small notice above the prompt says which provider it runs on; Generate opens the key dialog for that provider. That goes both ways: a fal-only model with only an OpenRouter key, an OpenRouter-only model with only a fal key.
 - **With both keys, every model works.** A few models are on both (Nano Banana Pro, Nano Banana 2, GPT Image 2, Seedance 2.5, Kling 3.0 Pro and Standard, MiniMax H3 and H3 Max). "Run models both providers offer on" in Settings › Keys picks who runs those, OpenRouter by default. A model only one provider has always runs there.
 - **Both keys stay in this browser**, and each one is only sent to its own provider. A motion-control reference video is uploaded to fal's storage when you run it ([SECURITY.md](SECURITY.md) has what that means).
-- fal publishes prices only to a signed-in key and returns no cost with a result, so fal-only models show no estimate and runs on fal record no cost.
+- Runs on fal show an estimate from fal's own prices, which can differ from OpenRouter's for the same model. fal returns no cost with a result, so runs on fal record none.
 
 The rules are in [docs/FAL.md](docs/FAL.md).
 
@@ -91,7 +91,7 @@ Curated: 19 image models and 35 video models with their real limits (sizes, dura
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
 
-Cost estimates are shown before you generate; the actual cost reported by OpenRouter is saved with each result. fal reports no cost, so fal-only models show no estimate and runs on fal record none.
+Cost estimates are shown before you generate, from the prices of whichever provider will run it; the actual cost reported by OpenRouter is saved with each result. fal reports no cost, so runs on fal record none.
 
 ## How it works
 
