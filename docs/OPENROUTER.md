@@ -174,7 +174,7 @@ bodies, `api.rewriteVideoPrompt` / `api.previewVideoFrame` make the calls):
   input_references? }` (`quality` is in that model's catalog entry). The video's ratio when Flare lists it, else
   the closest; the first frame as the one reference when attached.
 - Recreate video: the same streamed chat call with `model: "google/gemini-4-argon"`, `max_tokens: 4000` (a detailed
-  description of up to ~300 words, every spoken line quoted word for word) and a user message in parts,
+  description as long as the video needs, every spoken line quoted word for word) and a user message in parts,
   `[{ type: "text", text }, { type: "video_url", video_url: { url: dataUrl, processing: "static" } }]`. The clip
   goes inline as a base64 data URL (OpenRouter only passes http(s) video urls to a few providers, and Gemini on
   AI Studio takes YouTube links only); the file is sniffed first (`video-meta.ts`: MP4, QuickTime, WebM) and

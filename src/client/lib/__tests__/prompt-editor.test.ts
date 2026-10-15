@@ -97,7 +97,9 @@ describe("request bodies", () => {
   });
 
   it("asks for a detailed description that keeps every spoken line, and a rewrite that keeps them too", () => {
-    for (const rule of ["150 to 300 words", "word for word in double quotes", "who speaks it", "Never invent or paraphrase a line", "Do not transcribe song lyrics", "dialogue included"]) {
+    // Length follows the video, never a set number of words or characters.
+    for (const text of [RECREATE_SYSTEM_PROMPT, REWRITE_SYSTEM_PROMPT]) expect(text).not.toMatch(/\d+\s*(?:to|-)?\s*\d*\s*(?:words|characters)|[\d,]+ characters/);
+    for (const rule of ["as long as the video needs", "word for word in double quotes", "who speaks it", "Never invent or paraphrase a line", "Do not transcribe song lyrics", "dialogue included"]) {
       expect(RECREATE_SYSTEM_PROMPT).toContain(rule);
     }
     expect(DEFAULT_RECREATE_INSTRUCTION).toContain("every spoken line word for word");

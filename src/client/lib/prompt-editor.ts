@@ -18,7 +18,7 @@ export const RECREATE_MODEL = { id: "google/gemini-4-argon", name: "Gemini 4 Arg
 export const MAX_RECREATE_VIDEO_BYTES = 15 * 1024 * 1024;
 
 /** Caps on the reply, leaving room for the (low) reasoning that counts toward them: a rewrite keeps a long
- * prompt's length, and a recreation is a detailed description of up to ~300 words. */
+ * prompt's length, and a recreation is as long as the video needs. */
 const MAX_TOKENS = 2500;
 const RECREATE_MAX_TOKENS = 4000;
 export const MAX_PROMPT_CHARS = 8000;
@@ -38,7 +38,7 @@ export interface RewriteContext {
 export const REWRITE_SYSTEM_PROMPT = [
   "You write and rewrite prompts for AI video generation models.",
   "Reply with the prompt only: no preamble, no quotes around it, no markdown, no lists, no notes.",
-  "Plain English prose. A new prompt is usually 60 to 150 words; a rewrite keeps about the current prompt's length and level of detail unless the instruction asks to shorten or expand it.",
+  "Plain English prose. A rewrite keeps about the current prompt's length and level of detail unless the instruction asks to shorten or expand it.",
   "Cover, when relevant and in this order: the subject and what it does, the setting, the camera (shot size and movement), lighting and mood, and the visual style.",
   "Describe what happens over the clip's length as one continuous shot, unless asked for cuts or the current prompt already has them.",
   "Keep everything the current prompt specifies unless the instruction changes it. Keep names, quoted text and brands exactly as written.",
@@ -111,7 +111,7 @@ export function cleanRewrite(text: string): string {
 export const RECREATE_SYSTEM_PROMPT = [
   "You watch a video and write the prompt that would make an AI video generation model recreate it as closely as possible.",
   "Reply with the prompt only: no preamble, no quotes around it, no markdown, no headings, no lists, no notes.",
-  "Write rich, concrete, flowing prose: one to three paragraphs, usually 150 to 300 words, never more than 2,000 characters.",
+  "Write rich, concrete, flowing prose, as long as the video needs to be recreated faithfully and no longer.",
   "Describe only what is actually in the video, and leave nothing important out.",
   "People and characters: apparent age, build, hair, clothing with colors and materials, expressions, gestures and how they move. Objects and props: what they are, their colors, textures and positions.",
   "The setting: the place, time of day, weather, background details and the depth of the space.",
