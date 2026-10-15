@@ -17,8 +17,10 @@ export const RECREATE_MODEL = { id: "google/gemini-4-argon", name: "Gemini 4 Arg
 /** The video goes inline as base64 (Gemini's inline limit is 20 MB of request); 15 MB leaves room for the encoding. */
 export const MAX_RECREATE_VIDEO_BYTES = 15 * 1024 * 1024;
 
-/** A rewrite is one paragraph; the cap leaves room for the (low) reasoning that counts toward it. */
-const MAX_TOKENS = 1500;
+/** Caps on the reply, leaving room for the (low) reasoning that counts toward them: a rewrite keeps a long
+ * prompt's length, and a recreation is a detailed description of up to ~300 words. */
+const MAX_TOKENS = 2500;
+const RECREATE_MAX_TOKENS = 4000;
 export const MAX_PROMPT_CHARS = 8000;
 
 /** What the composer is set to, so the rewrite fits the run it is for. */
@@ -35,11 +37,12 @@ export interface RewriteContext {
 
 export const REWRITE_SYSTEM_PROMPT = [
   "You write and rewrite prompts for AI video generation models.",
-  "Reply with the prompt only: no preamble, no quotes, no markdown, no lists, no notes.",
-  "One paragraph of plain English, usually 40 to 120 words.",
+  "Reply with the prompt only: no preamble, no quotes around it, no markdown, no lists, no notes.",
+  "Plain English prose. A new prompt is usually 60 to 150 words; a rewrite keeps about the current prompt's length and level of detail unless the instruction asks to shorten or expand it.",
   "Cover, when relevant and in this order: the subject and what it does, the setting, the camera (shot size and movement), lighting and mood, and the visual style.",
-  "Describe what happens over the clip's length as one continuous shot, unless asked for cuts.",
+  "Describe what happens over the clip's length as one continuous shot, unless asked for cuts or the current prompt already has them.",
   "Keep everything the current prompt specifies unless the instruction changes it. Keep names, quoted text and brands exactly as written.",
+  "Keep every spoken line (dialogue in quotes) word for word, with who says it, how and when, unless the instruction changes it.",
   "Do not add on-screen text, captions, logos or watermarks unless asked.",
   "When the video starts from an image, describe the motion, camera and changes rather than re-describing the image.",
   "Write in the language of the current prompt (or of the instruction when there is no prompt yet).",
@@ -94,7 +97,11 @@ export function cleanRewrite(text: string): string {
   s = s.replace(/^(?:\*\*)?(?:prompt|rewritten prompt|video prompt)\s*:(?:\*\*)?\s*/i, "");
   const pairs: [string, string][] = [['"', '"'], ["“", "”"], ["'", "'"]];
   for (const [open, close] of pairs) {
-    if (s.length > 1 && s.startsWith(open) && s.endsWith(close)) s = s.slice(open.length, -close.length).trim();
+    if (s.length > 1 && s.startsWith(open) && s.endsWith(close)) {
+      const inner = s.slice(open.length, -close.length);
+      // Only a pair that wraps the whole reply: a prompt that opens and ends on dialogue keeps its quotes.
+      if (!inner.includes(open) && !inner.includes(close)) s = inner.trim();
+    }
   }
   return s.slice(0, MAX_PROMPT_CHARS);
 }
@@ -102,20 +109,26 @@ export function cleanRewrite(text: string): string {
 // ---------- Recreate video ----------
 
 export const RECREATE_SYSTEM_PROMPT = [
-  "You watch a short video and write the prompt that would make an AI video generation model recreate it.",
-  "Reply with the prompt only: no preamble, no quotes, no markdown, no lists, no notes.",
-  "One paragraph of plain English, usually 60 to 150 words.",
-  "Describe what is actually in the video, in this order: the subject and what it does, the setting, the camera (shot size, angle and movement, cuts if any), lighting and mood, the visual style (film look, animation, color grade), and the pacing.",
-  "Be concrete about motion and timing: what moves, how fast, and what changes from the first second to the last.",
-  "The prompt is for a clip of the given length: when the video is longer, describe its most characteristic stretch of that length as one continuous shot.",
+  "You watch a video and write the prompt that would make an AI video generation model recreate it as closely as possible.",
+  "Reply with the prompt only: no preamble, no quotes around it, no markdown, no headings, no lists, no notes.",
+  "Write rich, concrete, flowing prose: one to three paragraphs, usually 150 to 300 words, never more than 2,000 characters.",
+  "Describe only what is actually in the video, and leave nothing important out.",
+  "People and characters: apparent age, build, hair, clothing with colors and materials, expressions, gestures and how they move. Objects and props: what they are, their colors, textures and positions.",
+  "The setting: the place, time of day, weather, background details and the depth of the space.",
+  "The camera: shot size, angle, lens feel and depth of field, and every movement (pan, tilt, dolly, handheld shake, zoom) with its direction and speed.",
+  "Light and look: light sources, direction, quality and color, the mood, the visual style (live action, animation, film grain, color grade), and the motion feel (real time, slow motion, time-lapse).",
+  "Tell the action in order, beat by beat, with rough timing (in the first second, at about three seconds, at the end); follow the video's own structure, and when it cuts, describe each shot in order and say where it cuts.",
+  "Keep every spoken line, including voice-over and narration, word for word in double quotes, in the language it is spoken in, and say who speaks it (by a short description, never a real name), how (tone, volume, accent, emotion) and when. Never invent or paraphrase a line; when speech is unclear, describe it instead (muffled chatter, an unintelligible shout).",
+  "Sound: ambient sound and sound effects as they happen, and the music by genre, tempo, instruments and mood. Do not transcribe song lyrics or name songs or artists.",
+  "Quote on-screen text that is part of the scene (a sign, a title card) exactly; leave out watermarks, platform overlays and subtitles that only repeat the speech.",
   "Do not name real people, brands or copyrighted characters; describe them generically.",
-  "Do not mention on-screen text, captions, logos or watermarks unless they are part of the shot.",
-  "When the instruction asks for a change (another subject, setting, style or camera), write the prompt for the changed video and keep everything else as in the original.",
-  "Write in the language of the instruction, or in English when there is none.",
+  "The prompt is for a clip of the given length: when the video is longer, keep the stretch that matters most, with its action and the lines spoken in it, and leave out the rest.",
+  "When the instruction asks for a change (another subject, setting, style, camera or line), write the prompt for the changed video and keep everything else exactly as in the original, dialogue included.",
+  "Write in the language of the instruction, or in English when there is none; quoted lines stay in the language they are spoken in.",
 ].join(" ");
 
 /** The instruction used when the user asks for the prompt without saying more. */
-export const DEFAULT_RECREATE_INSTRUCTION = "Write the prompt that recreates this video as closely as possible.";
+export const DEFAULT_RECREATE_INSTRUCTION = "Write the prompt that recreates this video as closely as possible, with every detail that matters and every spoken line word for word.";
 
 /** The video as a data URL plus what the composer is set to, so the prompt fits the run it is for. */
 export function buildRecreateBody(videoDataUrl: string, instruction: string, ctx: RewriteContext = {}): ChatTextBody {
@@ -134,7 +147,7 @@ export function buildRecreateBody(videoDataUrl: string, instruction: string, ctx
       { role: "user", content },
     ],
     stream: true,
-    max_tokens: MAX_TOKENS,
+    max_tokens: RECREATE_MAX_TOKENS,
     reasoning: { effort: "low", exclude: true },
     usage: { include: true },
   };

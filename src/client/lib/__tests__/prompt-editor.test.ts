@@ -92,6 +92,17 @@ describe("request bodies", () => {
     expect(parts[1]).toEqual({ type: "video_url", video_url: { url: "data:video/mp4;base64,AAAA", processing: "static" } });
     const bare = buildRecreateBody("data:video/webm;base64,AAAA", "   ").messages[1]?.content;
     expect(Array.isArray(bare) && bare[0]?.type === "text" ? bare[0].text : "").toBe(`Instruction: ${DEFAULT_RECREATE_INSTRUCTION}`);
+    // A detailed description needs a larger cap than a rewrite.
+    expect(b.max_tokens).toBeGreaterThan(body.max_tokens);
+  });
+
+  it("asks for a detailed description that keeps every spoken line, and a rewrite that keeps them too", () => {
+    for (const rule of ["150 to 300 words", "word for word in double quotes", "who speaks it", "Never invent or paraphrase a line", "Do not transcribe song lyrics", "dialogue included"]) {
+      expect(RECREATE_SYSTEM_PROMPT).toContain(rule);
+    }
+    expect(DEFAULT_RECREATE_INSTRUCTION).toContain("every spoken line word for word");
+    expect(REWRITE_SYSTEM_PROMPT).toContain("Keep every spoken line (dialogue in quotes) word for word");
+    expect(REWRITE_SYSTEM_PROMPT).toContain("keeps about the current prompt's length");
   });
 
   it("takes fences, labels and wrapping quotes off the reply", () => {
@@ -100,6 +111,9 @@ describe("request bodies", () => {
     expect(cleanRewrite("**Prompt:** A slow dolly shot.")).toBe("A slow dolly shot.");
     expect(cleanRewrite("“A slow dolly shot.”")).toBe("A slow dolly shot.");
     expect(cleanRewrite('He says "hi" and waves')).toBe('He says "hi" and waves');
+    // A prompt that opens and ends on dialogue keeps its quotes.
+    expect(cleanRewrite('"We\'re late," the man says. She whispers, "Run."')).toBe('"We\'re late," the man says. She whispers, "Run."');
+    expect(cleanRewrite("“Hi,” she says, then laughs: “bye.”")).toBe("“Hi,” she says, then laughs: “bye.”");
   });
 });
 
