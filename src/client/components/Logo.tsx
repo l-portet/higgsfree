@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { MarkMorphGlyph } from "./MarkMorph";
 
 /**
  * higgsfree mark: a looped script F, black on a green tile. The path is the supplied artwork
@@ -9,7 +10,8 @@ const MARK_PATH = "M21.56 50.82C18.65 50.5 16.21 48.53 15.29 45.76C14.99 44.89 1
 
 /**
  * The brand green (the UI accent at rest) and the ink sampled from the artwork. With `intro`, a tile in the old
- * brand lime sits over the green one and fades out with the accent on load (`logo-intro`, globals.css).
+ * brand lime sits over the green one and fades out with the accent on load (`logo-intro`, globals.css), and the
+ * glyph morphs from a swirl into the F meanwhile (`MarkMorphGlyph`, docs/brand/mark-morph.json).
  */
 export const BRAND_COLOR = "#5dfd8c";
 const INTRO_LIME = "#d0f81e";
@@ -25,7 +27,7 @@ export interface LogoProps {
   className?: string;
   /** Extra classes for the wordmark span, e.g. `hidden sm:block` to collapse it on small screens. */
   wordmarkClassName?: string;
-  /** The nav's tile: opens on the old lime and fades to the green with the accent on load. */
+  /** The nav's mark: opens on the old lime with the swirl, and fades to the green as the swirl becomes the F, on load. */
   intro?: boolean;
 }
 
@@ -47,7 +49,7 @@ export function Logo({ size = 24, variant = "mark", tone = "accent", className, 
         <>
           <rect width="64" height="64" rx="15" fill={BRAND_COLOR} />
           {intro ? <rect width="64" height="64" rx="15" fill={INTRO_LIME} className="logo-intro" /> : null}
-          <path fill={BRAND_INK} fillRule="evenodd" d={MARK_PATH} />
+          {intro ? <MarkMorphGlyph fill={BRAND_INK} /> : <path fill={BRAND_INK} fillRule="evenodd" d={MARK_PATH} />}
         </>
       ) : (
         // Without the tile the glyph grows to a 75 % body so it keeps the same visual weight.
