@@ -45,7 +45,8 @@ export function Chip({ icon, label, chevron = false, active, tone = "neutral", s
       {chevron ? (
         <ChevronDown
           size={14}
-          className="-mr-0.5 shrink-0 text-fg-subtle transition-transform duration-150 [[data-state=open]_&]:rotate-180"
+          // The chip's own open state (a popover trigger), not any open ancestor: inside a dialog the dialog is "open" too.
+          className="-mr-0.5 shrink-0 text-fg-subtle transition-transform duration-150 group-data-[state=open]/chip:rotate-180"
           aria-hidden="true"
         />
       ) : null}
