@@ -106,27 +106,18 @@ export function Nav() {
     <header className="pointer-events-none fixed inset-x-0 top-3 z-40 flex justify-center px-3">
       <div className="pointer-events-auto flex items-center gap-2">
         {/*
-          A 30 px tile in a 46 px box: its 7 px corners stay concentric with the box's 15 px at the 8 px inset.
-          On hover or focus the box stretches to reveal the wordmark; the 0fr → 1fr column animates to the text's exact width.
-          On load it does the same once by itself: open, 2 s, closed (`animate-wordmark-intro`, globals.css). Only where the
-          whole word fits beside the other boxes (from 430 px with the tab labels collapsed, from 700 px with them shown);
-          narrower, the row would squeeze it to "higgs".
+          A 30 px tile in a 46 px box: its 7 px corners stay concentric with the box's 15 px at the 8 px inset. The
+          wordmark is always there from `md`; below it the box is the tile alone (there is not room for the whole word
+          beside the tab labels between 640 and ~680 px, and phones need the space).
         */}
         <Link
           href="/video"
           aria-label="higgsfree home"
-          className={cn(BOX, "group px-[7px] transition-colors duration-150 hover:border-border-strong focus-visible:border-border-strong")}
+          className={cn(BOX, "px-[7px] transition-colors duration-150 hover:border-border-strong focus-visible:border-border-strong")}
         >
           <Logo variant="mark" size={30} />
-          <span
-            aria-hidden="true"
-            className="grid grid-cols-[0fr] max-sm:min-[430px]:animate-wordmark-intro min-[700px]:animate-wordmark-intro transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr]"
-          >
-            <span className="overflow-hidden">
-              <span className="block whitespace-nowrap pl-2.5 pr-2 font-display text-[15px] font-bold leading-normal tracking-[-0.01em] text-fg opacity-0 max-sm:min-[430px]:animate-wordmark-intro-text min-[700px]:animate-wordmark-intro-text transition-opacity duration-200 group-hover:opacity-100 group-hover:delay-75 group-focus-visible:opacity-100">
-                higgsfree
-              </span>
-            </span>
+          <span aria-hidden="true" className="hidden whitespace-nowrap pl-2.5 pr-2 font-display text-[15px] font-bold leading-normal tracking-[-0.01em] text-fg md:block">
+            higgsfree
           </span>
         </Link>
 

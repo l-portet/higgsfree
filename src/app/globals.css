@@ -57,10 +57,6 @@
   --animate-fade-in: fade-in 150ms ease-out;
   --animate-fade-out: fade-out 120ms ease-in forwards;
   --animate-slide-up: slide-up 200ms var(--ease-out-quart);
-  /* The wordmark next to the logo on load: opens like the hover reveal, stays 2 s while the accent
-     sweeps, then closes. No fill mode, so hover and focus own it again once it is done. */
-  --animate-wordmark-intro: wordmark-intro 2.6s 0.2s;
-  --animate-wordmark-intro-text: wordmark-intro-text 2.6s 0.2s;
 
   @keyframes pop-in {
     from { opacity: 0; transform: scale(0.96); }
@@ -81,19 +77,6 @@
   @keyframes slide-up {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
-  }
-  /* 300 ms open (0 → 300 ms), held to 2.3 s, 300 ms close: the hover reveal's width and easing. */
-  @keyframes wordmark-intro {
-    0% { grid-template-columns: 0fr; animation-timing-function: var(--ease-out-quart); }
-    11.5% { grid-template-columns: 1fr; }
-    88.5% { grid-template-columns: 1fr; animation-timing-function: var(--ease-out-quart); }
-    100% { grid-template-columns: 0fr; }
-  }
-  /* The text fades in 75 ms after the box starts opening and out as it closes, like on hover. */
-  @keyframes wordmark-intro-text {
-    0%, 3% { opacity: 0; }
-    10.5%, 88.5% { opacity: 1; }
-    96%, 100% { opacity: 0; }
   }
 }
 
