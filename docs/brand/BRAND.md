@@ -1,11 +1,11 @@
 # higgsfree brand
 
-The identity is one mark, one wordmark and the blue. Everything in this folder is the source of
+The identity is one mark, one wordmark and the green. Everything in this folder is the source of
 truth; `src/client/components/Logo.tsx` and the icons in `public/` are derived from it.
 
 ## The mark
 
-A **looped script F**, black on a blue tile. The top stroke is a soft wave, the stem drops into
+A **looped script F**, black on a green tile. The top stroke is a soft wave, the stem drops into
 a closed loop at the bottom left, and a straight crossbar cuts to the right. It is the F of
 "free", drawn by hand rather than set in a font.
 
@@ -27,7 +27,7 @@ never trace or redraw the glyph again.
 | File | Use |
 |---|---|
 | `logo-source.png` | The original artwork, kept as the reference. Not for use in the product |
-| `mark.svg` | The logo: black F on the rounded blue tile. App icon, avatar, nav |
+| `mark.svg` | The logo: black F on the rounded green tile. App icon, avatar, nav |
 | `mark-square.svg` | The same on a square full-bleed tile, exactly as supplied |
 | `mark-mono.svg` | The F alone in `currentColor`, body at 75 % of the 64 box, for single-colour use |
 | `lockup.svg` | Tile + wordmark (`#f5f5f5`) on transparent, for dark surfaces |
@@ -59,14 +59,14 @@ all-caps display headings (`text-display`), where it is set in caps with the res
 
 ## Colour
 
-- Blue `#5da8fd` and ink `#171717`. The blue is the UI accent at rest (docs/DESIGN.md); the ink is
-  sampled from the artwork and reads at 7.2:1 on the blue. Every file here, the favicon, the PWA
+- Green `#5dfd8c` and ink `#171717`. The green is the UI accent at rest (docs/DESIGN.md); the ink is
+  sampled from the artwork and reads at 13.6:1 on the green. Every file here, the favicon, the PWA
   icons and the social card use exactly these values.
 - The artwork's original lime `#d0f81e` is retired. It survives in `logo-source.png` and in one
-  place in the product: on each page load the nav tile opens on it and sweeps to the blue with the
+  place in the product: on each page load the nav tile opens on it and sweeps to the green with the
   UI accent ("Accent on load" in docs/DESIGN.md). The glyph stays ink throughout.
 - On dark (`#0a0a0a` to `#25252b`): the tile as is, wordmark `#f5f5f5`.
-- On light: the tile as is, wordmark `#171717`. Never a blue glyph or blue wordmark on white.
+- On light: the tile as is, wordmark `#171717`. Never a green glyph or green wordmark on white.
 - Monochrome (print, embossing, odd tab bars): `mark-mono.svg` in any single colour.
 
 ## Favicon and app icons (`public/`)
@@ -94,7 +94,7 @@ rsvg-convert -w 1200 -h 630 docs/brand/og-image.svg      -o public/og-image.png
 
 ## Do not
 
-- Recolour the tile or the glyph, or swap their colours (no blue F on black tile). The nav tile's
+- Recolour the tile or the glyph, or swap their colours (no green F on black tile). The nav tile's
   load sweep above is the only exception.
 - Add a gradient, glow, shadow, outline, bevel or rotation. Do not animate it in the product
   beyond that colour sweep.
