@@ -26,6 +26,7 @@ const SettingsDialog = dynamic(() => import("@/components/settings/SettingsDialo
 const STORAGE_TOAST = "storage-unavailable";
 
 const INTRO = "data-accent-intro";
+const SWEEPS = ["accent-shift", "logo-shift"];
 
 /**
  * The accent intro (globals.css): the static HTML opens on the old lime; once the app is up and a frame
@@ -40,8 +41,9 @@ function playAccentIntro(): () => void {
   let frame = requestAnimationFrame(() => {
     frame = requestAnimationFrame(() => {
       root.setAttribute(INTRO, "play");
-      const sweep = typeof root.getAnimations === "function" ? root.getAnimations().find((a) => (a as CSSAnimation).animationName === "accent-shift") : undefined;
-      if (sweep) sweep.finished.then(done, done);
+      // The accent and the logo run on two clocks (globals.css): wait for both.
+      const sweeps = typeof root.getAnimations === "function" ? root.getAnimations().filter((a) => SWEEPS.includes((a as CSSAnimation).animationName)) : [];
+      if (sweeps.length) void Promise.allSettled(sweeps.map((a) => a.finished)).then(done);
       else done();
     });
   });
