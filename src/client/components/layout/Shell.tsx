@@ -29,7 +29,7 @@ const INTRO = "data-accent-intro";
 
 /**
  * The accent intro (globals.css): the static HTML opens on the old lime; once the app is up and a frame
- * is painted, play the sweep, then drop the attribute (resting blue, transitions back on). Started here
+ * is painted, play the sweep, then drop the attribute (resting green, transitions back on). Started here
  * rather than by a clock at first style, so a slow first paint can never swallow the lime. Two frames:
  * the first may still be the one that commits hydration. A background tab waits until it is shown.
  */

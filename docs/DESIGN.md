@@ -1,7 +1,7 @@
 # higgsfree design spec
 
 Derived from a live walkthrough of higgsfield.ai (Aug 2026). The goal is a faithful, *professional-minimal* interpretation:
-Vercel/Linear dark discipline with a single accent: blue `#5da8fd`, which each page load reaches from Higgsfield's lime.
+Vercel/Linear dark discipline with a single accent: green `#5dfd8c`, which each page load reaches from Higgsfield's lime.
 No neon, no glows, no gamer aesthetics.
 
 ## Tokens (Tailwind v4 `@theme` in `src/app/globals.css`)
@@ -19,9 +19,9 @@ No neon, no glows, no gamer aesthetics.
 --color-fg-subtle:  #888e90   tertiary text: placeholders, sublines, inactive nav icons (6.4:1 on bg, 4.6:1 on surface-2)
 --color-fg-disabled: #7e8486  not-ready Generate, the "no key" dot
 --color-fg-faint:   #676c6e   decorative only: option-chip icons, dividers, dashed borders (never text)
---color-accent:     #defd5d → #5da8fd   lime at load, then blue (Accent on load): Generate, the active tab's icon, the Sound toggle, the kept heart, NEW badge
---color-accent-hover: #d2f24c → #4b9cf6
---color-on-accent:  #141a05 → #04152b
+--color-accent:     #defd5d → #5dfd8c   lime at load, then green (Accent on load): Generate, the active tab's icon, the Sound toggle, the kept heart, NEW badge
+--color-accent-hover: #d2f24c → #4ef181
+--color-on-accent:  #141a05 → #021c09
 --color-danger:     #f87171
 --color-warning:    #fbbf24   amber: the composer's provider notice (a model whose provider has no key)
 --color-success:    #4ade80
@@ -50,7 +50,7 @@ The global `:focus-visible` outline follows each element's own radius; nothing m
 The chrome (nav, composer, dialogs) is one lifted grey (`surface`), and everything on it steps up ~8 RGB points per
 layer (27 → 35 → 44) so chips read as raised on the bar and the selected row as raised in a popover. Quiet cards
 on the page itself (`panel`) are barely lifted. The accent is reserved for Generate, the active tab's icon, an on toggle,
-the kept heart and the NEW badge. The logo's tile is the same blue (`#5da8fd`, docs/brand/BRAND.md); on load it sweeps
+the kept heart and the NEW badge. The logo's tile is the same green (`#5dfd8c`, docs/brand/BRAND.md); on load it sweeps
 there from the old brand lime (`#d0f81e`) with the accent.
 
 Rules that follow from the tokens:
@@ -235,12 +235,12 @@ There is no page chrome: the app is four views under one floating nav, with one 
 ## Motion & polish
 - 150ms ease-out transitions for hover/active; popovers fade+scale 4%. Skeleton shimmer 1.6s.
 - **Accent on load.** Every page load opens on the lime accent. Once the app is up and painted, the lime holds
-  0.4 s more, then blends to blue (`#5da8fd`) over 1.2 s. The path is one continuous blend through a clear aqua
-  (OKLab, chroma kept up mid-way), spaced by perceptual distance and eased with smootherstep, so nothing jolts. It applies to the accent variables on `html` (`accent-shift`
+  0.4 s more, then blends to green (`#5dfd8c`) over 1.2 s. The path is one continuous blend (OKLab, chroma kept up
+  mid-way), spaced by perceptual distance and eased with smootherstep, so nothing jolts. It applies to the accent variables on `html` (`accent-shift`
   in `globals.css`), so every accent element shifts together. `data-accent-intro` in the static HTML holds the lime;
   Shell sets it to `play` after hydration and removes it at the end. That way a slow first paint never skips the
-  lime. Transitions are off until it ends, so no element trails behind. Client-side navigation keeps the blue.
+  lime. Transitions are off until it ends, so no element trails behind. Client-side navigation keeps the green.
   It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same sweep, from the
-  old brand lime (`#d0f81e`) to the brand blue, through `--color-logo`; the glyph stays ink.
+  old brand lime (`#d0f81e`) to the brand green, through `--color-logo`; the glyph stays ink.
 - Toasts (sonner, top-right so the fixed prompt bar never covers them, dark). Focus rings `ring-2 ring-accent/60`. All icon buttons have `aria-label`.
 - Mobile: nav collapses to icons; video panel stacks above the canvas; prompt bar goes full-width.

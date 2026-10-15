@@ -129,7 +129,7 @@ Docs: [OpenRouter integration](docs/OPENROUTER.md), [fal integration](docs/FAL.m
 
 ## Brand assets
 
-The mark (a looped script F, black on a blue tile), the lockups and the app icons live in
+The mark (a looped script F, black on a green tile), the lockups and the app icons live in
 [docs/brand/](docs/brand/), traced from the original artwork in `docs/brand/logo-source.png`. Sizes,
 clear space and colour rules are in [docs/brand/BRAND.md](docs/brand/BRAND.md). Use the files as
 they are: no recolouring, no effects, no stretching.

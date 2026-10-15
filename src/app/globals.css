@@ -22,9 +22,9 @@
   /* Purely decorative (option-chip icons, dividers, chevrons), never for text. */
   --color-fg-faint: #676c6e;
   /* At rest. Each page load shows the old lime first and sweeps here ("Accent on load" below). */
-  --color-accent: #5da8fd;
-  --color-accent-hover: #4b9cf6;
-  --color-on-accent: #04152b;
+  --color-accent: #5dfd8c;
+  --color-accent-hover: #4ef181;
+  --color-on-accent: #021c09;
   --color-danger: #f87171;
   --color-warning: #fbbf24;
   --color-success: #4ade80;
@@ -87,41 +87,41 @@
 }
 
 /* ---------- Accent on load ----------
-   The page opens on the old lime and, once it is up, sweeps to the resting blue (#5da8fd). The three
+   The page opens on the old lime and, once it is up, sweeps to the resting green (#5dfd8c). The three
    accent variables are registered as colors so they interpolate, and every `bg-accent`, `text-accent`,
    `ring-accent/40`, the focus ring and the selection read them, so the whole UI shifts together. The
    logo's tile makes the same sweep from the old brand lime (`--color-logo`, read by Logo.tsx).
    `data-accent-intro` on <html> drives it. It is in the static HTML (layout.tsx), so the first paint is
    lime. Shell sets it to "play" once the app has hydrated and painted a frame: the lime holds 0.4 s
    more, then the sweep runs. A clock started at first style instead would run out before a slow first
-   paint, and the page would open already blue. Shell removes the attribute when the sweep ends,
+   paint, and the page would open already green. Shell removes the attribute when the sweep ends,
    leaving the resting values, which equal the last stop.
-   The path is one continuous blend: a straight line in OKLab from lime to blue, its chroma lifted a
-   third of the way back toward the ends so the middle stays a clear aqua instead of going grey (a hue
-   sweep around the wheel read as separate green, mint and cyan bands). The 41 stops are spaced by
+   The path is one continuous blend: a straight line in OKLab from lime to green, its chroma lifted a
+   third of the way back toward the ends so the middle never goes grey (a hue sweep around the wheel
+   read as separate color bands). The 41 stops are spaced by
    perceptual distance and eased with smootherstep (no jolt at either end), which is why the timing
    between them is `linear`. It runs
-   once per document: client-side navigation keeps the blue, a full load replays it. */
+   once per document: client-side navigation keeps the green, a full load replays it. */
 @property --color-accent {
   syntax: "<color>";
   inherits: true;
-  initial-value: #5da8fd;
+  initial-value: #5dfd8c;
 }
 @property --color-accent-hover {
   syntax: "<color>";
   inherits: true;
-  initial-value: #4b9cf6;
+  initial-value: #4ef181;
 }
 @property --color-on-accent {
   syntax: "<color>";
   inherits: true;
-  initial-value: #04152b;
+  initial-value: #021c09;
 }
-/* The logo's tile: the brand blue at rest (docs/brand/BRAND.md), the old brand lime before the sweep. */
+/* The logo's tile: the brand green at rest (docs/brand/BRAND.md), the old brand lime before the sweep. */
 @property --color-logo {
   syntax: "<color>";
   inherits: true;
-  initial-value: #5da8fd;
+  initial-value: #5dfd8c;
 }
 
 /* Before and during the intro: the old lime (the sweep's first stop). */
@@ -139,45 +139,45 @@ html[data-accent-intro="play"] {
 @keyframes accent-shift {
   0% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81e; }
   2.5% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81e; }
-  5% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81f; }
-  7.5% { --color-accent: #ddfd5e; --color-accent-hover: #d1f24d; --color-on-accent: #141a05; --color-logo: #cff822; }
-  10% { --color-accent: #ddfc5f; --color-accent-hover: #d0f14f; --color-on-accent: #141a05; --color-logo: #cff726; }
-  12.5% { --color-accent: #dbfc62; --color-accent-hover: #cff151; --color-on-accent: #141a06; --color-logo: #cdf72c; }
-  15% { --color-accent: #d9fb64; --color-accent-hover: #cdf055; --color-on-accent: #131a06; --color-logo: #ccf633; }
-  17.5% { --color-accent: #d7fa68; --color-accent-hover: #cbef59; --color-on-accent: #131a07; --color-logo: #c9f53b; }
-  20% { --color-accent: #d4f86c; --color-accent-hover: #c7ed5e; --color-on-accent: #131a07; --color-logo: #c7f444; }
-  22.5% { --color-accent: #d0f771; --color-accent-hover: #c4ec64; --color-on-accent: #121a08; --color-logo: #c3f24d; }
-  25% { --color-accent: #ccf577; --color-accent-hover: #bfea6a; --color-on-accent: #111a09; --color-logo: #bff156; }
-  27.5% { --color-accent: #c6f37d; --color-accent-hover: #b9e871; --color-on-accent: #101a0b; --color-logo: #baef60; }
-  30% { --color-accent: #c0f083; --color-accent-hover: #b3e678; --color-on-accent: #0f1a0c; --color-logo: #b5ed69; }
-  32.5% { --color-accent: #baee8a; --color-accent-hover: #ace37f; --color-on-accent: #0e1a0e; --color-logo: #aeea72; }
-  35% { --color-accent: #b2eb91; --color-accent-hover: #a4e187; --color-on-accent: #0c1a10; --color-logo: #a7e87c; }
-  37.5% { --color-accent: #aae999; --color-accent-hover: #9bde8f; --color-on-accent: #0a1a12; --color-logo: #a0e685; }
-  40% { --color-accent: #a0e6a1; --color-accent-hover: #91dc97; --color-on-accent: #081a14; --color-logo: #97e38f; }
-  42.5% { --color-accent: #97e4a9; --color-accent-hover: #86d9a0; --color-on-accent: #071a17; --color-logo: #8ee198; }
-  45% { --color-accent: #8de1b2; --color-accent-hover: #7bd7aa; --color-on-accent: #051a19; --color-logo: #85dfa1; }
-  47.5% { --color-accent: #83dfbb; --color-accent-hover: #70d4b3; --color-on-accent: #051a1b; --color-logo: #7bddab; }
-  50% { --color-accent: #79dcc3; --color-accent-hover: #66d1bc; --color-on-accent: #041a1d; --color-logo: #72dab4; }
-  52.5% { --color-accent: #72d9cc; --color-accent-hover: #5ecec5; --color-on-accent: #04191f; --color-logo: #69d8be; }
-  55% { --color-accent: #6bd6d4; --color-accent-hover: #58cacd; --color-on-accent: #041920; --color-logo: #61d5c7; }
-  57.5% { --color-accent: #67d2dc; --color-accent-hover: #54c7d5; --color-on-accent: #041921; --color-logo: #5bd1d0; }
-  60% { --color-accent: #65cee2; --color-accent-hover: #52c2db; --color-on-accent: #041822; --color-logo: #58ced9; }
-  62.5% { --color-accent: #64cae8; --color-accent-hover: #51bee0; --color-on-accent: #041823; --color-logo: #57cae0; }
-  65% { --color-accent: #63c5ec; --color-accent-hover: #51bae5; --color-on-accent: #041724; --color-logo: #58c5e6; }
-  67.5% { --color-accent: #63c1f0; --color-accent-hover: #51b5e8; --color-on-accent: #041725; --color-logo: #59c1eb; }
-  70% { --color-accent: #63bdf3; --color-accent-hover: #50b1eb; --color-on-accent: #041726; --color-logo: #5bbdf0; }
-  72.5% { --color-accent: #62b9f5; --color-accent-hover: #50adee; --color-on-accent: #041627; --color-logo: #5cb9f3; }
-  75% { --color-accent: #62b5f7; --color-accent-hover: #4faaf0; --color-on-accent: #041628; --color-logo: #5db5f5; }
-  77.5% { --color-accent: #61b2f9; --color-accent-hover: #4fa6f1; --color-on-accent: #041629; --color-logo: #5db2f7; }
-  80% { --color-accent: #60b0fa; --color-accent-hover: #4ea4f3; --color-on-accent: #041629; --color-logo: #5daff9; }
-  82.5% { --color-accent: #5fadfb; --color-accent-hover: #4da1f4; --color-on-accent: #04152a; --color-logo: #5dadfa; }
-  85% { --color-accent: #5eabfc; --color-accent-hover: #4ca0f5; --color-on-accent: #04152a; --color-logo: #5dabfb; }
-  87.5% { --color-accent: #5eaafc; --color-accent-hover: #4c9ef5; --color-on-accent: #04152b; --color-logo: #5daafc; }
-  90% { --color-accent: #5da9fd; --color-accent-hover: #4b9df6; --color-on-accent: #04152b; --color-logo: #5da9fc; }
-  92.5% { --color-accent: #5da8fd; --color-accent-hover: #4b9df6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
-  95% { --color-accent: #5da8fd; --color-accent-hover: #4b9cf6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
-  97.5% { --color-accent: #5da8fd; --color-accent-hover: #4b9cf6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
-  100% { --color-accent: #5da8fd; --color-accent-hover: #4b9cf6; --color-on-accent: #04152b; --color-logo: #5da8fd; }
+  5% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81e; }
+  7.5% { --color-accent: #defd5d; --color-accent-hover: #d2f24c; --color-on-accent: #141a05; --color-logo: #d0f81f; }
+  10% { --color-accent: #ddfd5d; --color-accent-hover: #d1f24d; --color-on-accent: #141a05; --color-logo: #cff820; }
+  12.5% { --color-accent: #dcfd5e; --color-accent-hover: #d0f24d; --color-on-accent: #141a05; --color-logo: #cff822; }
+  15% { --color-accent: #dbfd5e; --color-accent-hover: #cff24e; --color-on-accent: #141a05; --color-logo: #cef825; }
+  17.5% { --color-accent: #dafd5f; --color-accent-hover: #cef24f; --color-on-accent: #131a05; --color-logo: #ccf828; }
+  20% { --color-accent: #d8fd60; --color-accent-hover: #ccf250; --color-on-accent: #131a05; --color-logo: #cbf82c; }
+  22.5% { --color-accent: #d6fd61; --color-accent-hover: #caf251; --color-on-accent: #131a05; --color-logo: #c9f930; }
+  25% { --color-accent: #d4fd62; --color-accent-hover: #c8f252; --color-on-accent: #121a05; --color-logo: #c7f934; }
+  27.5% { --color-accent: #d1fd64; --color-accent-hover: #c5f254; --color-on-accent: #121a05; --color-logo: #c4f939; }
+  30% { --color-accent: #cefd65; --color-accent-hover: #c2f256; --color-on-accent: #121a06; --color-logo: #c1f93e; }
+  32.5% { --color-accent: #cafe67; --color-accent-hover: #bef258; --color-on-accent: #111a06; --color-logo: #befa42; }
+  35% { --color-accent: #c6fe69; --color-accent-hover: #baf25a; --color-on-accent: #101b06; --color-logo: #bbfa47; }
+  37.5% { --color-accent: #c2fe6b; --color-accent-hover: #b6f25c; --color-on-accent: #101b06; --color-logo: #b7fa4c; }
+  40% { --color-accent: #bdfe6d; --color-accent-hover: #b1f25f; --color-on-accent: #0f1b06; --color-logo: #b3fa51; }
+  42.5% { --color-accent: #b8fe6f; --color-accent-hover: #acf261; --color-on-accent: #0e1b06; --color-logo: #aefb56; }
+  45% { --color-accent: #b3fe71; --color-accent-hover: #a7f264; --color-on-accent: #0e1b06; --color-logo: #aafb5a; }
+  47.5% { --color-accent: #aefe73; --color-accent-hover: #a2f266; --color-on-accent: #0d1b07; --color-logo: #a5fb5f; }
+  50% { --color-accent: #a8fe76; --color-accent-hover: #9cf269; --color-on-accent: #0c1b07; --color-logo: #a0fb63; }
+  52.5% { --color-accent: #a3fe78; --color-accent-hover: #97f26b; --color-on-accent: #0b1b07; --color-logo: #9bfc68; }
+  55% { --color-accent: #9dfe7a; --color-accent-hover: #91f26e; --color-on-accent: #0a1b07; --color-logo: #96fc6c; }
+  57.5% { --color-accent: #97fe7c; --color-accent-hover: #8bf270; --color-on-accent: #091b07; --color-logo: #91fc70; }
+  60% { --color-accent: #91fe7e; --color-accent-hover: #85f272; --color-on-accent: #081b08; --color-logo: #8bfc73; }
+  62.5% { --color-accent: #8bfe80; --color-accent-hover: #7ff274; --color-on-accent: #071c08; --color-logo: #86fc77; }
+  65% { --color-accent: #85fe82; --color-accent-hover: #79f276; --color-on-accent: #071c08; --color-logo: #81fc7a; }
+  67.5% { --color-accent: #80fe83; --color-accent-hover: #73f278; --color-on-accent: #061c08; --color-logo: #7cfd7d; }
+  70% { --color-accent: #7afe85; --color-accent-hover: #6ef27a; --color-on-accent: #051c08; --color-logo: #77fd80; }
+  72.5% { --color-accent: #75fd86; --color-accent-hover: #68f27b; --color-on-accent: #051c08; --color-logo: #72fd82; }
+  75% { --color-accent: #71fd88; --color-accent-hover: #63f17c; --color-on-accent: #041c09; --color-logo: #6efd84; }
+  77.5% { --color-accent: #6cfd89; --color-accent-hover: #5ff17d; --color-on-accent: #031c09; --color-logo: #6afd86; }
+  80% { --color-accent: #68fd8a; --color-accent-hover: #5af17e; --color-on-accent: #031c09; --color-logo: #67fd88; }
+  82.5% { --color-accent: #65fd8a; --color-accent-hover: #57f17f; --color-on-accent: #031c09; --color-logo: #64fd89; }
+  85% { --color-accent: #62fd8b; --color-accent-hover: #54f180; --color-on-accent: #031c09; --color-logo: #62fd8a; }
+  87.5% { --color-accent: #60fd8b; --color-accent-hover: #52f180; --color-on-accent: #021c09; --color-logo: #60fd8b; }
+  90% { --color-accent: #5ffd8c; --color-accent-hover: #50f181; --color-on-accent: #021c09; --color-logo: #5ffd8b; }
+  92.5% { --color-accent: #5efd8c; --color-accent-hover: #4ff181; --color-on-accent: #021c09; --color-logo: #5efd8c; }
+  95% { --color-accent: #5dfd8c; --color-accent-hover: #4ef181; --color-on-accent: #021c09; --color-logo: #5dfd8c; }
+  97.5% { --color-accent: #5dfd8c; --color-accent-hover: #4ef181; --color-on-accent: #021c09; --color-logo: #5dfd8c; }
+  100% { --color-accent: #5dfd8c; --color-accent-hover: #4ef181; --color-on-accent: #021c09; --color-logo: #5dfd8c; }
 }
 
 /* No transitions until the sweep is over. A color transition re-targeted on every frame trails the
