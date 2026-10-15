@@ -96,7 +96,9 @@ export function buildFalVideoPayload(model: VideoModel, req: FalVideoParams, med
   }
 
   const hasFrames = Boolean(media.firstFrame || media.lastFrame);
-  const endpoint = hasFrames ? route.imageToVideo : route.textToVideo;
+  const bothFrames = Boolean(route.firstLastFrameToVideo && media.lastFrame);
+  if (bothFrames && !media.firstFrame) throw badRequest(`${model.name} on fal needs a first frame with the last frame`);
+  const endpoint = bothFrames ? route.firstLastFrameToVideo : hasFrames ? route.imageToVideo : route.textToVideo;
   if (!endpoint) throw badRequest(hasFrames ? `${model.name} on fal does not take a first frame` : `${model.name} on fal needs a first frame`);
   const input: Record<string, unknown> = { prompt, ...route.extra };
   const params: VideoParams = { duration: snapDuration(model, req.duration) };
@@ -104,7 +106,10 @@ export function buildFalVideoPayload(model: VideoModel, req: FalVideoParams, med
   if (route.duration) {
     input.duration = route.duration === "number" ? params.duration : route.duration === "seconds" ? `${params.duration}s` : String(params.duration);
   }
-  if (hasFrames) {
+  if (bothFrames) {
+    input.start_image_url = media.firstFrame;
+    input.end_image_url = media.lastFrame;
+  } else if (hasFrames) {
     if (media.firstFrame) input[route.imageField ?? "image_url"] = media.firstFrame;
     if (media.lastFrame) {
       if (!route.endImage) throw badRequest(`${model.name} on fal does not take a last frame`);

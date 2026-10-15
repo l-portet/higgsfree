@@ -168,7 +168,7 @@ describe("fal routes", () => {
       }
       if (m.caps.textToVideo) expect(m.fal.textToVideo, `${m.id} text-to-video endpoint`).toBeTruthy();
       if (m.caps.imageToVideo) expect(m.fal.imageToVideo, `${m.id} image-to-video endpoint`).toBeTruthy();
-      if (m.caps.lastFrame) expect(m.fal.endImage, `${m.id} last frame on fal`).toBe(true);
+      if (m.caps.lastFrame) expect(m.fal.endImage || Boolean(m.fal.firstLastFrameToVideo), `${m.id} last frame on fal`).toBe(true);
       if (m.caps.audio && m.falOnly) expect(m.fal.audio, `${m.id} audio field`).toBeTruthy();
       if (m.fal.resolutions) for (const r of m.resolutions) expect(m.fal.resolutions[r], `${m.id} has no fal value for ${r}`).toBeTruthy();
     }

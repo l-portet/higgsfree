@@ -241,6 +241,11 @@ export interface FalVideoRoute {
   imageField?: "image_url" | "start_image_url";
   /** The last frame goes in `end_image_url`. */
   endImage?: boolean;
+  /**
+   * Both frames go to this endpoint instead, as `start_image_url` and `end_image_url`, both required
+   * (FLUX 3 splits first-frame and first-and-last-frame jobs). A last frame alone is refused.
+   */
+  firstLastFrameToVideo?: string;
   /** How `duration` is written: `5`, `"5"` or `"5s"`. Absent = never sent. */
   duration?: "number" | "string" | "seconds";
   /** Where `aspect_ratio` is accepted. Absent = never sent. */
