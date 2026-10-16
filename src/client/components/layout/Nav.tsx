@@ -12,7 +12,7 @@ import { useUi } from "@/store/ui";
 
 /** Each icon sits in a 16 px box; sizes are tuned so the drawn shapes match the mockup (14 px frames, a 12 px heart). */
 const TABS: { href: string; label: string; icon: ReactNode }[] = [
-  { href: "/video", label: "Video", icon: <VideoIcon /> },
+  { href: "/", label: "Video", icon: <VideoIcon /> },
   { href: "/image", label: "Image", icon: <Image size={17} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
   { href: "/assets", label: "Assets", icon: <AssetsIcon /> },
   { href: "/favorites", label: "Favorites", icon: <Heart size={13} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
@@ -22,8 +22,14 @@ const TABS: { href: string; label: string; icon: ReactNode }[] = [
 const BOX = "flex h-[46px] items-center rounded-chrome border border-border bg-surface shadow-float";
 const LABEL = "text-[13px] font-medium tracking-[-0.01em]";
 
+/** `/video` serves the same view as `/` (which is its canonical); treat the two as one tab. */
+function normalize(pathname: string): string {
+  return pathname === "/video" ? "/" : pathname;
+}
+
 function isActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  // `href` of "/" would make every path a prefix match, so the exact test is the only one that applies.
+  return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 }
 
 function IconBox({ children }: { children: ReactNode }) {
@@ -99,7 +105,7 @@ function useIndicator(activeIndex: number) {
  * its icon in the accent), and the key. Tab labels collapse to icons on phones.
  */
 export function Nav() {
-  const pathname = usePathname() ?? "/";
+  const pathname = normalize(usePathname() ?? "/");
   const activeIndex = TABS.findIndex((t) => isActive(pathname, t.href));
   const { tabs, indicator } = useIndicator(activeIndex);
   return (
@@ -111,7 +117,7 @@ export function Nav() {
           beside the tab labels between 640 and ~680 px, and phones need the space).
         */}
         <Link
-          href="/video"
+          href="/"
           aria-label="higgsfree home"
           className={cn(BOX, "px-[7px] transition-colors duration-150 hover:border-border-strong focus-visible:border-border-strong")}
         >

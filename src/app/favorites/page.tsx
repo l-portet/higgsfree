@@ -1,10 +1,13 @@
-"use client";
+import type { Metadata } from "next";
+import FavoritesView from "@/features/favorites/FavoritesView";
 
-import dynamic from "next/dynamic";
-import { FeedFallback } from "@/components/layout/fallbacks";
-
-const FavoritesPage = dynamic(() => import("@/features/favorites/FavoritesPage"), { ssr: false, loading: () => <FeedFallback /> });
+/** `noindex`, for the same reason as `/assets`: the library is this browser's, and empty to a crawler. */
+export const metadata: Metadata = {
+  title: "Favorites",
+  description: "The generations you have kept, in folders.",
+  robots: { index: false, follow: true },
+};
 
 export default function Page() {
-  return <FavoritesPage />;
+  return <FavoritesView />;
 }
