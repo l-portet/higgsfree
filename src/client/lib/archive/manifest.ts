@@ -2,6 +2,7 @@
 import type { Folder, Generation, GenerationInputs, GenerationStatus, GenerationType, MediaRef } from "@shared/types";
 import { isFolderId, normalizeFolderName } from "../folders";
 import { isGenerationId, isMediaId } from "../media-ids";
+import { normalizeNote } from "../notes";
 
 export const ARCHIVE_FORMAT = "higgsfree-library";
 export const ARCHIVE_VERSION = 1;
@@ -100,6 +101,11 @@ export function sanitizeRecord(v: unknown): Generation | undefined {
     g.favorite = true;
     // Kept only if the folder is in the library once the import is done (the importer checks).
     if (isFolderId(o.folder)) g.folder = o.folder;
+  }
+  if (type === "video") {
+    const note = str(o.note);
+    const cleaned = note ? normalizeNote(note) : "";
+    if (cleaned) g.note = cleaned;
   }
   const completedAt = iso(o.completedAt);
   if (completedAt) g.completedAt = completedAt;

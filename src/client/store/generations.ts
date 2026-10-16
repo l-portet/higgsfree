@@ -8,6 +8,7 @@ import type { Generation, GenerationStatus, GenerationType, ListGenerationsQuery
 import * as api from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 import { subscribeEvents, subscribeEventStatus } from "@/lib/live";
+import { normalizeNote } from "@/lib/notes";
 import { useUi } from "@/store/ui";
 
 export type ListKey = string;
@@ -62,6 +63,8 @@ interface GenerationsState {
   retryGeneration: (id: string) => Promise<Generation[]>;
   /** The heart and its folder: optimistic locally, the stored record wins once the write lands. */
   setKeep: (id: string, patch: KeepPatch) => Promise<void>;
+  /** A video's note (`null` removes it): optimistic locally, the stored record wins once the write lands. */
+  setNote: (id: string, note: string | null) => Promise<void>;
 }
 
 export const useGenerations = create<GenerationsState>()((set, get) => ({
@@ -166,6 +169,22 @@ export const useGenerations = create<GenerationsState>()((set, get) => ({
     set((s) => ({ byId: { ...s.byId, [id]: optimistic } }));
     try {
       get().upsert(await api.updateGeneration(id, patch));
+    } catch (err) {
+      set((s) => (s.byId[id] === optimistic ? { byId: { ...s.byId, [id]: prev } } : s));
+      throw err;
+    }
+  },
+
+  setNote: async (id, note) => {
+    const prev = get().byId[id];
+    if (!prev || prev.type !== "video") return;
+    const text = normalizeNote(note ?? "");
+    if ((prev.note ?? "") === text) return;
+    const { note: _prevNote, ...rest } = prev;
+    const optimistic: Generation = text ? { ...rest, note: text } : { ...rest };
+    set((s) => ({ byId: { ...s.byId, [id]: optimistic } }));
+    try {
+      get().upsert(await api.updateGeneration(id, { note: text || null }));
     } catch (err) {
       set((s) => (s.byId[id] === optimistic ? { byId: { ...s.byId, [id]: prev } } : s));
       throw err;

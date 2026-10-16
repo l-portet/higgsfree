@@ -29,6 +29,7 @@ import { imageCatalog, videoCatalog } from "./catalog";
 import { cachedCredits, fetchCredits, invalidateCredits } from "./credits";
 import { countInFolder, getFolder as readFolder, listFolders as readFolders, putFolder, removeFolder } from "./db/folders";
 import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic, type GenerationPatch } from "./db/generations";
+import { normalizeNote } from "./notes";
 import { listUploads, putMedia } from "./db/media";
 import { base64ToBytes, blobToDataUrl, toDataUrl } from "./data-url";
 import { cancelJob, retryGeneration as engineRetry, submitImageBatch, submitVideo } from "./engine";
@@ -125,11 +126,12 @@ export async function getGeneration(id: string): Promise<Generation> {
 }
 
 /**
- * Client-editable fields only (the heart and its folder); status, output and friends belong to the
- * engine. Filing in a folder keeps the record; removing the heart takes it out of its folder.
+ * Client-editable fields only (the heart, its folder, a video's note); status, output and friends
+ * belong to the engine. Filing in a folder keeps the record; removing the heart takes it out of its
+ * folder. An empty note removes it.
  */
 export async function updateGeneration(id: string, body: UpdateGenerationRequest): Promise<Generation> {
-  if (body.favorite === undefined && body.folder === undefined) throw badRequest("Nothing to update");
+  if (body.favorite === undefined && body.folder === undefined && body.note === undefined) throw badRequest("Nothing to update");
   const patch: GenerationPatch = {};
   if (body.favorite !== undefined) patch.favorite = body.favorite;
   if (body.folder) {
@@ -139,6 +141,14 @@ export async function updateGeneration(id: string, body: UpdateGenerationRequest
     patch.folder = body.folder;
   } else if (body.folder === null || body.favorite === false) {
     patch.folder = undefined;
+  }
+  if (body.note !== undefined) {
+    if (body.note !== null && typeof body.note !== "string") throw badRequest("Note must be text");
+    const current = await readGeneration(id);
+    if (!current) throw notFound("Generation not found");
+    if (current.type !== "video") throw badRequest("Only a video can have a note");
+    const note = normalizeNote(body.note ?? "");
+    patch.note = note || undefined;
   }
   const row = await patchGeneration(id, patch);
   if (!row) throw notFound("Generation not found");

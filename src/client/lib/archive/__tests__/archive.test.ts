@@ -21,6 +21,7 @@ const MP4ISH = Uint8Array.from([0, 0, 0, 8, 109, 100, 97, 116]);
 const B: Generation = {
   id: "gen_bbbbbbbb", type: "video", status: "completed", prompt: "b", model: "m", modelName: "M", params: { duration: 5 },
   inputs: { firstFrame: "gen_aaaaaaaa.png" }, output: { id: "gen_bbbbbbbb.mp4", mime: "video/mp4", bytes: MP4ISH.length, durationSec: 5 },
+  note: "Locked-off, rain on the window",
   createdAt: later, updatedAt: later, completedAt: later,
 };
 const C: Generation = { id: "gen_cccccccc", type: "image", status: "failed", error: "boom", prompt: "c", model: "m", modelName: "M", params: { aspectRatio: "1:1", size: "1K" }, createdAt: ts, updatedAt: ts };
