@@ -77,6 +77,8 @@ export interface Generation {
   batchId?: string;
   /** Position within the batch (0-based). */
   batchIndex?: number;
+  /** A note written on this video; only present when non-empty. */
+  note?: string;
   /** Kept by the user (the heart on a card); only present when true. */
   favorite?: boolean;
   /** The Favorites folder it is filed in (a `Folder` id); only on kept records. */
@@ -324,6 +326,8 @@ export interface UpdateGenerationRequest {
   favorite?: boolean;
   /** File it in a folder (keeping it if it was not), or `null` to take it out of its folder. */
   folder?: string | null;
+  /** A note on a video, or `null` to remove it. */
+  note?: string | null;
 }
 
 export interface UploadResponse {

@@ -20,6 +20,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Spinner } from "@/components/ui/Spinner";
 import { ProviderTile } from "@/components/ProviderTile";
 import { KeepMenu } from "@/components/favorites/KeepMenu";
+import { VideoNote } from "@/components/video/VideoNote";
 import type { Generation } from "@shared/types";
 
 function Row({ label, children, mono }: { label: string; children: ReactNode; mono?: boolean }) {
@@ -71,6 +72,8 @@ function Details({ g }: { g: Generation }) {
           </DialogPrimitive.Description>
         </div>
       </div>
+
+      {g.type === "video" ? <VideoNote g={g} /> : null}
 
       <section>
         <div className="mb-1.5 flex items-center justify-between">
@@ -282,9 +285,9 @@ export function Lightbox() {
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const t = e.target;
-    // Leave ← → to the native <video controls> (seeking) and to any text field / editable region.
+    // Leave ← → to the native <video controls> (seeking), to any text field, and to the note editor.
     if (t instanceof HTMLVideoElement) return;
-    if (t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    if (t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest("[data-note-editor]"))) return;
     if (e.key === "ArrowLeft") {
       e.preventDefault();
       step(-1);
@@ -304,6 +307,11 @@ export function Lightbox() {
           ref={contentRef}
           tabIndex={-1}
           onKeyDown={onKeyDown}
+          // Escape inside the note editor cancels the edit; the dialog stays open (the listener is capture-phase).
+          onEscapeKeyDown={(e) => {
+            const t = e.target;
+            if (t instanceof HTMLElement && t.closest("[data-note-editor]")) e.preventDefault();
+          }}
           // Focus the container (not the Close button) so ← → work immediately and Esc closes the dialog
           // instead of a focused icon button's tooltip. Remember the opener (a card) to return focus to on close.
           onOpenAutoFocus={(e) => {
