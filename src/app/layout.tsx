@@ -3,27 +3,22 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import type { ReactNode } from "react";
 import Shell from "@/components/layout/Shell";
+import { SITE_DESCRIPTION, SITE_URL } from "@shared/site";
+import { DEFAULT_TITLE, card } from "./meta";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-inter", display: "swap" });
 const interTight = Inter_Tight({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-inter-tight", display: "swap" });
 
-const DESCRIPTION = "Open-source AI image and video studio powered by your OpenRouter key.";
-
-/** Absolute base for social-card urls: APP_URL, else the Vercel production domain, else local dev. */
-function siteUrl(): URL {
-  const explicit = process.env.APP_URL?.trim();
-  if (explicit) return new URL(explicit);
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  return new URL(vercel ? `https://${vercel}` : "http://localhost:3000");
-}
-
 export const metadata: Metadata = {
-  metadataBase: siteUrl(),
-  title: { default: "higgsfree", template: "%s · higgsfree" },
-  description: DESCRIPTION,
+  metadataBase: SITE_URL,
+  title: { default: DEFAULT_TITLE, template: "%s · higgsfree" },
+  description: SITE_DESCRIPTION,
   applicationName: "higgsfree",
   manifest: "/site.webmanifest",
+  // No `alternates.canonical` here: a value in the layout is inherited by every page, which would
+  // point all of them at one url. Each page declares its own.
+  keywords: ["AI image generator", "AI video generator", "OpenRouter", "fal", "open source", "text to image", "text to video"],
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -32,19 +27,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
-  openGraph: {
-    type: "website",
-    siteName: "higgsfree",
-    title: "higgsfree",
-    description: "Open-source AI image and video studio on your OpenRouter key.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "higgsfree" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "higgsfree",
-    description: "Open-source AI image and video studio on your OpenRouter key.",
-    images: ["/og-image.png"],
-  },
+  ...card({}),
 };
 
 const GA_ID = "G-SCFQ6KQ6L0";

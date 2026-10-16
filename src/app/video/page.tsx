@@ -1,11 +1,16 @@
-"use client";
+import type { Metadata } from "next";
+import VideoView from "@/features/video/VideoView";
+import { card } from "../meta";
 
-import dynamic from "next/dynamic";
-import { FEED_CELL } from "@/components/FeedGrid";
-import { FeedFallback } from "@/components/layout/fallbacks";
-
-const VideoPage = dynamic(() => import("@/features/video/VideoPage"), { ssr: false, loading: () => <FeedFallback aspect={FEED_CELL.video} statusLine /> });
+/**
+ * The same view as `/`, kept for links that already point here (the nav sends the Video tab to `/`).
+ * The canonical points at `/` so the two are not read as duplicates.
+ */
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  ...card({ url: "/" }),
+};
 
 export default function Page() {
-  return <VideoPage />;
+  return <VideoView />;
 }

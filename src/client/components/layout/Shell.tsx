@@ -116,7 +116,8 @@ function useComposerMode() {
   useEffect(() => {
     if (!pathname) return;
     if (pathname.startsWith("/image")) setMode("image");
-    else if (pathname.startsWith("/video")) setMode("video");
+    // `/` is the Video view, and `/video` the same view under its old url.
+    else if (pathname === "/" || pathname.startsWith("/video")) setMode("video");
   }, [pathname, setMode]);
 }
 
