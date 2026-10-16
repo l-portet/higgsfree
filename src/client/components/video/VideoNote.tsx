@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { Pen } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { describeApiError } from "@/lib/api";
 import { NOTE_MAX, normalizeNote } from "@/lib/notes";
@@ -44,9 +45,10 @@ export function VideoNote({ g }: { g: Generation }) {
       <button
         ref={openerRef}
         type="button"
-        className="cursor-text self-start border-0 bg-transparent p-0 text-left text-body font-normal text-fg-muted transition-colors duration-150 hover:text-fg"
+        className="inline-flex cursor-text items-center gap-1.5 self-start border-0 bg-transparent p-0 text-left text-body font-normal text-fg-muted transition-colors duration-150 hover:text-fg"
         onClick={() => setEditing(true)}
       >
+        <Pen size={14} aria-hidden="true" />
         Write a note
       </button>
     );
