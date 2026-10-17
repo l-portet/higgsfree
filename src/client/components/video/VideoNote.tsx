@@ -58,10 +58,11 @@ export function VideoNote({ g }: { g: Generation }) {
     <button
       ref={openerRef}
       type="button"
-      className="cursor-text w-full border-0 bg-transparent p-0 text-left text-body font-normal whitespace-pre-wrap break-words text-fg"
+      className="inline-flex w-full cursor-text items-start gap-1.5 border-0 bg-transparent p-0 text-left text-body font-normal text-fg"
       onClick={() => setEditing(true)}
     >
-      {note}
+      <Pen size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-fg-muted" />
+      <span className="min-w-0 whitespace-pre-wrap break-words">{note}</span>
     </button>
   );
 }
