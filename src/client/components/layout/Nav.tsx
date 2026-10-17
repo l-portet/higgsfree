@@ -58,7 +58,7 @@ function KeyBox() {
         className={cn(BOX, "group gap-2 px-[17px] text-fg-muted transition-colors duration-150 hover:text-fg")}
       >
         <IconBox>
-          <KeyIcon className="text-fg-subtle transition-colors duration-150 group-hover:text-fg-muted" />
+          <KeyIcon data-nav-icon className="text-fg-subtle transition-colors duration-150 group-hover:text-fg-muted" />
         </IconBox>
         <span className={cn(LABEL, "hidden tabular-nums sm:inline")}>{label}</span>
         <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", hasKey ? "bg-accent" : "bg-fg-disabled")} />
@@ -103,6 +103,8 @@ function useIndicator(activeIndex: number) {
 /**
  * The top bar: three floating boxes, centred. The logo (home, the Video view), the four views (the active one raised,
  * its icon in the accent), and the key. Tab labels collapse to icons on phones.
+ * `data-nav-icon` marks every icon in the bar: on load they all wear the accent and sweep with it, then the ones
+ * that do not keep it settle to their own colour as it lands (globals.css, "Accent on load").
  */
 export function Nav() {
   const pathname = normalize(usePathname() ?? "/");
@@ -154,7 +156,7 @@ export function Nav() {
                 )}
               >
                 <IconBox>
-                  <span className={cn("inline-flex transition-colors duration-200", active ? "text-accent" : "text-fg-subtle group-hover:text-fg-muted")}>
+                  <span data-nav-icon className={cn("inline-flex transition-colors duration-200", active ? "text-accent" : "text-fg-subtle group-hover:text-fg-muted")}>
                     {icon}
                   </span>
                 </IconBox>
