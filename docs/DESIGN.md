@@ -256,6 +256,9 @@ There is no page chrome: the app is four views under one floating nav, with one 
   lime. Transitions are off while the accent moves, so no element trails behind; that freeze has its own
   attribute (`data-accent-sweep`, dropped with `accent-shift`) rather than riding on `data-accent-intro`,
   which runs on to the logo's slower clock — a tab clicked in between used to change colour in a jump.
+  The top bar arrives as one: for the length of the sweep every icon in it wears the accent (`data-nav-icon`),
+  not only the active tab's, and as it lands the ones that do not keep it settle to their grey over their own
+  200 ms — the bar comes up lime, turns green, then recedes and leaves the active tab lit.
   Client-side navigation keeps the green.
   It also runs under reduced motion (a color fade, nothing moves). The nav logo's tile makes the same move, from the
   old brand lime (`#d0f81e`) to the brand green, on its own slower clock (2.4 s, sine ease): a lime tile over the
