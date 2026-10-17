@@ -201,14 +201,6 @@ html[data-accent-sweep] ::after {
   transition: none !important;
 }
 
-/* The top bar arrives as one: every icon in it (`data-nav-icon`, Nav.tsx) wears the accent and sweeps with it,
-   not only the active tab's. The moment the attribute goes, the icons that do not keep the accent are back on
-   their own colour with their colour transition live again, so they settle to grey over 200 ms instead of
-   snapping — the bar lands green, then recedes and leaves the active tab lit. */
-html[data-accent-sweep] [data-nav-icon] {
-  color: var(--color-accent);
-}
-
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
