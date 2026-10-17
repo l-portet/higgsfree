@@ -280,6 +280,7 @@ export function ImageComposer() {
           maxLength={8000}
           minRows={1}
           maxRows={6}
+          compactUntilFocus
           className={PROMPT_TEXTAREA_CLASS}
         />
       }
