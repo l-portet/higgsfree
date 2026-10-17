@@ -26,23 +26,35 @@ const SettingsDialog = dynamic(() => import("@/components/settings/SettingsDialo
 const STORAGE_TOAST = "storage-unavailable";
 
 const INTRO = "data-accent-intro";
-const SWEEPS = ["accent-shift", "logo-intro"];
+const SWEEP = "data-accent-sweep";
+const ACCENT = "accent-shift";
+const SWEEPS = [ACCENT, "logo-intro"];
 
 /**
  * The accent intro (globals.css): the static HTML opens on the old lime; once the app is up and a frame
- * is painted, play the sweep, then drop the attribute (resting green, transitions back on). Started here
- * rather than by a clock at first style, so a slow first paint can never swallow the lime. Two frames:
- * the first may still be the one that commits hydration. A background tab waits until it is shown.
+ * is painted, play the sweep, then drop the attribute (resting green). Started here rather than by a clock
+ * at first style, so a slow first paint can never swallow the lime. Two frames: the first may still be the
+ * one that commits hydration. A background tab waits until it is shown.
+ * Two attributes, because the accent and the logo's tile run on two clocks: `data-accent-sweep` (transitions
+ * off) goes as soon as the accent has landed, `data-accent-intro` only once the tile's slower fade is over.
+ * One attribute for both froze every transition for a second longer than the accent moved, and a tab clicked
+ * in that window changed colour in a jump.
  */
 function playAccentIntro(): () => void {
   const root = document.documentElement;
   if (root.getAttribute(INTRO) !== "") return () => undefined; // already playing or played
-  const done = () => root.removeAttribute(INTRO);
+  const thaw = () => root.removeAttribute(SWEEP);
+  const done = () => {
+    thaw();
+    root.removeAttribute(INTRO);
+  };
   let frame = requestAnimationFrame(() => {
     frame = requestAnimationFrame(() => {
       root.setAttribute(INTRO, "play");
-      // The accent (on <html>) and the logo's tile (in the nav) run on two clocks (globals.css): wait for both.
       const sweeps = typeof root.getAnimations === "function" ? root.getAnimations({ subtree: true }).filter((a) => SWEEPS.includes((a as CSSAnimation).animationName)) : [];
+      const accent = sweeps.filter((a) => (a as CSSAnimation).animationName === ACCENT);
+      if (accent.length) void Promise.allSettled(accent.map((a) => a.finished)).then(thaw);
+      else thaw();
       if (sweeps.length) void Promise.allSettled(sweeps.map((a) => a.finished)).then(done);
       else done();
     });
