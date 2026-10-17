@@ -253,7 +253,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
   mid-way), spaced by perceptual distance and eased with smootherstep, so nothing jolts. It applies to the accent variables on `html` (`accent-shift`
   in `globals.css`), so every accent element shifts together. `data-accent-intro` in the static HTML holds the lime;
   Shell sets it to `play` after hydration and removes it at the end. That way a slow first paint never skips the
-  lime. Transitions are off while the accent moves, so no element trails behind; that freeze has its own
+  lime. Each leg ends on its own `animationend`, never on the `Animation` objects `getAnimations` returns:
+  cancelling one (a style sheet swapped in while the page hydrates) rejects its `finished`, which used to end
+  the whole intro on the frame it started — a flash of lime, then every colour at rest and nothing moving.
+  A 4 s cap covers an intro that never reports in at all. Transitions are off while the accent moves, so no element trails behind; that freeze has its own
   attribute (`data-accent-sweep`, dropped with `accent-shift`) rather than riding on `data-accent-intro`,
   which runs on to the logo's slower clock — a tab clicked in between used to change colour in a jump.
   The top bar arrives as one: for the length of the sweep every icon in it wears the accent (`data-nav-icon`),
