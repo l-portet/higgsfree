@@ -113,8 +113,9 @@ There is no page chrome: the app is four views under one floating nav, with one 
   inset. Row 1: a 33 px `+` (a rounded square, `rounded-control`, not a circle) · attached-image thumbnails (33 px,
   `rounded-thumb`, tagged 1st / Last / Ref for video) · the prompt (15 px on a 24 px line, padded to 33 px so it sits
   level with the `+`, auto-growing to 6 lines), 14 px apart. A prompt restored from the last visit opens on one
-  line whatever its length and grows to fit at the first focus (`compactUntilFocus`), so the page never loads under
-  a six-line bar; a prompt handed over ("Reuse prompt", an example) is shown in full straight away. Row 2, 8 px below: option chips left, 6 px apart; the
+  line whatever its length and rises to fit at the first focus (`compactUntilFocus`, 200 ms `ease-out-quart`), so the
+  page never loads under a six-line bar; a prompt handed over ("Reuse prompt", an example) is shown in full straight
+  away. Only that opening is animated — growing a line while typing stays instant. Row 2, 8 px below: option chips left, 6 px apart; the
   estimate (`~$0.13`, 13 px `fg-subtle`) and Generate right. Chips are 36 px, `rounded-control`, `surface-2`,
   `border-strong`, 13 px medium with `-0.01em`. Option chips: `fg-muted` label, `fg-faint` icon. The model chip names
   the thing: `fg` label and icon. Generate: 13 px semibold, `px-3.5`, shortcut badge `rounded-tag` on `black/10`.
