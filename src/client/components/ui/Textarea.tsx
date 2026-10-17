@@ -2,6 +2,9 @@ import { useCallback, useLayoutEffect, useRef, useState, type ComponentProps } f
 import { cn } from "@/lib/cn";
 import { NO_AUTOFILL } from "@/lib/no-autofill";
 
+/** How long the box takes to open out of `compactUntilFocus`. Growth while typing stays instant. */
+const OPEN_MS = 200;
+
 export interface TextareaProps extends ComponentProps<"textarea"> {
   /** Grow with content (default true). */
   autoGrow?: boolean;
@@ -48,25 +51,45 @@ export function Textarea({
   // New text (a prompt handed over from "Reuse prompt", an example) is there to be read: show all of it.
   if (compact && value !== mountedWith) setCompact(false);
 
+  const wasCompact = useRef(compact);
+
   useLayoutEffect(() => {
     const el = inner.current;
     if (!el || !autoGrow) return;
+    // Inline `transition` is only ever ours (the open below), so its presence means that open is still running.
+    const opening = (wasCompact.current && !compact) || el.style.transition !== "";
+    wasCompact.current = compact;
+
     const cs = getComputedStyle(el);
     const line = parseFloat(cs.lineHeight) || 20;
     const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
     const border = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
     const min = line * minRows + pad + border;
     const max = line * maxRows + pad + border;
+
     if (compact) {
       el.style.height = `${min}px`;
       el.style.overflowY = "hidden";
       el.scrollTop = 0; // The first line, not wherever the caret left it.
       return;
     }
+
+    // Where it is on screen right now, read before the measurement collapses it.
+    const from = opening ? el.getBoundingClientRect().height : 0;
+    el.style.transition = "";
     el.style.height = "0px";
     const next = Math.min(Math.max(el.scrollHeight + border, min), max);
-    el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight + border > max ? "auto" : "hidden";
+    if (!opening || Math.abs(from - next) < 1) {
+      el.style.height = `${next}px`;
+      return;
+    }
+    // Out of compact (or typing while that is still under way): ride up to the full height, never jump to it.
+    el.style.height = `${from}px`;
+    void el.offsetHeight; // Commit the start, so the line below is a change the transition can run on.
+    el.style.transition = `height ${OPEN_MS}ms var(--ease-out-quart)`;
+    el.style.height = `${next}px`;
+    el.addEventListener("transitionend", () => { el.style.transition = ""; }, { once: true });
   }, [value, autoGrow, minRows, maxRows, compact]);
 
   return (
