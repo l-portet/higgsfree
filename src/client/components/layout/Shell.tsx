@@ -28,7 +28,9 @@ const STORAGE_TOAST = "storage-unavailable";
 const INTRO = "data-accent-intro";
 const SWEEP = "data-accent-sweep";
 const ACCENT = "accent-shift";
-const SWEEPS = [ACCENT, "logo-intro"];
+const LOGO = "logo-intro";
+/** Past the logo's 0.4 s + 2.4 s: only a backstop for an intro that never reports in at all. */
+const INTRO_CAP_MS = 4000;
 
 /**
  * The accent intro (globals.css): the static HTML opens on the old lime; once the app is up and a frame
@@ -39,28 +41,44 @@ const SWEEPS = [ACCENT, "logo-intro"];
  * off) goes as soon as the accent has landed, `data-accent-intro` only once the tile's slower fade is over.
  * One attribute for both froze every transition for a second longer than the accent moved, and a tab clicked
  * in that window changed colour in a jump.
+ * The end of each leg comes from its `animationend`, never from the `Animation` objects `getAnimations`
+ * hands back: anything that cancels one (a style sheet swapped in behind us while the page hydrates, which
+ * is what dev does) rejects its `finished`, and the whole intro used to end on the frame it began — a flash
+ * of lime, then every colour at rest, nothing moving. An event survives that; a cancelled animation that
+ * restarts simply reports in late, and the cap below covers one that never reports at all.
  */
 function playAccentIntro(): () => void {
   const root = document.documentElement;
   if (root.getAttribute(INTRO) !== "") return () => undefined; // already playing or played
+
+  let timer = 0;
+  const stop = () => {
+    document.removeEventListener("animationend", onEnd);
+    clearTimeout(timer);
+  };
   const thaw = () => root.removeAttribute(SWEEP);
   const done = () => {
     thaw();
     root.removeAttribute(INTRO);
+    stop();
   };
+  function onEnd(e: AnimationEvent) {
+    if (e.animationName === ACCENT) thaw();
+    else if (e.animationName === LOGO) done();
+  }
+
   let frame = requestAnimationFrame(() => {
     frame = requestAnimationFrame(() => {
+      document.addEventListener("animationend", onEnd);
       root.setAttribute(INTRO, "play");
-      const sweeps = typeof root.getAnimations === "function" ? root.getAnimations({ subtree: true }).filter((a) => SWEEPS.includes((a as CSSAnimation).animationName)) : [];
-      const accent = sweeps.filter((a) => (a as CSSAnimation).animationName === ACCENT);
-      if (accent.length) void Promise.allSettled(accent.map((a) => a.finished)).then(thaw);
-      else thaw();
-      if (sweeps.length) void Promise.allSettled(sweeps.map((a) => a.finished)).then(done);
-      else done();
+      timer = window.setTimeout(done, INTRO_CAP_MS);
     });
   });
   // StrictMode runs effects twice in dev: the first pass is cancelled before its frames fire.
-  return () => cancelAnimationFrame(frame);
+  return () => {
+    cancelAnimationFrame(frame);
+    stop();
+  };
 }
 
 /** After the first completed generation in this profile, ask the browser to keep the library out of eviction. */
