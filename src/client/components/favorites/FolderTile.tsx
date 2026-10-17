@@ -1,11 +1,21 @@
-import { memo, useEffect, useState, type DragEvent } from "react";
-import { Folder as FolderIcon, Pencil, Trash2 } from "lucide-react";
+import { memo, useEffect, useRef, useState, type DragEvent } from "react";
+import { Download, Folder as FolderIcon, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import type { Folder, FolderSummary, Generation } from "@shared/types";
+import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { downloadFilename } from "@/lib/files";
+import { isDownloadableVideo, videosInFolder } from "@/lib/folder-videos";
 import { pluralize } from "@/lib/format";
-import { useMediaUrl } from "@/lib/media-urls";
+import { downloadMedia, useMediaUrl } from "@/lib/media-urls";
 import { IconButton } from "@/components/ui/IconButton";
+import { Spinner } from "@/components/ui/Spinner";
 import { dragHasGeneration, droppedGenerationId } from "./dnd";
+
+/** Pause between saves so the browser does not drop the later ones. */
+const DOWNLOAD_GAP_MS = 350;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export interface FolderTileProps {
   folder: Folder;
@@ -37,11 +47,13 @@ const CELLS: Record<number, string[]> = {
 
 /**
  * A folder on the Favorites grid: a square tile with a cover made of its newest records, its name and count,
- * Rename / Delete on hover, and a drop target for the cards (the ring lights up while one is over it).
+ * Download / Rename / Delete on hover, and a drop target for the cards (the ring lights up while one is over it).
  */
 export const FolderTile = memo(function FolderTile({ folder, summary, dropHint, onOpen, onRename, onDelete, onDrop }: FolderTileProps) {
   // dragenter / dragleave fire for every child too; the depth says whether the pointer is still over the tile.
   const [depth, setDepth] = useState(0);
+  const [downloading, setDownloading] = useState(false);
+  const busy = useRef(false);
   const over = depth > 0;
   const count = summary?.count ?? 0;
   const newest = (summary?.newest ?? []).slice(0, 4);
@@ -73,6 +85,49 @@ export const FolderTile = memo(function FolderTile({ folder, summary, dropHint, 
     if (!id) return;
     e.preventDefault();
     onDrop(folder, id);
+  };
+
+  const downloadVideos = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setDownloading(true);
+    try {
+      const videos = await videosInFolder(folder.id);
+      const ready = videos.filter(isDownloadableVideo);
+      if (ready.length === 0) {
+        toast(videos.length === 0 ? "No videos in this folder" : "Only completed videos can be downloaded");
+        return;
+      }
+      let saved = 0;
+      let failed = 0;
+      for (const [i, g] of ready.entries()) {
+        const out = g.output;
+        if (!out) continue;
+        try {
+          await downloadMedia(out.id, downloadFilename(g.id, out.mime));
+          saved++;
+        } catch {
+          failed++;
+        }
+        if (i < ready.length - 1) await sleep(DOWNLOAD_GAP_MS);
+      }
+      if (saved === 0) {
+        toast.error("Couldn't download the videos");
+        return;
+      }
+      const unfinished = videos.length - ready.length;
+      const notes = [
+        saved > 1 ? "Your browser may ask to allow multiple downloads." : "",
+        unfinished > 0 ? `${pluralize(unfinished, "video")} not finished yet` : "",
+        failed > 0 ? `${pluralize(failed, "video")} could not be saved` : "",
+      ].filter(Boolean);
+      toast.success(`Downloading ${pluralize(saved, "video")}`, { description: notes.join(" ") || undefined });
+    } catch (err) {
+      toast.error("Couldn't download the videos", { description: describeApiError(err) });
+    } finally {
+      busy.current = false;
+      setDownloading(false);
+    }
   };
 
   return (
@@ -126,10 +181,20 @@ export const FolderTile = memo(function FolderTile({ folder, summary, dropHint, 
 
       <div
         className={cn(
-          "absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-150",
+          "absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 transition-opacity duration-150",
           "group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
         )}
       >
+        <IconButton
+          label="Download all videos"
+          size="sm"
+          variant="overlay"
+          aria-busy={downloading || undefined}
+          className={downloading ? "opacity-50" : undefined}
+          onClick={() => void downloadVideos()}
+        >
+          {downloading ? <Spinner size={14} /> : <Download />}
+        </IconButton>
         <IconButton label="Rename folder" size="sm" variant="overlay" onClick={() => onRename(folder)}>
           <Pencil />
         </IconButton>
