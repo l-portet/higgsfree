@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { Heart, Image } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Logo } from "@/components/Logo";
-import { AssetsIcon, KeyIcon, VideoIcon } from "@/components/icons/nav";
+import { ASSETS_ICON, HEART_ICON, IMAGE_ICON, KeyIcon, tabIconStyle, VIDEO_ICON } from "@/components/icons/nav";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import { formatUsd } from "@/lib/format";
 import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 
-/** Each icon sits in a 16 px box; sizes are tuned so the drawn shapes match the mockup (14 px frames, a 12 px heart). */
-const TABS: { href: string; label: string; icon: ReactNode }[] = [
-  { href: "/", label: "Video", icon: <VideoIcon /> },
-  { href: "/image", label: "Image", icon: <Image size={17} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
-  { href: "/assets", label: "Assets", icon: <AssetsIcon /> },
-  { href: "/favorites", label: "Favorites", icon: <Heart size={13} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" /> },
+/** Each icon sits in a 16 px box; its own size, shape and mask come from `icons/nav` (built once, here). */
+const TABS: { href: string; label: string; icon: CSSProperties }[] = [
+  { href: "/", label: "Video", icon: tabIconStyle(VIDEO_ICON) },
+  { href: "/image", label: "Image", icon: tabIconStyle(IMAGE_ICON) },
+  { href: "/assets", label: "Assets", icon: tabIconStyle(ASSETS_ICON) },
+  { href: "/favorites", label: "Favorites", icon: tabIconStyle(HEART_ICON) },
 ];
 
 /** One floating box of the top bar: 46 px tall (1 px border, 4 px padding, 36 px tabs), chrome radius. */
@@ -154,9 +153,15 @@ export function Nav() {
                 )}
               >
                 <IconBox>
-                  <span className={cn("inline-flex transition-colors duration-200", active ? "text-accent" : "text-fg-subtle group-hover:text-fg-muted")}>
-                    {icon}
-                  </span>
+                  {/* The colour is the box's background, cut to the icon by its mask (`icons/nav` says why). */}
+                  <span
+                    aria-hidden="true"
+                    style={icon}
+                    className={cn(
+                      "block shrink-0 transition-colors duration-200 forced-colors:bg-[CanvasText] forced-colors:forced-color-adjust-none",
+                      active ? "bg-accent" : "bg-fg-subtle group-hover:bg-fg-muted",
+                    )}
+                  />
                 </IconBox>
                 <span className="sr-only sm:not-sr-only">{label}</span>
               </Link>
