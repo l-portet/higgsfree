@@ -104,7 +104,11 @@ There is no page chrome: the app is four views under one floating nav, with one 
     4 px padded box. Labels 13 px medium, `-0.01em`. Icons sit in a 16 px box with 1.5 px strokes, sized to match the
     mock (14 px frames, a 12 px heart); the video frame, the tray and the key are drawn in `components/icons/nav.tsx`.
     Inactive: `fg-muted` label, `fg-subtle` icon. Active: raised (`surface-2`, `border-strong`, `shadow-raised`),
-    `fg` label, accent icon. Below `sm` (640 px) the labels collapse to icons.
+    `fg` label, accent icon. Below `sm` (640 px) the labels collapse to icons. The tab icons are painted, not drawn:
+    a box whose `background-color` is the colour, cut to the icon by a mask built from its shapes (`icons/nav`).
+    A colour-rewriting browser extension dropped the `color` that a `currentColor` SVG relies on, leaving the
+    active icon the label's white and out of the accent intro; `background-color` comes through. Forced-colours
+    mode paints them `CanvasText`.
   - **Key box**: key icon, "Add key", 6 px dot (`fg-disabled`) until a key is set (opens the key dialog); then the
     remaining credits (`$12.34`) and an accent dot (opens Settings on the OpenRouter section).
 - **Content**: max-width 1400 px, 24 px page padding, 72 px top padding to clear the nav, bottom padding equal to the
