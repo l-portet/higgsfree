@@ -98,6 +98,20 @@ describe("buildFalVideoPayload", () => {
     expect(() => buildFalVideoPayload(video("fal/vidu-q4"), { prompt: "p", duration: 5 }, {})).toThrow("needs a first frame");
   });
 
+  it("FLUX.3 Max: resolution and audio; aspect ratio only without a frame; the last frame beside the first", () => {
+    const max = video("fal/flux-3-max");
+    expect(buildFalVideoPayload(max, { prompt: "p", duration: 14, aspectRatio: "21:9", resolution: "1080p", audio: false }, {})).toEqual({
+      endpoint: "blackforestlabs/flux-3-max/text-to-video",
+      input: { prompt: "p", duration: 14, aspect_ratio: "21:9", resolution: "1080p", generate_audio: false },
+      params: { duration: 14, aspectRatio: "21:9", resolution: "1080p", audio: false },
+    });
+    expect(buildFalVideoPayload(max, { prompt: "p", duration: 3, aspectRatio: "9:16" }, { firstFrame: "data:f", lastFrame: "data:l" })).toEqual({
+      endpoint: "blackforestlabs/flux-3-max/image-to-video",
+      input: { prompt: "p", duration: 5, image_url: "data:f", end_image_url: "data:l", resolution: "720p" },
+      params: { duration: 5, resolution: "720p" },
+    });
+  });
+
   it("FLUX.3 Video Draft: one endpoint per job, both frames to the first-last-frame one", () => {
     const draft = video("fal/flux-3-video-draft");
     expect(buildFalVideoPayload(draft, { prompt: "p", duration: 12, aspectRatio: "21:9", resolution: "720p", audio: true }, {})).toEqual({

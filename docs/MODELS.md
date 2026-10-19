@@ -16,8 +16,8 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 19 image models (8 of them fal-only) and 45 video models, of which 43 are offered
-(15 fal-only, 7 of the 43 are [video editors](#video-editing)) and 2 are hidden.
+Curated today: 19 image models (8 of them fal-only) and 46 video models, of which 44 are offered
+(16 fal-only, 7 of the 44 are [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
 
@@ -109,7 +109,7 @@ text-to-video again in Oct 2026, so it is offered; a rejection shows the provide
 
 Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced above Wan 3.0.
 
-Not on OpenRouter: Gemini Omni Flash, Kling 3.0 Motion Control and FLUX.3 Video Draft run on fal (see
+Not on OpenRouter: Gemini Omni Flash, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
 [fal models](#fal-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
@@ -147,6 +147,7 @@ brackets are the values fal receives when they differ from the app's.
 | Model | Id | fal endpoints | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
 | **Gemini Omni Flash 1.1** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1` | `google/gemini-omni-flash/v1.1/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | 3–10 (default 8) | 16:9, 9:16 |
+| **FLUX.3 Max** <sub>NEW</sub> | `fal/flux-3-max` | `blackforestlabs/flux-3-max/text-to-video` · `…/image-to-video` ³ | ✓ | ✓ | ✓ | ✓ | 720p / 1080p (default 720p) | 5–20 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † |
 | **FLUX.3 Video Draft** <sub>NEW</sub> <sub>FAST</sub> | `fal/flux-3-video-draft` | `blackforestlabs/flux-3/text-to-video/draft` · `…/image-to-video/draft` · `…/first-last-frame-to-video/draft` ² | ✓ | ✓ | ✓ | ✓ | 720p (not sent) | 5–20 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † |
 | **Kling O3 Pro** <sub>NEW</sub> | `fal/kling-o3-pro` | `fal-ai/kling-video/o3/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **Kling 3.0 Turbo** <sub>FAST</sub> | `fal/kling-v3-turbo-pro` | `fal-ai/kling-video/v3/turbo/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | – | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
@@ -159,8 +160,12 @@ brackets are the values fal receives when they differ from the app's.
 ² FLUX.3 Video's fast, cheaper preview (fal lists $0.06/s, against $0.17/s for FLUX.3 Video at 720p).
 A first frame alone goes to `image-to-video/draft`; a first and a last frame go to
 `first-last-frame-to-video/draft` (`firstLastFrameToVideo`); a last frame alone is refused.
+³ fal's post-trained FLUX.3 Video (16 Oct 2026), tuned for prompt adherence and quality. The last frame
+goes with the first to `image-to-video` as `end_image_url`. $0.17/s at 720p, $0.29/s at 1080p; fal
+takes 75% off through 7 Nov 2026 ($0.0425 / $0.0725), and the estimate follows. `reasoning_level` is
+left at fal's default (`high`: the model expands the prompt). The keyframes endpoint is not used.
 
-Durations go out as numbers (Gemini Omni Flash, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
+Durations go out as numbers (Gemini Omni Flash, FLUX.3 Max, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
 seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`).
 
 **Motion control** (`caps.motionControl`): a character image plus a reference video, and an optional

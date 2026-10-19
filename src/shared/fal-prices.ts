@@ -53,6 +53,12 @@ const MINIMAX_H3_MAX: FalPrice = {
 };
 const GEMINI_OMNI_FLASH: FalPrice = { unit: "second", usd: { "720p": 0.1, "1080p": 0.15, "4K": 0.3 } };
 const FLUX_3_DRAFT: FalPrice = { unit: "second", usd: 0.06 };
+// Launch offer (read 19 Oct 2026): 75% off from 15 Oct through 7 Nov.
+const FLUX_3_MAX: FalPrice = {
+  unit: "second",
+  usd: { "720p": 0.17, "1080p": 0.29 },
+  promo: { until: "2026-11-07", usd: { "720p": 0.0425, "1080p": 0.0725 } },
+};
 const KLING_O3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.14 };
 const PIXVERSE_6: FalPrice = { unit: "second", usd: { "720p": 0.045, "1080p": 0.09 }, audioUsd: { "720p": 0.06, "1080p": 0.115 } };
 // 2K and 4K are fal's 1440p and 2160p.
@@ -95,6 +101,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/kling-video/v3/standard/motion-control": { unit: "second", usd: 0.126 },
   "google/gemini-omni-flash/v1.1/text-to-video": GEMINI_OMNI_FLASH,
   "google/gemini-omni-flash/v1.1/image-to-video": GEMINI_OMNI_FLASH,
+  "blackforestlabs/flux-3-max/text-to-video": FLUX_3_MAX,
+  "blackforestlabs/flux-3-max/image-to-video": FLUX_3_MAX,
   "blackforestlabs/flux-3/text-to-video/draft": FLUX_3_DRAFT,
   "blackforestlabs/flux-3/image-to-video/draft": FLUX_3_DRAFT,
   "blackforestlabs/flux-3/first-last-frame-to-video/draft": FLUX_3_DRAFT,

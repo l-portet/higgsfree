@@ -80,6 +80,9 @@ describe("estimateFalVideoCost", () => {
     const h3max = video("minimax/hailuo-3-max");
     expect(estimateFalVideoCost(h3max, { duration: 6, resolution: "768p" }, PROMO)).toBeCloseTo(0.288);
     expect(estimateFalVideoCost(h3max, { duration: 6, resolution: "768p" }, new Date("2026-10-16T00:00:00Z"))).toBeCloseTo(0.48);
+    const flux = video("fal/flux-3-max");
+    expect(estimateFalVideoCost(flux, { duration: 10, resolution: "1080p" }, new Date("2026-11-07T23:00:00Z"))).toBeCloseTo(0.725);
+    expect(estimateFalVideoCost(flux, { duration: 10, resolution: "1080p" }, new Date("2026-11-08T00:00:00Z"))).toBeCloseTo(2.9);
   });
 
   it("motion control: by the reference video's length, none while it is unknown", () => {
