@@ -4,6 +4,9 @@ export interface VideoFormat {
   mime: string;
 }
 
+/** OpenRouter's (and Gemini's) type for each format: QuickTime is `video/mov`, not the browser's `video/quicktime`. */
+export const OPENROUTER_VIDEO_MIME: Record<VideoFormat["ext"], string> = { mp4: "video/mp4", mov: "video/mov", webm: "video/webm" };
+
 /** A clip's length in seconds, as the browser reads it from the file's header. `undefined` when it cannot. */
 export function readVideoDuration(file: Blob, timeoutMs = 5000): Promise<number | undefined> {
   return new Promise((resolve) => {

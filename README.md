@@ -18,7 +18,8 @@
 
 - **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more, plus FLUX.1 Kontext, Ideogram 4.5 and other fal models with a fal key. Reference images, batches of four, 1K to 4K.
 - **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, MiniMax H3, Wan 3.0 and more. First and last frame, style references, native audio. With a fal key: Kling 3.0 Motion Control (your character, moving like a reference video), Gemini Omni Flash, Vidu Q4, PixVerse 6 and more.
-- **Assets**: every generation with its prompt, settings and real cost. Search, download, reuse, animate an image into a video.
+- **Video editing**: change a clip in plain words ("make it snow", "swap the jacket for a red one", "remove the car"), keeping its motion and framing. FLUX Video Edit and Runway Aleph 2 on OpenRouter; with a fal key, Kling O3 Edit, Gemini Omni Flash Edit, Grok Imagine Edit and Wan 2.7 Edit too. Upload a video, or press **Edit video** on any clip you made.
+- **Assets**: every generation with its prompt, settings and real cost. Search, download, reuse, animate an image into a video, edit a video.
 - **Favorites**: press the heart on any run to keep it in one place, with folders you create: drag runs onto a folder, or pick one from the heart's menu.
 - **AI Prompt Editor** (video): ask GPT-6 Luna to rewrite your prompt ("more cinematic", "add rain"), preview the shot as six frames in one picture with GPT Image 2.5 Flare, or drop in a clip and have Gemini 4 Argon write the prompt that recreates it, with your instructions. All run on your OpenRouter key and show what they cost.
 - **Video ready alerts**: a ding and / or a system notification when a video finishes, switched on in Settings › Notifications. They work while the site is open in a tab, even in the background.
@@ -39,12 +40,12 @@ Open http://localhost:3000 and paste your key behind **Add key** (top right). Th
 
 ## fal (optional)
 
-[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), Gemini Omni Flash 1.1, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6, LTX 2.3, Luma Ray 3.2, FLUX.1 Kontext, Ideogram 4.5 and more.
+[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 Edit, Grok Imagine Edit, Wan 2.7 Edit), Gemini Omni Flash 1.1, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6, LTX 2.3, Luma Ray 3.2, FLUX.1 Kontext, Ideogram 4.5 and more.
 
 - **Add a key** when you need it: pick a fal model and press Generate, and a small dialog asks for the fal key ("Save and generate" finishes the job). It is also in Settings › Keys, next to **Test connection** and **Remove key**. Get one at [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys).
 - **Every model is listed, whatever keys you have.** Pick one whose provider has no key and a small notice above the prompt says which provider it runs on; Generate opens the key dialog for that provider. That goes both ways: a fal-only model with only an OpenRouter key, an OpenRouter-only model with only a fal key.
-- **With both keys, every model works.** A few models are on both (Nano Banana Pro, Nano Banana 2, GPT Image 2, Seedance 2.5, Kling 3.0 Pro and Standard, MiniMax H3 and H3 Max). "Run models both providers offer on" in Settings › Keys picks who runs those, OpenRouter by default. A model only one provider has always runs there.
-- **Both keys stay in this browser**, and each one is only sent to its own provider. A motion-control reference video is uploaded to fal's storage when you run it ([SECURITY.md](SECURITY.md) has what that means).
+- **With both keys, every model works.** A few models are on both (Nano Banana Pro, Nano Banana 2, GPT Image 2, Seedance 2.5, Kling 3.0 Pro and Standard, MiniMax H3 and H3 Max, FLUX Video Edit). "Run models both providers offer on" in Settings › Keys picks who runs those, OpenRouter by default. A model only one provider has always runs there.
+- **Both keys stay in this browser**, and each one is only sent to its own provider. A video you run a fal model on (a motion-control reference, or a video to edit) is uploaded to fal's storage; a video you edit on OpenRouter goes inline in the request ([SECURITY.md](SECURITY.md) has what that means).
 - Runs on fal show an estimate from fal's own prices, which can differ from OpenRouter's for the same model. fal returns no cost with a result, so runs on fal record none.
 
 The rules are in [docs/FAL.md](docs/FAL.md).
@@ -75,7 +76,7 @@ Everything lives in the browser profile you use the app in:
 
 - **The OpenRouter key** is in localStorage (`higgsfree.apiKey`) and is only ever sent to openrouter.ai. **Remove key** in Settings › Keys deletes it.
 - **The fal key**, if you add one, is in localStorage (`higgsfree.falKey`) and is only ever sent to fal's API hosts. **Remove key** in Settings › Keys deletes it. Which provider runs the models both offer is `higgsfree.preferredProvider`.
-- **The library** (records, generated images and clips, reference images and videos) is in IndexedDB (database `higgsfree`). Media are displayed through object urls. Nothing is uploaded anywhere, except a motion-control reference video, which goes to fal's storage when you run it.
+- **The library** (records, generated images and clips, reference images and videos) is in IndexedDB (database `higgsfree`). Media are displayed through object urls. Nothing is uploaded anywhere, except a video you run a fal model on (a motion-control reference, or a video to edit), which goes to fal's storage when you run it.
 
 What follows from that:
 
@@ -87,7 +88,7 @@ What follows from that:
 
 ## Models
 
-Curated: 19 image models and 35 video models with their real limits (sizes, durations, resolutions, audio); 8 of the image models and 9 of the video models run only on fal. Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 19 image models and 43 video models (7 of them video editors) with their real limits (sizes, durations, resolutions, audio); 8 of the image models and 15 of the video models run only on fal. Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
 

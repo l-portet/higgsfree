@@ -45,7 +45,7 @@ import { chatText, listLiveModels, nativeImage } from "./openrouter";
 import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DEFAULT_PREVIEW_CONFIG, MAX_RECREATE_VIDEO_BYTES, storyboardLayout, type PreviewConfig, type RewriteContext } from "./prompt-editor";
 import { getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setStoredFalKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
-import { detectVideo } from "./video-meta";
+import { detectVideo, OPENROUTER_VIDEO_MIME } from "./video-meta";
 
 export { ApiClientError, describeApiError, OFFLINE_MESSAGE, providerMessage } from "./errors";
 
@@ -256,9 +256,6 @@ export interface RecreateRequest {
   context?: RewriteContext;
 }
 
-/** OpenRouter's and Gemini's name for QuickTime is `video/mov`, not the browser's `video/quicktime`. */
-const RECREATE_MIME: Record<string, string> = { mp4: "video/mp4", mov: "video/mov", webm: "video/webm" };
-
 /**
  * Watch a video and write the prompt that recreates it, with the editor's video model (OpenRouter, the user's
  * key); `onText` streams the text so far. The file is sniffed and sent inline as a data URL, so the clip has to
@@ -271,7 +268,7 @@ export async function recreateVideoPrompt(req: RecreateRequest, opts: { signal?:
   const head = new Uint8Array(await req.file.slice(0, 64).arrayBuffer());
   const format = detectVideo(head);
   if (!format) throw badRequest("Unsupported video type: only MP4, MOV and WebM are accepted");
-  const mime = RECREATE_MIME[format.ext] ?? format.mime;
+  const mime = OPENROUTER_VIDEO_MIME[format.ext];
   const dataUrl = await blobToDataUrl(new Blob([req.file], { type: mime }));
   const res = await chatText(key, buildRecreateBody(dataUrl, req.instruction, req.context), {
     signal: opts.signal,

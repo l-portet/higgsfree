@@ -106,7 +106,7 @@ function ModelRow({ id, model, selected, highlighted, disabledReason, unavailabl
         ) : (
           <div className="mt-0.5 flex items-center gap-1 text-[11px] text-fg-muted">
             {maxResolution(model) ? <MiniChip>{maxResolution(model)}</MiniChip> : null}
-            <MiniChip>{durationRange(model)}</MiniChip>
+            {durationRange(model) ? <MiniChip>{durationRange(model)}</MiniChip> : null}
             {model.caps.audio ? (
               <Volume2 size={12} className="ml-0.5 text-fg-muted" aria-label="Native audio" role="img" />
             ) : null}
@@ -158,10 +158,13 @@ export function ModelPicker(props: ModelPickerProps) {
 
   const groups = useMemo(() => {
     if (terms.length) return [{ label: "Results", items: models.filter((m) => matches(m, terms)) }];
-    const featured = models.filter((m) => m.featured);
-    const rest = models.filter((m) => !m.featured);
+    // Video editors (a video in, the same video changed out) get their own group under the featured models.
+    const editors = models.filter((m) => m.kind === "video" && m.caps.videoEdit);
+    const featured = models.filter((m) => m.featured && !editors.includes(m));
+    const rest = models.filter((m) => !m.featured && !editors.includes(m));
     const out: { label: string; items: CatalogModel[] }[] = [];
     if (featured.length) out.push({ label: "Featured", items: featured });
+    if (editors.length) out.push({ label: "Edit a video", items: editors });
     if (rest.length) out.push({ label: "All models", items: rest });
     return out;
   }, [models, terms]);

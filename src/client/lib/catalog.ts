@@ -5,7 +5,9 @@
  *  - Video: every option (durations, resolutions, aspect ratios, frames, audio) and the price
  *    come from `GET /api/v1/videos/models`. The curated entry adds the display name, featured
  *    flag, badges, description and the quirks OpenRouter does not publish (faces, references,
- *    aspect ratio on image-to-video). A slug with no curated entry is "discovered".
+ *    aspect ratio on image-to-video). A slug with no curated entry is "discovered". Video editors
+ *    are the exception: OpenRouter publishes no options for them, so a curated editor keeps its own
+ *    and takes only the price.
  *  - Image: curated models keep their verified routes and options (chat completions and the
  *    OpenAI-style images endpoint do not take OpenRouter's catalog fields one to one). Every
  *    other model in `GET /api/v1/images/models` is discovered and served through the native
@@ -101,17 +103,38 @@ export function perSecondUsd(pricing: Record<string, string>, res: VideoResoluti
   return perToken === undefined ? undefined : round(perToken * tokensPerSecond(res));
 }
 
+/** The provider's minimum charge per run in `pricing_skus` (Runway Aleph 2), in USD. */
+export function minimumUsd(pricing: Record<string, string>): number | undefined {
+  const cents = Number.parseFloat(pricing.minimum_cents_per_generation ?? "");
+  return Number.isFinite(cents) && cents > 0 ? cents / 100 : undefined;
+}
+
 // ---------- video ----------
 
 const DISCOVERED_VIDEO_DESCRIPTION = "New on OpenRouter. Not tested in this app yet.";
 
-/** A spec OpenRouter lists but the app cannot drive (video editing, upscaling, avatars). */
+/** A spec with no durations: editing, upscaling, avatars. Only a curated editor is driven. */
 const isGenerative = (s: LiveVideoSpec): boolean => s.durations.length > 0;
+
+/** A curated video editor: its options stay curated, the price (per second, and any minimum) is OpenRouter's. */
+function buildEditModel(spec: LiveVideoSpec, curated: VideoModel): VideoModel {
+  const estCostPerSecUsd: VideoModel["estCostPerSecUsd"] = {};
+  for (const res of curated.resolutions) {
+    const per = perSecondUsd(spec.pricing, res) ?? curated.estCostPerSecUsd[res];
+    if (per !== undefined) estCostPerSecUsd[res] = per;
+  }
+  const model: VideoModel = { ...curated, estCostPerSecUsd };
+  const min = minimumUsd(spec.pricing);
+  if (min !== undefined) model.minCostUsd = min;
+  else delete model.minCostUsd;
+  return model;
+}
 
 /** Curated entry (if any) with every option and the price replaced by what OpenRouter publishes now. */
 export function buildVideoModel(spec: LiveVideoSpec, curated?: VideoModel): VideoModel {
+  if (curated?.caps.videoEdit) return buildEditModel(spec, curated);
   if (!isGenerative(spec)) {
-    // Editing, upscaling, avatars: listed (so the slug is known) but never offered.
+    // Upscaling, avatars, editors the app has no entry for: listed (so the slug is known) but never offered.
     return {
       ...(curated ?? {
         kind: "video",

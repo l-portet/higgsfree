@@ -33,6 +33,8 @@ export interface RewriteContext {
   startsFromImage?: boolean;
   /** Motion control: a character image moves like a reference video. */
   motionControl?: boolean;
+  /** Video editing: the prompt says what to change in an attached video. */
+  videoEdit?: boolean;
 }
 
 export const REWRITE_SYSTEM_PROMPT = [
@@ -45,6 +47,7 @@ export const REWRITE_SYSTEM_PROMPT = [
   "Keep every spoken line (dialogue in quotes) word for word, with who says it, how and when, unless the instruction changes it.",
   "Do not add on-screen text, captions, logos or watermarks unless asked.",
   "When the video starts from an image, describe the motion, camera and changes rather than re-describing the image.",
+  "When the run edits an existing video, write an edit instruction: say what to change, add or remove, and leave everything else as it is; do not describe the whole video.",
   "Write in the language of the current prompt (or of the instruction when there is no prompt yet).",
 ].join(" ");
 
@@ -55,6 +58,7 @@ function describeRun(ctx: RewriteContext): string {
   const parts: string[] = [];
   if (ctx.modelName) parts.push(ctx.modelName);
   if (ctx.motionControl) parts.push("motion control: a character image moves like a reference video, which also sets the length");
+  else if (ctx.videoEdit) parts.push("video editing: the prompt says what to change in an attached video, which keeps its length");
   else {
     if (ctx.duration) parts.push(`${ctx.duration} s`);
     if (ctx.aspectRatio) parts.push(ctx.aspectRatio);

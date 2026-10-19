@@ -1,9 +1,9 @@
 /**
  * Pure request builders for fal: the app's options mapped onto each model's field names
  * (`FalImageRoute` / `FalVideoRoute` in the catalog). Inputs are urls fal can fetch: data URLs
- * for images, an uploaded file url for the motion-control video.
+ * for images, an uploaded file url for a video (motion control's reference, the video being edited).
  */
-import type { ImageAspectRatio, ImageModel, ImageSize, MotionOrientation, VideoAspectRatio, VideoModel, VideoParams, VideoResolution } from "@shared/types";
+import type { FalVideoRoute, ImageAspectRatio, ImageModel, ImageSize, MotionOrientation, VideoAspectRatio, VideoModel, VideoParams, VideoResolution } from "@shared/types";
 import { snapDuration } from "@shared/models";
 import { badRequest } from "./errors";
 
@@ -73,6 +73,8 @@ export interface FalVideoMedia {
   lastFrame?: string;
   /** Public url of the uploaded reference video (motion control). */
   motionVideo?: string;
+  /** Public url of the uploaded video to edit (video editing). */
+  sourceVideo?: string;
 }
 
 export interface FalVideoPayload extends FalPayload {
@@ -80,10 +82,31 @@ export interface FalVideoPayload extends FalPayload {
   params: VideoParams;
 }
 
+/** The requested resolution if the model lists it, else its default, with fal's value for it; undefined when the route sends none. */
+function falResolution(model: VideoModel, route: FalVideoRoute, requested: VideoResolution | undefined): { app: VideoResolution; fal: string } | undefined {
+  const app = requested && model.resolutions.includes(requested) ? requested : model.defaultResolution;
+  const fal = app ? route.resolutions?.[app] : undefined;
+  return app && fal ? { app, fal } : undefined;
+}
+
 export function buildFalVideoPayload(model: VideoModel, req: FalVideoParams, media: FalVideoMedia): FalVideoPayload {
   const route = model.fal;
   if (!route) throw badRequest(`${model.name} is not available on fal`);
   const prompt = req.prompt.trim();
+
+  if (model.caps.videoEdit) {
+    if (!route.edit) throw badRequest(`${model.name} has no video-edit endpoint on fal`);
+    if (!media.sourceVideo) throw badRequest("Video editing needs a video to edit");
+    const input: Record<string, unknown> = { prompt, video_url: media.sourceVideo, ...route.extra };
+    // The clip is as long as the source (or what the model keeps of it); the duration is read from the result.
+    const params: VideoParams = { duration: 0 };
+    const res = falResolution(model, route, req.resolution);
+    if (res) {
+      input.resolution = res.fal;
+      params.resolution = res.app;
+    }
+    return { endpoint: route.edit, input, params };
+  }
 
   if (model.caps.motionControl) {
     if (!route.motionControl) throw badRequest(`${model.name} has no motion-control endpoint on fal`);
@@ -121,11 +144,10 @@ export function buildFalVideoPayload(model: VideoModel, req: FalVideoParams, med
     input.aspect_ratio = req.aspectRatio;
     params.aspectRatio = req.aspectRatio;
   }
-  const resolution = req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution;
-  const falResolution = resolution ? route.resolutions?.[resolution] : undefined;
-  if (resolution && falResolution) {
-    input.resolution = falResolution;
-    params.resolution = resolution;
+  const res = falResolution(model, route, req.resolution);
+  if (res) {
+    input.resolution = res.fal;
+    params.resolution = res.app;
   }
   if (model.caps.audio && route.audio && req.audio !== undefined) {
     input[route.audio] = req.audio;

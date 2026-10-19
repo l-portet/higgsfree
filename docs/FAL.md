@@ -174,10 +174,28 @@ image. These models have `caps.motionControl: true` and only a `motionControl` e
 - The reference video is uploaded at every submit, right before the queue call, so a retry uploads it
   again.
 
+### Video editing
+
+Editors (`caps.videoEdit`, the `edit` endpoint) change a video from a prompt; see
+[MODELS.md](MODELS.md#video-editing) for the list.
+
+- The video (`inputs.sourceVideo`: an upload, or another record's output) and a non-empty prompt are
+  required (a 400 otherwise). Frames, style references and a motion video are refused.
+- Input: `{ prompt, video_url: <uploaded file url> }`, plus `resolution` when the route maps the
+  requested one (or the model's default): `4K` → `"4k"` on Gemini Omni Flash, `480p` / `720p` on Grok
+  Imagine, `720p` / `1080p` on Wan 2.7. Kling O3 Edit (the video's own resolution) and FLUX Video Edit
+  (720p) send none. Duration, aspect ratio and audio are never sent.
+- The model's limits on the video (`editSource`) are checked before uploading, reading the length from
+  the MP4 / MOV `moov` box: "The video is 12 s. Wan 2.7 Edit takes up to 10 s.", "The video is 64 MB.
+  FLUX Video Edit takes up to 50 MB.". Grok Imagine keeps the first 8 s of a longer video instead
+  (`truncates`), so any length goes. A WebM, or a length that cannot be read, is left to fal.
+- As with motion control, the record is created with `params.duration: 0` and gets the clip's length
+  when it lands, and the video is uploaded again at every submit.
+
 ## Uploads
 
-Only the motion-control reference video is uploaded. Images (frames, references) travel inline as data
-URLs in the request body.
+Only videos are uploaded: the motion-control reference video and the video to edit. Images (frames,
+references) travel inline as data URLs in the request body.
 
 1. The video is first stored in the library: `uploadVideo` (`src/client/lib/api.ts`) takes MP4, MOV and
    WebM up to 90 MB, sniffed with `video-meta.ts` (an `ftyp` box, brand `qt  ` for MOV; the EBML magic
@@ -237,6 +255,9 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   has no estimate.
 - Motion control is priced by the reference video's length, read by the browser when the video is
   added. A video brought back from a draft has no known length, so no estimate.
+- Video editing is priced by the video's length too (up to 8 s on Grok Imagine, which keeps no more),
+  at the resolution sent. A video handed over with **Edit video** brings its length from its record.
+  Grok Imagine's price counts the input second as well ($0.05 / $0.07 per output second plus $0.01).
 - Quality and size defaults are fal's (GPT Image at high, Ideogram at medium); GPT Image edits also pay
   for their input images, which the estimate leaves out.
 
@@ -246,7 +267,7 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   says what it should cost.
 - **Style references are not sent to fal.** A video with style references is refused on fal; prefer
   OpenRouter in Settings for it.
-- **No multipart uploads.** Reference videos above 90 MB are refused.
+- **No multipart uploads.** Videos above 90 MB are refused.
 - **The upload `PUT` host is assumed to be fal's CDN.** It is whatever `upload_url` fal returns, checked
   only for `https:` since it carries no key. The production CSP allows `fal.media`, `*.fal.media` and
   `storage.googleapis.com` for uploads and downloads; a target anywhere else would be blocked by the

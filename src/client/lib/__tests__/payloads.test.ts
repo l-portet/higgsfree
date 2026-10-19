@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findImageModel, findVideoModel, snapDuration } from "@shared/models";
-import { buildImagePayload, buildVideoPayload } from "../payloads";
+import { buildImagePayload, buildVideoEditPayload, buildVideoPayload } from "../payloads";
 
 const must = <T>(v: T | undefined, label: string): T => {
   if (!v) throw new Error(`${label} missing from catalog`);
@@ -145,6 +145,17 @@ describe("buildVideoPayload", () => {
     expect(buildVideoPayload(veo, { prompt: "p", duration: 9 }, {}).body.duration).toBe(8);
     expect(buildVideoPayload(seedance, { prompt: "p", duration: 7.4 }, {}).body.duration).toBe(7);
     expect(buildVideoPayload(seedance, { prompt: "p", duration: 99 }, {}).body.duration).toBe(30);
+  });
+});
+
+describe("buildVideoEditPayload", () => {
+  it("sends the prompt and the source as a video reference, nothing else", () => {
+    const aleph = must(findVideoModel("runway/aleph-2"), "aleph-2");
+    expect(buildVideoEditPayload(aleph, "relight it at dusk", "data:video/mp4;base64,AAAA")).toEqual({
+      model: "runway/aleph-2",
+      prompt: "relight it at dusk",
+      input_references: [{ type: "video_url", video_url: { url: "data:video/mp4;base64,AAAA" } }],
+    });
   });
 });
 

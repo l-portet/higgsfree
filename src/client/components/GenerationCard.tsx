@@ -29,7 +29,7 @@ function paramsLabel(g: Generation): string {
   }
   const p = g.params;
   const seconds = g.output?.durationSec ?? p.duration;
-  // Motion control: the length follows the reference video and is known only once the clip is back.
+  // Motion control and video editing: the length follows the input video and is known only once the clip is back.
   return [seconds > 0 ? formatSeconds(seconds) : undefined, p.resolution].filter(Boolean).join(" · ");
 }
 
@@ -267,11 +267,9 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
                     </a>
                   </Tooltip>
                 ) : null}
-                {!isVideo ? (
-                  <IconButton label="Animate" size="sm" variant="overlay" onClick={actions.animate}>
-                    <WandSparkles />
-                  </IconButton>
-                ) : null}
+                <IconButton label={isVideo ? "Edit video" : "Animate"} size="sm" variant="overlay" onClick={isVideo ? actions.editVideo : actions.animate}>
+                  <WandSparkles />
+                </IconButton>
                 <IconButton label="Reuse prompt" size="sm" variant="overlay" onClick={actions.reuse}>
                   <RotateCcw />
                 </IconButton>

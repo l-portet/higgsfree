@@ -31,7 +31,7 @@ describe("fal prices", () => {
       }
     }
     for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
-      for (const e of [m.fal?.textToVideo, m.fal?.imageToVideo, m.fal?.firstLastFrameToVideo, m.fal?.motionControl]) {
+      for (const e of [m.fal?.textToVideo, m.fal?.imageToVideo, m.fal?.firstLastFrameToVideo, m.fal?.motionControl, m.fal?.edit]) {
         if (!e) continue;
         routed.add(e);
         const p = FAL_PRICES[e];
@@ -84,8 +84,17 @@ describe("estimateFalVideoCost", () => {
 
   it("motion control: by the reference video's length, none while it is unknown", () => {
     const motion = video("fal/kling-v3-pro-motion-control");
-    expect(estimateFalVideoCost(motion, { duration: 0, motionSec: 7.5 })).toBeCloseTo(1.26);
+    expect(estimateFalVideoCost(motion, { duration: 0, videoSec: 7.5 })).toBeCloseTo(1.26);
     expect(estimateFalVideoCost(motion, { duration: 0 })).toBeUndefined();
+  });
+
+  it("video editing: by the source's length (what the model keeps of it) at the resolution sent, none while it is unknown", () => {
+    expect(estimateFalVideoCost(video("fal/kling-o3-edit"), { duration: 0, videoSec: 10 })).toBeCloseTo(1.68);
+    expect(estimateFalVideoCost(video("black-forest-labs/flux-video-edit"), { duration: 0, videoSec: 12 })).toBeCloseTo(0.36);
+    expect(estimateFalVideoCost(video("fal/gemini-omni-flash-1.1-edit"), { duration: 0, resolution: "4K", videoSec: 6 })).toBeCloseTo(1.8);
+    expect(estimateFalVideoCost(video("fal/wan-2.7-edit"), { duration: 0, videoSec: 4 })).toBeCloseTo(0.6); // 1080p by default
+    expect(estimateFalVideoCost(video("fal/grok-imagine-edit"), { duration: 0, resolution: "720p", videoSec: 12 })).toBeCloseTo(0.64); // first 8 s
+    expect(estimateFalVideoCost(video("fal/kling-o3-edit"), { duration: 0 })).toBeUndefined();
   });
 });
 

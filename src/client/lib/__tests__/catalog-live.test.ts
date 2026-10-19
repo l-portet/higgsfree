@@ -1,7 +1,7 @@
 /** Merging OpenRouter's live catalogs into the curated one: prices, options, discovery, quirks. */
 import { describe, expect, it } from "vitest";
 import { findImageModel, findVideoModel } from "@shared/models";
-import { buildImageModel, buildVideoModel, displayName, perSecondUsd } from "../catalog";
+import { buildImageModel, buildVideoModel, displayName, minimumUsd, perSecondUsd } from "../catalog";
 import { parseImageSpec, parseVideoSpec, type LiveImageSpec, type LiveVideoSpec } from "../openrouter";
 import IMAGES_MODELS from "../../__tests__/fixtures/images-models.json";
 import VIDEOS_MODELS from "../../__tests__/fixtures/videos-models.json";
@@ -37,6 +37,17 @@ describe("perSecondUsd", () => {
 });
 
 describe("buildVideoModel", () => {
+  it("keeps a curated editor's own options (OpenRouter lists none) and takes OpenRouter's price and minimum", () => {
+    const flux = buildVideoModel(videoSpec("black-forest-labs/flux-video-edit"), findVideoModel("black-forest-labs/flux-video-edit"));
+    expect(flux).toMatchObject({ caps: { videoEdit: true }, resolutions: ["720p"], estCostPerSecUsd: { "720p": 0.03 }, editSource: { maxSec: 15, maxMb: 50 } });
+    expect(flux.hidden).toBeFalsy();
+    expect(flux.minCostUsd).toBeUndefined();
+    const aleph = buildVideoModel(videoSpec("runway/aleph-2"), findVideoModel("runway/aleph-2"));
+    expect(aleph).toMatchObject({ caps: { videoEdit: true }, estCostPerSecUsd: { "720p": 0.28 }, minCostUsd: 0.56 });
+    expect(minimumUsd({ minimum_cents_per_generation: "56" })).toBe(0.56);
+    expect(minimumUsd({ cents_per_second_output: "28" })).toBeUndefined();
+  });
+
   it("keeps the curated presentation and quirks but takes OpenRouter's options and prices", () => {
     const curated = findVideoModel("bytedance/seedance-2.0");
     if (!curated) throw new Error("catalog changed");
@@ -61,7 +72,8 @@ describe("buildVideoModel", () => {
   });
 
   it("hides what the app cannot drive and names discovered models without the vendor prefix", () => {
-    expect(buildVideoModel(videoSpec("black-forest-labs/flux-video-edit")).hidden).toBe(true);
+    expect(buildVideoModel(videoSpec("black-forest-labs/flux-video-edit")).hidden).toBe(true); // an editor the app has no entry for
+    expect(buildVideoModel(videoSpec("black-forest-labs/flux-video-upscale"), findVideoModel("black-forest-labs/flux-video-upscale")).hidden).toBe(true);
     expect(buildVideoModel(videoSpec("heygen/avatar-iv"), findVideoModel("heygen/avatar-iv")).hidden).toBe(true);
     const lite = buildVideoModel(videoSpec("x-ai/grok-imagine-video-1.5-lite"));
     expect(lite).toMatchObject({ name: "Grok Imagine Video 1.5 Lite", provider: "x-ai", discovered: true });

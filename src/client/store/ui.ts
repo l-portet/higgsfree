@@ -1,5 +1,5 @@
 /**
- * Cross-page UI state: lightbox, the "Animate this image" hand-off to /video,
+ * Cross-page UI state: lightbox, the "Animate this image" and "Edit this video" hand-offs to /video,
  * and "Reuse prompt" drafts consumed by the page's prompt bar.
  */
 import { create } from "zustand";
@@ -30,6 +30,8 @@ export interface Draft {
   /** Motion control: media id of the reference video. */
   motionVideo?: string;
   orientation?: MotionOrientation;
+  /** Video editing: media id of the video being edited. */
+  sourceVideo?: string;
 }
 
 export interface LightboxState {
@@ -59,6 +61,11 @@ interface UiState {
   pendingFirstFrame: string | null;
   setPendingFirstFrame: (id: string | null) => void;
   consumePendingFirstFrame: () => string | null;
+
+  /** The media id of a video handed to the video composer to edit. */
+  pendingSourceVideo: string | null;
+  setPendingSourceVideo: (id: string | null) => void;
+  consumePendingSourceVideo: () => string | null;
 
   draft: Draft | null;
   setDraft: (draft: Draft | null) => void;
@@ -100,6 +107,14 @@ export const useUi = create<UiState>()((set, get) => ({
   consumePendingFirstFrame: () => {
     const id = get().pendingFirstFrame;
     if (id) set({ pendingFirstFrame: null });
+    return id;
+  },
+
+  pendingSourceVideo: null,
+  setPendingSourceVideo: (id) => set({ pendingSourceVideo: id }),
+  consumePendingSourceVideo: () => {
+    const id = get().pendingSourceVideo;
+    if (id) set({ pendingSourceVideo: null });
     return id;
   },
 

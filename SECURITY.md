@@ -71,13 +71,14 @@ someone else's copy, and keep the browser and its extensions trustworthy.
 ## What the providers receive
 
 Each provider receives what a run sends it: the prompt, the options, and the images attached (frames and
-references travel inline as data URLs in the request body).
+references travel inline as data URLs in the request body). A video you edit on OpenRouter travels inline
+the same way.
 
 On fal, two things also exist as **public urls** that anyone who has them can fetch:
 
-- **A motion-control reference video** is uploaded to fal's storage (initiate on `rest.fal.ai`, then a
-  presigned `PUT`) and passed to the model as its public `file_url`. It is uploaded again at every run
-  and retry.
+- **A video you send to a model** (a motion-control reference video, or a video to edit) is uploaded to
+  fal's storage (initiate on `rest.fal.ai`, then a presigned `PUT`) and passed to the model as its public
+  `file_url`. It is uploaded again at every run and retry.
 - **fal's results** (images and clips) are public CDN urls; the app downloads them without the key.
 
 The app does not keep these urls, but fal has them. Treat anything you send to fal, and anything it makes,

@@ -54,6 +54,6 @@ export function mimeForId(id: string): string {
 export function inputMediaIds(inputs: GenerationInputs | undefined): string[] {
   if (!inputs) return [];
   const ids = new Set<string>();
-  for (const id of [...(inputs.referenceImages ?? []), inputs.firstFrame, inputs.lastFrame, inputs.motionVideo]) if (id && isMediaId(id)) ids.add(id);
+  for (const id of [...(inputs.referenceImages ?? []), inputs.firstFrame, inputs.lastFrame, inputs.motionVideo, inputs.sourceVideo]) if (id && isMediaId(id)) ids.add(id);
   return [...ids];
 }

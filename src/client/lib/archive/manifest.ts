@@ -61,6 +61,7 @@ function inputs(v: unknown): GenerationInputs | undefined {
   if (isMediaId(o.firstFrame)) out.firstFrame = o.firstFrame;
   if (isMediaId(o.lastFrame)) out.lastFrame = o.lastFrame;
   if (isMediaId(o.motionVideo)) out.motionVideo = o.motionVideo;
+  if (isMediaId(o.sourceVideo)) out.sourceVideo = o.sourceVideo;
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

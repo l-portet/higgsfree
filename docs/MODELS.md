@@ -16,8 +16,8 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 19 image models (8 of them fal-only) and 39 video models, of which 35 are offered
-(9 fal-only) and 4 are hidden.
+Curated today: 19 image models (8 of them fal-only) and 45 video models, of which 43 are offered
+(15 fal-only, 7 of the 43 are [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
 
@@ -117,16 +117,14 @@ Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
 
 ### Hidden (in the catalog, not selectable)
 
-OpenRouter lists these, but they need a video or audio input the app does not send. They stay in
-the catalog with `hidden: true` so their slugs are known. A model the live catalog lists without
-any duration is hidden the same way.
+OpenRouter lists these, but they need an input the app does not send. They stay in the catalog with
+`hidden: true` so their slugs are known. A model the live catalog lists without any duration is
+hidden the same way, unless it is a curated [video editor](#video-editing).
 
 | Model | OpenRouter slug | Why |
 |---|---|---|
-| **Runway Aleph 2** | `runway/aleph-2` | Video-to-video editing |
-| **FLUX Video Upscale** | `black-forest-labs/flux-video-upscale` | Video upscaling (video input) |
+| **FLUX Video Upscale** | `black-forest-labs/flux-video-upscale` | Video upscaling (an upscale factor the app does not offer) |
 | **HeyGen Avatar IV** | `heygen/avatar-iv` | Talking avatar (needs audio input) |
-| **FLUX Video Edit** | `black-forest-labs/flux-video-edit` | Video-to-video editing (video input) |
 
 ## fal models
 
@@ -176,6 +174,8 @@ orientation (the default) or 10 s when it follows the image's.
 | **Kling 3.0 Motion Control** <sub>NEW</sub> | `fal/kling-v3-pro-motion-control` | `fal-ai/kling-video/v3/pro/motion-control` |
 | **Kling 3.0 Motion Control Standard** | `fal/kling-v3-standard-motion-control` | `fal-ai/kling-video/v3/standard/motion-control` |
 
+Video editors that run only on fal are listed under [Video editing](#video-editing).
+
 ### fal-only image models
 
 All are 1K only (no size choice). References are sent as a list (`image_urls`) or a single
@@ -219,6 +219,37 @@ fal's fields. Style references are never sent to fal.
 - **Kling 3.0 Standard**: `fal-ai/kling-video/v3/standard/text-to-video` · `…/image-to-video`; as
   Kling 3.0 Pro.
 
+## Video editing
+
+Editors (`caps.videoEdit`) take one video and a prompt saying what to change, and return that video
+changed: same length (or as much of it as the model keeps), same framing. Nothing else is sent: no
+duration, aspect ratio, audio flag, frame or style reference; the resolution only where the model
+offers a choice. The composer switches to them like any model (the picker lists them together under
+"Edit a video"), and **Edit video** on a finished clip (card or lightbox) hands that clip to the
+last editor used (FLUX Video Edit the first time).
+
+The video is an upload (MP4, MOV or WebM up to 90 MB, like a motion-control reference) or another
+record's output. Its length and size are checked against `editSource` before anything is sent: in
+the composer (Generate stays disabled with the reason under the prompt) and again at submit (a 400).
+A length the app cannot read (WebM) is left to the provider. Prices are per second of the edit,
+which is as long as the video, so the estimate appears once the video's length is known.
+
+| Model | Id | Runs on | Endpoint | Resolutions | Video | Price |
+|---|---|---|---|---|---|---|
+| **FLUX Video Edit** <sub>NEW</sub> | `black-forest-labs/flux-video-edit` | OpenRouter, fal | fal: `blackforestlabs/flux-3/edit-video` | 720p (not sent) | up to 15 s, 50 MB | $0.03/s |
+| **Runway Aleph 2** <sub>PRO</sub> | `runway/aleph-2` | OpenRouter | | 720p (not sent) | ? | $0.28/s, $0.56 minimum |
+| **Kling O3 Edit** <sub>NEW</sub> | `fal/kling-o3-edit` | fal | `fal-ai/kling-video/o3/pro/video-to-video/edit` | follows the video | 3–15 s | $0.168/s |
+| **Kling O3 Edit Standard** | `fal/kling-o3-edit-standard` | fal | `fal-ai/kling-video/o3/standard/video-to-video/edit` | follows the video | 3–15 s | $0.126/s |
+| **Gemini Omni Flash 1.1 Edit** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1-edit` | fal | `google/gemini-omni-flash/v1.1/edit` | 720p / 1080p / 4K [`4k`] (default 720p) | ? | $0.10 / $0.15 / $0.30 per s |
+| **Grok Imagine Edit** <sub>FAST</sub> | `fal/grok-imagine-edit` | fal | `xai/grok-imagine-video/edit-video` | 480p / 720p (default 480p) | any; edits the first 8 s | $0.06 / $0.08 per s |
+| **Wan 2.7 Edit** | `fal/wan-2.7-edit` | fal | `fal-ai/wan/v2.7/edit-video` | 720p / 1080p (default 1080p) | 2–10 s | $0.10 / $0.15 per s |
+
+On OpenRouter the video goes inline as a data URL in `input_references` (`{ type: "video_url" }`):
+OpenRouter has no upload and the browser no public url to give it. OpenRouter's catalog lists no
+options for editors, so a curated editor keeps its own and takes only the price from the live
+catalog. Kling O3 Edit keeps the video's sound (fal's `keep_audio` default); Wan 2.7 Edit decides
+for itself (`audio_setting: "auto"`). None is verified end to end yet.
+
 ## Live catalog and discovered models
 
 At startup the browser reads `GET /api/v1/videos/models` and `GET /api/v1/images/models`. Both are
@@ -230,7 +261,9 @@ image-to-video and last-frame support, audio and the price. The curated entry ke
 featured flag, badges, description, `realFaces`, `references`, `omitAspectRatioOnI2v`, `verified`
 and a text-to-video quirk. A curated model OpenRouter no longer lists disappears from the picker,
 unless it has a fal route: it then stays, as a fal-only model. fal-only models are never looked up
-in OpenRouter's catalogs. Every other listed model is **discovered**:
+in OpenRouter's catalogs. A curated editor (`caps.videoEdit`) is the exception to the first rule:
+OpenRouter lists no options for it, so it keeps its own and takes only the price (`cents_per_second_output`,
+and `minimum_cents_per_generation` as `minCostUsd`). Every other listed model is **discovered**:
 
 | Field | Value |
 |---|---|
@@ -240,7 +273,7 @@ in OpenRouter's catalogs. Every other listed model is **discovered**:
 | `featured` / `badges` | `false` / `["new"]`; listed under "All models" with an "Unverified" hint. |
 | options and price | From the live catalog, as for curated models. Values the app has no option for (`8K`, `5:4`) are dropped. |
 | `caps.references` | `false`: style references are not sent until someone verifies them. |
-| `hidden` | `true` when the catalog lists no duration (editing, upscaling, avatars). |
+| `hidden` | `true` when the catalog lists no duration (upscaling, avatars, editors without a curated entry). |
 
 **Image.** Curated models keep their verified routes and options (`chat` and `images` do not take
 the catalog's fields one to one), and stay listed as they are when OpenRouter stops listing them. Every other model in `/api/v1/images/models` is discovered and
@@ -338,16 +371,19 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `caps.realFaces` | `true` = known to accept recognisable human faces on i2v, `false` = known to reject (Seedance moderation), `undefined` = unknown. Used for the "safe for real faces" hint. |
 | `caps.references` | `false` = the provider rejects `input_references` (FLUX.3 Video). The app then hides the style-reference strip and answers a request that still sends `references` with a 400. `undefined` = supported. fal never gets style references, whatever this says. |
 | `caps.motionControl` | Motion control: a character image (`firstFrame`) and a reference video (`motionVideo`) are required, the prompt is optional, and duration, resolution and aspect ratio are not sent (the clip follows the video). Only on fal-only models with a `fal.motionControl` endpoint. |
+| `caps.videoEdit` | Video editing: a source video (`sourceVideo`) and a prompt are required; duration, aspect ratio, audio, frames and references are not sent, and the clip keeps the video's length. `durations` is then a placeholder. See [Video editing](#video-editing). |
+| `editSource` | Editors only: the provider's limits on the video (`minSec`, `maxSec`, `maxMb`), checked before a run; `truncates: true` = longer videos are cut to `maxSec` rather than refused (Grok Imagine). Absent = unknown, left to the provider. |
 | `durations` | Either a range `{ min, max, step? }` (every step is allowed, e.g. Seedance 4–30 s) or an explicit list `{ options: [4, 6, 8] }` (Veo, Kling O1, Hailuo 2.3). The stepper snaps to these (`snapDuration`). |
 | `defaultDuration` | Preselected duration. |
 | `resolutions` / `defaultResolution` | Values the provider accepts for `resolution`. Some accept exactly one (H3 → `2K`, Kling 3.0 Pro → `720p`); if the list is empty the app doesn't send `resolution` at all. |
 | `aspectRatios` | Subset of `VideoAspectRatio`. |
 | `omitAspectRatioOnI2v` | Set when the provider returns 400 if `aspect_ratio` is sent together with `frame_images` (all Seedance models). The output then follows the input image. |
 | `estCostPerSecUsd` | USD per second keyed by resolution. Multiplied by the duration for the estimate. |
+| `minCostUsd` | The provider's minimum charge per run (Runway Aleph 2: $0.56); the estimate never goes below it. |
 | `verified` | `true` only after the checklist below. |
-| `hidden` | Keep in the catalog but don't list it (video-to-video, avatar models). |
+| `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |
 | `discovered` | Set by the browser (`src/client/lib/catalog.ts`), never in `models.ts`: OpenRouter lists the model but the curated catalog does not (see above). |
-| `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo` and `motionControl` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
+| `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
 | `falOnly` | Not on OpenRouter: runs only with a fal key, and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with a `fal` route that OpenRouter stopped listing. |
 
 ## Verification checklist

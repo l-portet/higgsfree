@@ -4,6 +4,7 @@
  * choices as the run itself. `undefined` when the request would be refused or the price is not known.
  */
 import { type ByResolution, FAL_PRICES } from "@shared/fal-prices";
+import { editedLength } from "@shared/models";
 import type { ImageModel, VideoModel, VideoResolution } from "@shared/types";
 import { buildFalImagePayload, buildFalVideoPayload, type FalImageParams, type FalVideoParams } from "./fal-payloads";
 
@@ -53,26 +54,31 @@ export interface FalVideoEstimate extends Omit<FalVideoParams, "prompt"> {
   /** Which frames are attached (they decide the endpoint, and so the price). */
   firstFrame?: boolean;
   lastFrame?: boolean;
-  /** Motion control: the reference video's length, which is the clip's. Unknown: no estimate. */
-  motionSec?: number;
+  /** Motion control and video editing: the input video's length, which sets the clip's. Unknown: no estimate. */
+  videoSec?: number;
 }
 
 /** Estimated USD for one clip of `req` on fal. `now` picks promotional rates (tests pass a date). */
 export function estimateFalVideoCost(model: VideoModel, req: FalVideoEstimate, now = new Date()): number | undefined {
   const motion = Boolean(model.caps.motionControl);
+  const edit = Boolean(model.caps.videoEdit);
   let payload;
   try {
     payload = buildFalVideoPayload(
       model,
       { ...req, prompt: "" },
-      motion ? { firstFrame: "frame", motionVideo: "video" } : { firstFrame: req.firstFrame ? "frame" : undefined, lastFrame: req.lastFrame ? "frame" : undefined },
+      motion
+        ? { firstFrame: "frame", motionVideo: "video" }
+        : edit
+          ? { sourceVideo: "video" }
+          : { firstFrame: req.firstFrame ? "frame" : undefined, lastFrame: req.lastFrame ? "frame" : undefined },
     );
   } catch {
     return undefined;
   }
   const price = FAL_PRICES[payload.endpoint];
   if (!price || price.unit !== "second") return undefined;
-  const seconds = motion ? req.motionSec : payload.params.duration;
+  const seconds = motion ? req.videoSec : edit ? req.videoSec && editedLength(model, req.videoSec) : payload.params.duration;
   if (!seconds) return undefined;
   // The resolution sent, or, when fal takes none, the one the model renders at.
   const res = payload.params.resolution ?? (req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution);

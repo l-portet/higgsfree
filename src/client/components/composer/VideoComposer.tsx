@@ -1,19 +1,21 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { AudioLines, Check, CircleAlert, Film, Gem, ImageIcon, ImagePlus, Images, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
+import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Generation, MotionOrientation, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
-import { DEFAULT_VIDEO_MODEL, estimateVideoCost, snapDuration } from "@shared/models";
+import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, estimateVideoCost, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { estimateFalVideoCost } from "@/lib/fal-pricing";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
-import { formatUsd, ratioLabel } from "@/lib/format";
+import { formatSeconds, formatUsd, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
-import { isVideoAspectRatio, isVideoResolution } from "@/lib/models";
+import { ownerGenerationId } from "@/lib/media-ids";
+import { editSourceHint, isVideoAspectRatio, isVideoResolution } from "@/lib/models";
 import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
+import { sourceVideoProblem } from "@/lib/validate";
 import { readVideoDuration } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
@@ -48,6 +50,8 @@ interface Persisted {
   prompt?: string;
   /** Motion control: whose orientation the character keeps. */
   orientation?: MotionOrientation;
+  /** The last video editor picked here: "Edit video" on a clip comes back to it. */
+  editModel?: string;
 }
 
 /** Motion control's two orientations, with fal's cap on the reference video for each. */
@@ -78,6 +82,7 @@ function restore() {
     count: clampCount(p.count),
     prompt: typeof p.prompt === "string" ? p.prompt : "",
     orientation: (p.orientation === "image" ? "image" : "video") as MotionOrientation,
+    editModel: typeof p.editModel === "string" && p.editModel.length > 0 ? p.editModel : DEFAULT_VIDEO_EDIT_MODEL,
   };
 }
 
@@ -91,17 +96,21 @@ const NO_FRAMES: Frames = { first: null, last: null, refs: [] };
 
 type Slot = "first" | "last" | "ref";
 
-/** Motion control's reference video: a media id in the library (never persisted). */
-interface MotionClip {
+/** The input video (motion control's reference, or the video being edited): a media id in the library (never persisted). */
+interface VideoClip {
   id: string;
   name: string;
   mediaId: string;
-  /** Its length in seconds, when the browser could read it: the clip's length, which prices the run. */
+  /** Its length in seconds, when known: the clip's length, which prices the run. */
   durationSec?: number;
+  bytes?: number;
 }
 
-function clipFromMedia(mediaId: string, name = "video"): MotionClip {
-  return { id: uid(), name, mediaId };
+/** A library video as an input. Another record's output brings its length and size; an upload's are checked at submit. */
+function clipFromMedia(mediaId: string, name = "video"): VideoClip {
+  const owner = ownerGenerationId(mediaId);
+  const out = owner ? useGenerations.getState().byId[owner]?.output : undefined;
+  return { id: uid(), name, mediaId, durationSec: out?.durationSec, bytes: out?.bytes };
 }
 
 /** Views that show video runs as they come in; from anywhere else a submit navigates to the Video view. */
@@ -111,6 +120,7 @@ export function VideoComposer() {
   const models = useModels((s) => s.video);
   const draft = useUi((s) => s.draft);
   const pendingFirstFrame = useUi((s) => s.pendingFirstFrame);
+  const pendingSourceVideo = useUi((s) => s.pendingSourceVideo);
   const router = useRouter();
   const pathname = usePathname() ?? "/";
 
@@ -125,9 +135,10 @@ export function VideoComposer() {
   const [count, setCount] = useState<number>(initial.count);
   const [prompt, setPrompt] = useState<string>(initial.prompt);
   const [frames, setFrames] = useState<Frames>(NO_FRAMES);
-  // Kept while another model is selected, so switching back to a motion model restores it.
-  const [motion, setMotion] = useState<MotionClip | null>(null);
+  // Kept while another model is selected, so switching back to a motion or edit model restores it.
+  const [clip, setClip] = useState<VideoClip | null>(null);
   const [orientation, setOrientation] = useState<MotionOrientation>(initial.orientation);
+  const [editModelId, setEditModelId] = useState<string>(initial.editModel);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -146,6 +157,8 @@ export function VideoComposer() {
   );
   /** Motion control: a character image (the first frame) and a reference video instead of frames and references. */
   const motionMode = Boolean(model?.caps.motionControl);
+  /** Video editing: one video and a prompt saying what to change; nothing else is sent. */
+  const editMode = Boolean(model?.caps.videoEdit);
 
   const pickModel = (id: string) => {
     setPickedModel(true);
@@ -153,30 +166,47 @@ export function VideoComposer() {
   };
 
   // Snap duration / aspect ratio / resolution to what the selected model supports. Motion control
-  // uses none of them (the clip follows the reference video), so they are left as they were.
+  // uses none of them (the clip follows the reference video), and video editing only the resolution
+  // (the clip keeps the source's length and framing), so the rest is left as it was.
   useEffect(() => {
     if (!model || model.caps.motionControl) return;
+    setResolution((r) => (r && model.resolutions.includes(r) ? r : (model.defaultResolution ?? model.resolutions[0])));
+    if (model.caps.videoEdit) {
+      setEditModelId(model.id);
+      return;
+    }
     setDuration((d) => snapDuration(model, Number.isFinite(d) ? d : model.defaultDuration));
     setAspectRatio((ar) =>
       model.aspectRatios.includes(ar) ? ar : model.aspectRatios.includes("16:9") ? "16:9" : (model.aspectRatios[0] ?? "16:9"),
     );
-    setResolution((r) => (r && model.resolutions.includes(r) ? r : (model.defaultResolution ?? model.resolutions[0])));
   }, [model]);
 
   // Persist the last-used controls.
   useEffect(() => {
-    writeJson(STORAGE_KEY, { model: modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation } satisfies Persisted);
-  }, [modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation]);
+    writeJson(STORAGE_KEY, { model: modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation, editModel: editModelId } satisfies Persisted);
+  }, [modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation, editModelId]);
 
-  // "Animate this image" hand-off from a card / the lightbox.
+  // "Animate this image" hand-off from a card / the lightbox. An editor takes no frame: back to the default model.
   useEffect(() => {
     if (!pendingFirstFrame) return;
     const mediaId = useUi.getState().consumePendingFirstFrame();
     if (!mediaId) return;
     setFrames((f) => ({ ...f, first: frameFromMedia(mediaId) }));
+    if (editMode) pickModel(DEFAULT_VIDEO_MODEL);
     toast.success(motionMode ? "Character image added" : "First frame added");
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [pendingFirstFrame, motionMode]);
+  }, [pendingFirstFrame, motionMode, editMode]);
+
+  // "Edit this video" hand-off from a card / the lightbox: onto the last editor used here (or the default one).
+  useEffect(() => {
+    if (!pendingSourceVideo) return;
+    const mediaId = useUi.getState().consumePendingSourceVideo();
+    if (!mediaId) return;
+    setClip(clipFromMedia(mediaId, "video to edit"));
+    if (!editMode) pickModel(models.some((m) => m.id === editModelId && m.caps.videoEdit) ? editModelId : DEFAULT_VIDEO_EDIT_MODEL);
+    toast.success("Video added", { description: "Say what to change, then Generate." });
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [pendingSourceVideo, editMode, editModelId, models]);
 
   // "Reuse prompt" / example prompt hand-off.
   useEffect(() => {
@@ -185,14 +215,14 @@ export function VideoComposer() {
     setPrompt(draft.prompt);
     if (draft.model && models.some((m) => m.id === draft.model)) pickModel(draft.model);
     const params = draft.params && !("size" in draft.params) ? draft.params : undefined;
-    // A motion-control run's duration is the reference video's length (0 until it finished): not a setting to bring back.
-    const motionDraft = Boolean(draft.motionVideo) || params?.orientation !== undefined;
-    if (params && !motionDraft) {
+    // A motion-control or edit run's duration is its input video's length (0 until it finished): not a setting to bring back.
+    const videoDraft = Boolean(draft.motionVideo || draft.sourceVideo) || params?.orientation !== undefined;
+    if (params && !videoDraft) {
       setDuration(params.duration);
       if (params.aspectRatio) setAspectRatio(params.aspectRatio);
       if (params.resolution) setResolution(params.resolution);
       if (params.audio !== undefined) setSound(params.audio);
-    }
+    } else if (params?.resolution) setResolution(params.resolution);
     const orient = draft.orientation ?? params?.orientation;
     if (orient) setOrientation(orient);
     setFrames((f) => ({
@@ -200,15 +230,16 @@ export function VideoComposer() {
       last: draft.lastFrame ? frameFromMedia(draft.lastFrame) : f.last,
       refs: draft.referenceImages?.length ? draft.referenceImages.slice(0, MAX_REFS).map((id) => frameFromMedia(id)) : f.refs,
     }));
-    if (draft.motionVideo) setMotion(clipFromMedia(draft.motionVideo));
+    if (draft.motionVideo) setClip(clipFromMedia(draft.motionVideo));
+    else if (draft.sourceVideo) setClip(clipFromMedia(draft.sourceVideo, "video to edit"));
     requestAnimationFrame(() => textareaRef.current?.focus());
   }, [draft, models]);
 
   // ---------- frames ----------
 
-  const showLast = !motionMode && Boolean(model?.caps.lastFrame);
+  const showLast = !motionMode && !editMode && Boolean(model?.caps.lastFrame);
   // Style references are sent unless the model is known to reject `input_references`.
-  const showRefs = !motionMode && model?.caps.references !== false;
+  const showRefs = !motionMode && !editMode && model?.caps.references !== false;
 
   const addTo = useCallback(
     async (slot: Slot, files: File[]) => {
@@ -230,31 +261,37 @@ export function VideoComposer() {
     [refs.length],
   );
 
-  /** Store a reference video (MP4 / MOV / WebM, sniffed and size-checked by the library). */
-  const addMotion = useCallback(async (file: File) => {
+  /** Store an input video (MP4 / MOV / WebM, sniffed and size-checked by the library). */
+  const addClip = useCallback(async (file: File) => {
     try {
       const [res, durationSec] = await Promise.all([api.uploadVideo(file), readVideoDuration(file)]);
-      setMotion({ id: uid(), name: file.name, mediaId: res.media.id, durationSec });
+      setClip({ id: uid(), name: file.name, mediaId: res.media.id, durationSec, bytes: res.media.bytes });
     } catch (err) {
       toast.error("Couldn't add the video", { description: describeApiError(err) });
     }
   }, []);
 
   /**
-   * Dropped / pasted files. Motion control: an image is the character, a video the motion.
+   * Dropped / pasted files. Video editing: one video. Motion control: an image is the character, a video the motion.
    * Otherwise images fill the first frame, then the last frame (if the model takes one), then references.
    */
   const addSmart = useCallback(
     async (files: File[], videos: File[] = []) => {
+      if (editMode) {
+        const [video, ...moreVideos] = videos;
+        if (files.length || moreVideos.length) toast.error(`${model?.name ?? "Video editing"} takes one video to edit`);
+        if (video) await addClip(video);
+        return;
+      }
       if (motionMode) {
         const [image, ...moreImages] = files;
         const [video, ...moreVideos] = videos;
         if (moreImages.length || moreVideos.length) toast.error("Motion control takes one character image and one reference video");
         if (image) await addTo("first", [image]);
-        if (video) await addMotion(video);
+        if (video) await addClip(video);
         return;
       }
-      if (videos.length) toast.error("Only motion control models take a reference video");
+      if (videos.length) toast.error("Only motion control and video editing models take a video");
       if (!files.length) return;
       const queue = [...files];
       if (!firstFrame) {
@@ -270,7 +307,7 @@ export function VideoComposer() {
         else toast.error(`${model?.name ?? "This model"} takes a first frame${showLast ? " and a last frame" : ""} only`);
       }
     },
-    [addMotion, addTo, firstFrame, lastFrame, model?.name, motionMode, showLast, showRefs],
+    [addClip, addTo, editMode, firstFrame, lastFrame, model?.name, motionMode, showLast, showRefs],
   );
 
   const pickFor = async (slot: Slot) => {
@@ -279,14 +316,14 @@ export function VideoComposer() {
     void addTo(slot, files);
   };
 
-  const pickMotion = async () => {
+  const pickClip = async () => {
     setAddOpen(false);
     const [file] = await pickVideoFiles();
-    if (file) await addMotion(file);
+    if (file) await addClip(file);
   };
 
   const removeAttachment = (id: string) => {
-    setMotion((m) => (m?.id === id ? null : m));
+    setClip((c) => (c?.id === id ? null : c));
     setFrames((f) => ({
       first: f.first?.id === id ? null : f.first,
       last: f.last?.id === id ? null : f.last,
@@ -294,10 +331,14 @@ export function VideoComposer() {
     }));
   };
 
-  const attachments: Attachment[] = motionMode
+  const attachments: Attachment[] = editMode
+    ? clip
+      ? [{ id: clip.id, mediaId: clip.mediaId, name: clip.name, tag: "Source", kind: "video" as const }]
+      : []
+    : motionMode
     ? [
         ...(firstFrame ? [{ id: firstFrame.id, mediaId: firstFrame.mediaId, name: "character image" }] : []),
-        ...(motion ? [{ id: motion.id, mediaId: motion.mediaId, name: motion.name, tag: "Motion", kind: "video" as const }] : []),
+        ...(clip ? [{ id: clip.id, mediaId: clip.mediaId, name: clip.name, tag: "Motion", kind: "video" as const }] : []),
       ]
     : [
         ...(firstFrame ? [{ id: firstFrame.id, mediaId: firstFrame.mediaId, name: firstFrame.name, tag: "1st" }] : []),
@@ -306,6 +347,9 @@ export function VideoComposer() {
       ];
 
   // ---------- validation ----------
+
+  // Video editing: the attached video's length or size is outside the model's limits (when known).
+  const editProblem = editMode && model && clip ? sourceVideoProblem(model, clip.durationSec, clip.bytes) : undefined;
 
   // Image-to-video exactly when a frame is attached (a last frame counts only for models that take one).
   const frameAttached = Boolean(firstFrame || (showLast && lastFrame));
@@ -317,8 +361,8 @@ export function VideoComposer() {
 
   const modelReason = useCallback(
     (m: VideoModel): string | null => {
-      // Motion control takes the attached image as its character, and needs nothing to be picked.
-      if (m.caps.motionControl) return null;
+      // Motion control takes the attached image as its character, video editing a video: neither needs anything picked.
+      if (m.caps.motionControl || m.caps.videoEdit) return null;
       if (i2v && !m.caps.imageToVideo) return `${m.name} doesn't support image-to-video`;
       if (!i2v && !m.caps.textToVideo) return `${m.name} needs a first frame. Add one with +`;
       return null;
@@ -328,10 +372,16 @@ export function VideoComposer() {
 
   const disabledReason: string | null = !model
     ? "No video models available"
-    : motionMode
+    : editMode
+      ? !clip
+        ? "Add a video to edit"
+        : !trimmed
+          ? "Say what to change"
+          : (editProblem ?? null)
+      : motionMode
           ? !firstFrame
             ? "Add a character image"
-            : !motion
+            : !clip
               ? "Add a reference video"
               : null
           : (modelReason(model) ?? (!i2v && !trimmed ? "Enter a prompt" : null));
@@ -341,20 +391,28 @@ export function VideoComposer() {
   const runsOnFal = keyGate.runsOnFal;
   const hasFirst = Boolean(firstFrame);
   const hasLast = showLast && Boolean(lastFrame);
+  const clipSec = clip?.durationSec;
   const estimateAt = useCallback(
     (d: number, r: VideoResolution | undefined) =>
       !model
         ? undefined
-        : runsOnFal
-          ? estimateFalVideoCost(model, { duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast })
-          : estimateVideoCost(model, d, r),
-    [model, runsOnFal, aspectRatio, sound, hasFirst, hasLast],
+        : model.caps.videoEdit
+          ? // The edit is as long as the source (or what the model keeps of it), priced once that length is known.
+            clipSec === undefined
+            ? undefined
+            : runsOnFal
+              ? estimateFalVideoCost(model, { duration: 0, resolution: r, videoSec: clipSec })
+              : estimateVideoCost(model, editedLength(model, clipSec), r)
+          : runsOnFal
+            ? estimateFalVideoCost(model, { duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast })
+            : estimateVideoCost(model, d, r),
+    [model, runsOnFal, aspectRatio, sound, hasFirst, hasLast, clipSec],
   );
   const estimateFor = useCallback((d: number) => estimateAt(d, resolution), [estimateAt, resolution]);
   // Motion control: the clip is as long as the reference video, priced once its length is known.
   const perClip = motionMode
     ? model && runsOnFal
-      ? estimateFalVideoCost(model, { duration: 0, motionSec: motion?.durationSec })
+      ? estimateFalVideoCost(model, { duration: 0, videoSec: clipSec })
       : undefined
     : estimateFor(duration);
   const estimate = perClip !== undefined ? perClip * count : undefined;
@@ -363,10 +421,15 @@ export function VideoComposer() {
     if (!model || disabledReason || submitting) return;
     if (keyGate.askForKey(() => void submit())) return;
     let req: VideoGenerateRequest;
-    if (motionMode) {
-      if (!firstFrame || !motion) return;
+    if (editMode) {
+      if (!clip) return;
+      // `duration` is required by the type and ignored: the clip keeps the source's length.
+      req = { prompt: trimmed, model: model.id, duration: 5, sourceVideo: clip.mediaId };
+      if (resolution && model.resolutions.includes(resolution)) req.resolution = resolution;
+    } else if (motionMode) {
+      if (!firstFrame || !clip) return;
       // `duration` is required by the type and ignored: the clip follows the reference video.
-      req = { prompt: trimmed, model: model.id, duration: 5, firstFrame: frameInput(firstFrame), motionVideo: motion.mediaId, orientation };
+      req = { prompt: trimmed, model: model.id, duration: 5, firstFrame: frameInput(firstFrame), motionVideo: clip.mediaId, orientation };
     } else {
       req = { prompt: trimmed, model: model.id, duration };
       if (resolution && model.resolutions.includes(resolution)) req.resolution = resolution;
@@ -445,6 +508,42 @@ export function VideoComposer() {
   const singleRes = model.resolutions.length === 1;
   const faceWarning = model.caps.realFaces === false && Boolean(firstFrame);
   const orientationLabel = orientation === "image" ? "Follow image" : "Follow video";
+  // Video editing: how long the edit will be, once the source's length is known (a model may keep only its start).
+  const editSec = editMode && clipSec !== undefined ? editedLength(model, clipSec) : undefined;
+  const editCut = editSec !== undefined && clipSec !== undefined && editSec < clipSec - 0.05;
+  const editHint = editMode ? editSourceHint(model) : undefined;
+
+  const resolutionChip = noRes ? null : singleRes ? (
+    <StaticChip icon={<Gem size={15} />} label={resolution ?? "Auto"} title={`${resolution ?? "Default"} is the only resolution for ${model.name}`} />
+  ) : (
+    <Popover open={resOpen} onOpenChange={setResOpen}>
+      <PopoverTrigger asChild>
+        <Chip icon={<Gem size={15} />} label={resolution ?? "Auto"} aria-label={`Resolution: ${resolution ?? "auto"}`} className="tabular-nums" />
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-[220px]">
+        <div role="listbox" aria-label="Resolution">
+          <PopoverLabel>Resolution</PopoverLabel>
+          {model.resolutions.map((r) => {
+            const est = estimateAt(duration, r);
+            return (
+              <PopoverItem
+                key={r}
+                selected={r === resolution}
+                onClick={() => {
+                  setResolution(r);
+                  setResOpen(false);
+                }}
+              >
+                <span className="w-12 font-medium tabular-nums">{r}</span>
+                <span className="flex-1 text-meta tabular-nums">{est !== undefined ? formatUsd(est, { approx: true }) : ""}</span>
+                {r === resolution ? <Check size={14} className="text-accent" aria-hidden="true" /> : null}
+              </PopoverItem>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 
   return (
     <>
@@ -459,23 +558,35 @@ export function VideoComposer() {
       notice={notice ? <ComposerNotice message={notice.message} action={notice.action} onAction={notice.onAction} /> : null}
       addControl={
         <Popover open={addOpen} onOpenChange={setAddOpen}>
-          <Tooltip content={motionMode ? "Add a character image or a reference video" : "Add a first frame, last frame or style reference"} side="top">
+          <Tooltip
+            content={editMode ? "Add the video to edit" : motionMode ? "Add a character image or a reference video" : "Add a first frame, last frame or style reference"}
+            side="top"
+          >
             <PopoverTrigger asChild>
-              <AddButton aria-label={motionMode ? "Add image or video" : "Add image"}>
+              <AddButton aria-label={editMode ? "Add video" : motionMode ? "Add image or video" : "Add image"}>
                 <Plus size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
               </AddButton>
             </PopoverTrigger>
           </Tooltip>
-          {motionMode ? (
+          {editMode ? (
+            <PopoverContent side="top" align="start" className="w-[232px]">
+              <PopoverLabel>Video editing</PopoverLabel>
+              <PopoverItem onClick={() => void pickClip()}>
+                <Film size={15} className="text-fg-muted" aria-hidden="true" />
+                <span className="flex-1">{clip ? "Replace video" : "Video to edit"}</span>
+              </PopoverItem>
+              <p className="px-2 pb-1 pt-1.5 text-caption">{editHint ? `${editHint} ` : ""}Or drop a video anywhere on the bar.</p>
+            </PopoverContent>
+          ) : motionMode ? (
             <PopoverContent side="top" align="start" className="w-[232px]">
               <PopoverLabel>Motion control</PopoverLabel>
               <PopoverItem onClick={() => void pickFor("first")}>
                 <UserRound size={15} className="text-fg-muted" aria-hidden="true" />
                 <span className="flex-1">{firstFrame ? "Replace character image" : "Character image"}</span>
               </PopoverItem>
-              <PopoverItem onClick={() => void pickMotion()}>
+              <PopoverItem onClick={() => void pickClip()}>
                 <Film size={15} className="text-fg-muted" aria-hidden="true" />
-                <span className="flex-1">{motion ? "Replace reference video" : "Reference video"}</span>
+                <span className="flex-1">{clip ? "Replace reference video" : "Reference video"}</span>
               </PopoverItem>
               <p className="px-2 pb-1 pt-1.5 text-caption">Or drop an image and a video anywhere on the bar.</p>
             </PopoverContent>
@@ -504,7 +615,9 @@ export function VideoComposer() {
           )}
         </Popover>
       }
-      attachments={<AttachmentStrip items={attachments} onRemove={removeAttachment} label={motionMode ? "Attached inputs" : "Attached images"} />}
+      attachments={
+        <AttachmentStrip items={attachments} onRemove={removeAttachment} label={editMode ? "Attached video" : motionMode ? "Attached inputs" : "Attached images"} />
+      }
       textarea={
         <Textarea
           ref={textareaRef}
@@ -514,7 +627,13 @@ export function VideoComposer() {
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           placeholder={
-            motionMode ? "Describe the scene or style (optional)…" : i2v ? "Describe the motion and camera (optional)…" : "Describe the shot: motion, camera, scene…"
+            editMode
+              ? "Say what to change: swap, add, remove, restyle…"
+              : motionMode
+                ? "Describe the scene or style (optional)…"
+                : i2v
+                  ? "Describe the motion and camera (optional)…"
+                  : "Describe the shot: motion, camera, scene…"
           }
           aria-label="Prompt"
           maxLength={8000}
@@ -533,7 +652,17 @@ export function VideoComposer() {
         </Tooltip>
       }
       note={
-        faceWarning ? (
+        editProblem ? (
+          <p className="flex items-center gap-1.5 text-caption" role="note">
+            <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
+            {editProblem}
+          </p>
+        ) : editCut && editSec !== undefined && clipSec !== undefined ? (
+          <p className="flex items-center gap-1.5 text-caption" role="note">
+            <CircleAlert size={12} className="shrink-0 text-fg-muted" aria-hidden="true" />
+            {model.name} edits the first {formatSeconds(editSec)} of this {formatSeconds(clipSec)} video.
+          </p>
+        ) : faceWarning ? (
           <p className="flex items-center gap-1.5 text-caption" role="note">
             <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
             {model.name} rejects recognizable real faces.{" "}
@@ -554,7 +683,14 @@ export function VideoComposer() {
             <ModelChip model={model} reason={modelReason(model)} />
           </ModelPicker>
 
-          {motionMode ? (
+          {editMode ? (
+            <>
+              {editSec !== undefined ? (
+                <StaticChip icon={<Clock size={15} />} label={formatSeconds(editSec)} title="The edit is as long as the video" />
+              ) : null}
+              {resolutionChip}
+            </>
+          ) : motionMode ? (
             <Popover open={orientOpen} onOpenChange={setOrientOpen}>
               <PopoverTrigger asChild>
                 <Chip
@@ -623,37 +759,7 @@ export function VideoComposer() {
 
             <DurationControl model={model} value={duration} onChange={setDuration} estimateFor={estimateFor} chevron={false} />
 
-            {noRes ? null : singleRes ? (
-              <StaticChip icon={<Gem size={15} />} label={resolution ?? "Auto"} title={`${resolution ?? "Default"} is the only resolution for ${model.name}`} />
-            ) : (
-              <Popover open={resOpen} onOpenChange={setResOpen}>
-                <PopoverTrigger asChild>
-                  <Chip icon={<Gem size={15} />} label={resolution ?? "Auto"} aria-label={`Resolution: ${resolution ?? "auto"}`} className="tabular-nums" />
-                </PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-[220px]">
-                  <div role="listbox" aria-label="Resolution">
-                    <PopoverLabel>Resolution</PopoverLabel>
-                    {model.resolutions.map((r) => {
-                      const est = estimateAt(duration, r);
-                      return (
-                        <PopoverItem
-                          key={r}
-                          selected={r === resolution}
-                          onClick={() => {
-                            setResolution(r);
-                            setResOpen(false);
-                          }}
-                        >
-                          <span className="w-12 font-medium tabular-nums">{r}</span>
-                          <span className="flex-1 text-meta tabular-nums">{est !== undefined ? formatUsd(est, { approx: true }) : ""}</span>
-                          {r === resolution ? <Check size={14} className="text-accent" aria-hidden="true" /> : null}
-                        </PopoverItem>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
+            {resolutionChip}
 
             {model.caps.audio ? (
               <Chip
@@ -684,13 +790,14 @@ export function VideoComposer() {
       prompt={prompt}
       context={{
         modelName: model.name,
-        duration: motionMode ? undefined : duration,
-        aspectRatio: motionMode ? undefined : aspectRatio,
-        startsFromImage: Boolean(firstFrame),
+        duration: motionMode || editMode ? undefined : duration,
+        aspectRatio: motionMode || editMode ? undefined : aspectRatio,
+        startsFromImage: !editMode && Boolean(firstFrame),
         motionControl: motionMode,
+        videoEdit: editMode,
       }}
-      aspectRatio={motionMode ? undefined : aspectRatio}
-      firstFrame={firstFrame ? frameInput(firstFrame) : undefined}
+      aspectRatio={motionMode || editMode ? undefined : aspectRatio}
+      firstFrame={firstFrame && !editMode ? frameInput(firstFrame) : undefined}
       onUse={(p) => {
         setPrompt(p);
         requestAnimationFrame(() => textareaRef.current?.focus());

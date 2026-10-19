@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  allowedDurations, DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL, estimateImageCost, estimateVideoCost, findImageModel, findVideoModel,
-  IMAGE_ASPECT_RATIOS, IMAGE_MODELS, PROVIDER_LABEL, snapDuration, VIDEO_ASPECT_RATIOS, VIDEO_MODELS,
+  allowedDurations, DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, estimateImageCost, estimateVideoCost, findImageModel,
+  findVideoModel, IMAGE_ASPECT_RATIOS, IMAGE_MODELS, PROVIDER_LABEL, snapDuration, VIDEO_ASPECT_RATIOS, VIDEO_MODELS,
 } from "@shared/models";
 import { IMAGES_SIZE_BY_ASPECT } from "../payloads";
 
@@ -120,7 +120,13 @@ describe("video models (visible)", () => {
       expect(durations[0]).toBe(m.durations.min);
       expect(durations.at(-1)).toBeLessThanOrEqual(m.durations.max);
     }
-    expect(m.caps.textToVideo || m.caps.imageToVideo || m.caps.motionControl, `${m.id} can generate nothing`).toBe(true);
+    expect(m.caps.textToVideo || m.caps.imageToVideo || m.caps.motionControl || m.caps.videoEdit, `${m.id} can generate nothing`).toBe(true);
+    if (m.caps.videoEdit) {
+      expect(Boolean(m.caps.textToVideo || m.caps.imageToVideo || m.caps.motionControl), `${m.id} edits and generates`).toBe(false);
+      const { minSec, maxSec } = m.editSource ?? {};
+      if (minSec !== undefined && maxSec !== undefined) expect(maxSec).toBeGreaterThan(minSec);
+      if (m.editSource?.truncates) expect(maxSec, `${m.id} truncates without a maxSec`).toBeDefined();
+    }
     if (m.caps.lastFrame) expect(m.caps.imageToVideo, `${m.id} lastFrame without imageToVideo`).toBe(true);
   });
 
@@ -133,6 +139,32 @@ describe("video models (visible)", () => {
     expect(snapDuration(seedance, 999)).toBe(30);
     expect(snapDuration(veo, 5)).toBe(4); // ties resolve to the first listed option
     expect(snapDuration(veo, 7.5)).toBe(8);
+  });
+});
+
+describe("video editing", () => {
+  it("the default editor exists, is visible and runs on both providers", () => {
+    const m = findVideoModel(DEFAULT_VIDEO_EDIT_MODEL);
+    expect(m?.caps.videoEdit).toBe(true);
+    expect(m?.hidden).toBeFalsy();
+    expect(m?.falOnly).toBeFalsy();
+    expect(m?.fal?.edit).toBeTruthy();
+  });
+
+  it("an edit is as long as its source, or as much of it as the model keeps", () => {
+    const flux = findVideoModel("black-forest-labs/flux-video-edit");
+    const grok = findVideoModel("fal/grok-imagine-edit");
+    if (!flux || !grok) throw new Error("catalog changed");
+    expect(editedLength(flux, 12.4)).toBe(12.4);
+    expect(editedLength(grok, 12.4)).toBe(8);
+    expect(editedLength(grok, 5)).toBe(5);
+  });
+
+  it("applies the provider's minimum charge (Runway Aleph 2: $0.56)", () => {
+    const aleph = findVideoModel("runway/aleph-2");
+    if (!aleph) throw new Error("catalog changed");
+    expect(estimateVideoCost(aleph, 1)).toBeCloseTo(0.56);
+    expect(estimateVideoCost(aleph, 10)).toBeCloseTo(2.8);
   });
 });
 
@@ -164,6 +196,11 @@ describe("fal routes", () => {
       if (m.caps.motionControl) {
         expect(m.fal.motionControl, `${m.id} motion-control endpoint`).toBeTruthy();
         expect(m.falOnly).toBe(true);
+        continue;
+      }
+      if (m.caps.videoEdit) {
+        expect(m.fal.edit, `${m.id} video-edit endpoint`).toBeTruthy();
+        if (m.fal.resolutions) for (const r of m.resolutions) expect(m.fal.resolutions[r], `${m.id} has no fal value for ${r}`).toBeTruthy();
         continue;
       }
       if (m.caps.textToVideo) expect(m.fal.textToVideo, `${m.id} text-to-video endpoint`).toBeTruthy();
