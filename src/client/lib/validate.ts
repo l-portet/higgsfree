@@ -7,8 +7,8 @@ export const MAX_PROMPT_CHARS = 8000;
 export const MAX_IMAGE_COUNT = 4;
 export const MAX_REFERENCE_IMAGES = 8;
 
-function assertMediaIds(ids: readonly (string | undefined)[], label: string): void {
-  for (const id of ids) if (id !== undefined && !isMediaId(id)) throw badRequest(`${label} must be a stored image`);
+function assertMediaIds(ids: readonly (string | undefined)[], label: string, what = "image"): void {
+  for (const id of ids) if (id !== undefined && !isMediaId(id)) throw badRequest(`${label} must be a stored ${what}`);
 }
 
 export function validateImageRequest(model: ImageModel, req: ImageGenerateRequest): void {
@@ -30,8 +30,38 @@ export function validateImageRequest(model: ImageModel, req: ImageGenerateReques
   }
 }
 
+/**
+ * Video editing: why the source video is outside the model's limits (its length and size, when known), or
+ * undefined. The composer shows it before a run, the engine refuses with it before anything is uploaded.
+ */
+export function sourceVideoProblem(model: VideoModel, durationSec: number | undefined, bytes: number | undefined): string | undefined {
+  const limits = model.editSource;
+  if (!limits) return undefined;
+  if (bytes !== undefined && limits.maxMb !== undefined && bytes > limits.maxMb * 1024 * 1024) {
+    return `The video is ${Math.round(bytes / 1024 / 1024)} MB. ${model.name} takes up to ${limits.maxMb} MB.`;
+  }
+  if (durationSec === undefined) return undefined;
+  if (limits.minSec !== undefined && durationSec < limits.minSec) return `The video is ${durationSec.toFixed(1)} s. ${model.name} needs at least ${limits.minSec} s.`;
+  if (limits.maxSec !== undefined && !limits.truncates && durationSec > limits.maxSec + 0.05) {
+    return `The video is ${Math.round(durationSec)} s. ${model.name} takes up to ${limits.maxSec} s.`;
+  }
+  return undefined;
+}
+
 export function validateVideoRequest(model: VideoModel, req: VideoGenerateRequest, prompt: string): void {
   if (prompt.length > MAX_PROMPT_CHARS) throw badRequest(`Prompt is longer than ${MAX_PROMPT_CHARS} characters`);
+  if (model.caps.videoEdit) {
+    assertMediaIds([req.sourceVideo], "The video to edit", "video");
+    if (!req.sourceVideo) throw badRequest(`${model.name} needs a video to edit`);
+    if (!prompt) throw badRequest("Say what to change in the video");
+    if (req.firstFrame || req.lastFrame || req.references?.length || req.motionVideo) throw badRequest(`${model.name} takes a video and a prompt only`);
+    if (req.resolution !== undefined && !model.resolutions.includes(req.resolution)) {
+      if (model.resolutions.length === 0) throw badRequest(`${model.name} keeps the video's resolution. Leave it unset.`);
+      throw new UnsupportedOptionError(model.name, "resolution", req.resolution, model.resolutions);
+    }
+    return;
+  }
+  if (req.sourceVideo) throw badRequest(`${model.name} does not edit videos`);
   if (model.caps.motionControl) {
     assertMediaIds([req.firstFrame, req.motionVideo], "The character image and the reference video");
     if (!req.firstFrame) throw badRequest(`${model.name} needs a character image`);

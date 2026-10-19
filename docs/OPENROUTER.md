@@ -85,6 +85,15 @@ Request timeouts: 6 min for an image call (the record itself times out after 10 
     A model that lists none (discovered models) never gets one.
   - Frames and references are media ids in the library (an upload, or another record's output). They are
     read from IndexedDB and converted to data URLs right before the submit.
+- **Video editing** (FLUX Video Edit, Runway Aleph 2; `caps.videoEdit`):
+  `{ model, prompt, input_references: [{ type: "video_url", video_url: { url: dataUrl } }] }` and nothing
+  else (`buildVideoEditPayload`). The video goes inline as a base64 data URL typed `video/mp4`,
+  `video/mov` (QuickTime, as OpenRouter spells it) or `video/webm`: OpenRouter has no upload and the
+  browser no public url to give. `duration` is not sent; the record starts at `params.duration: 0` and
+  takes the clip's length from its `moov` box when it lands. OpenRouter's catalog lists no options for
+  editors (an unlisted field is refused), so no resolution or aspect ratio goes out either. Not verified
+  end to end: OpenRouter documents the `video_url` reference (OpenAPI `ContentPartVideo`, and FLUX Video
+  Edit's example) with an https url, not a data URL.
 - The record is `pending` until the 202 arrives, then `running` with `providerJobId` and the polling url.
   The submitting tab takes the job's Web Lock (`higgsfree:job:<id>`) **before** the record exists and keeps
   it for the whole poll loop, so a pending video without a polling url whose lock is free can only be a
@@ -132,8 +141,9 @@ Two public catalogs, fetched by the browser at startup with or without a key (th
 there is one):
 - `GET /api/v1/videos/models` → per model `supported_durations`, `supported_resolutions`,
   `supported_aspect_ratios`, `supported_frame_images` (`first_frame`, `last_frame`),
-  `generate_audio` and `pricing_skus`. A model with no durations (editing, upscaling, avatars) is
-  hidden. Unknown values (`8K`, `5:4`) are dropped; resolutions are matched case-insensitively.
+  `generate_audio` and `pricing_skus`. A model with no durations (upscaling, avatars, editors) is
+  hidden, except a curated editor (`caps.videoEdit`), which keeps its curated options and takes the
+  price (`cents_per_second_output`, and `minimum_cents_per_generation` as `minCostUsd`). Unknown values (`8K`, `5:4`) are dropped; resolutions are matched case-insensitively.
 - `GET /api/v1/images/models` → per model `supported_parameters` as typed descriptors
   (`{ type: "enum", values }`, `{ type: "range", min, max }`, `{ type: "boolean" }`; an absent key
   means unsupported) and `architecture.output_modalities`. Every model here is served by the

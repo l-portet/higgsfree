@@ -41,13 +41,26 @@ export function maxResolution(m: VideoModel): VideoResolution | undefined {
   return best;
 }
 
-/** "4s–30s" (or "5s" when only one duration is allowed). */
+/** "4s–30s" (or "5s" when only one duration is allowed). Video editing: the source's limits ("3s–15s", "≤8s"), "" when unknown. */
 export function durationRange(m: VideoModel): string {
+  if (m.caps.videoEdit) {
+    const { minSec, maxSec } = m.editSource ?? {};
+    if (maxSec === undefined) return "";
+    return minSec === undefined ? `≤${maxSec}s` : `${minSec}s–${maxSec}s`;
+  }
   const list = allowedDurations(m);
   const min = list[0];
   const max = list[list.length - 1];
   if (min === undefined || max === undefined) return "";
   return min === max ? `${min}s` : `${min}s–${max}s`;
+}
+
+/** Video editing: "Takes 3–15 s clips.", "Takes clips up to 15 s.", "Edits the first 8 s."; undefined when the limits are unknown. */
+export function editSourceHint(m: VideoModel): string | undefined {
+  const { minSec, maxSec, truncates } = m.editSource ?? {};
+  if (maxSec === undefined) return undefined;
+  if (truncates) return `Edits the first ${maxSec} s.`;
+  return minSec === undefined ? `Takes clips up to ${maxSec} s.` : `Takes ${minSec}–${maxSec} s clips.`;
 }
 
 /** "1080p · 4s–30s" for a model row's second line. */

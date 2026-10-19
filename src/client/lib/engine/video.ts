@@ -20,12 +20,12 @@ import { errorMessage, log } from "../log";
 import { newGenerationId, outputMediaId } from "../media-ids";
 import { parseMp4MetaFromRanges } from "../mp4-meta";
 import * as or from "../openrouter";
-import { buildVideoPayload } from "../payloads";
+import { buildVideoEditPayload, buildVideoPayload } from "../payloads";
 import { getStoredKey } from "../settings";
 import { isQuotaError } from "../storage-health";
-import { validateVideoRequest } from "../validate";
+import { sourceVideoProblem, validateVideoRequest } from "../validate";
 import { DONE_STATUSES, FAILED_STATUSES, JOB_TIMEOUT_MS, limits, PENDING_STATUSES, timing } from "./constants";
-import { assertInputsExist, inputDataUrl, inputDataUrls } from "./inputs";
+import { assertInputsExist, inputDataUrl, inputDataUrls, inputVideoDataUrl } from "./inputs";
 import { keyFor, resolveRun } from "./provider";
 import { failGeneration, isCancelled, NOT_ACQUIRED, savePublish, tryWithJobLock } from "./state";
 
@@ -84,12 +84,18 @@ interface PreparedVideo {
 /** fal's limits on the motion-control reference video: 3 s minimum, 30 s following the video, 10 s following the image. */
 export const MOTION_VIDEO_LIMITS = { minSec: 3, maxSec: { video: 30, image: 10 } } as const;
 
+/** A stored video's length from its MP4 / MOV header; undefined for WebM, or when the header says nothing. */
+async function storedVideoLength(blob: Blob): Promise<number | undefined> {
+  if (blob.type === "video/webm") return undefined;
+  const { durationSec } = await parseMp4MetaFromRanges(blob.size, async (start, end) => new Uint8Array(await blob.slice(start, end + 1).arrayBuffer()));
+  return durationSec;
+}
+
 /** Check the reference video's length before anything is uploaded (MP4 / MOV; WebM is left to fal). */
 async function assertMotionVideo(model: VideoModel, mediaId: string, orientation: MotionOrientation): Promise<void> {
   const blob = await getMediaBlob(mediaId);
   if (!blob) throw badRequest(`Reference video is no longer in the library (${mediaId})`);
-  if (blob.type === "video/webm") return;
-  const { durationSec } = await parseMp4MetaFromRanges(blob.size, async (start, end) => new Uint8Array(await blob.slice(start, end + 1).arrayBuffer()));
+  const durationSec = await storedVideoLength(blob);
   if (durationSec === undefined) return;
   const max = MOTION_VIDEO_LIMITS.maxSec[orientation];
   if (durationSec < MOTION_VIDEO_LIMITS.minSec) throw badRequest(`The reference video is ${durationSec.toFixed(1)} s. ${model.name} needs at least ${MOTION_VIDEO_LIMITS.minSec} s.`);
@@ -97,6 +103,14 @@ async function assertMotionVideo(model: VideoModel, mediaId: string, orientation
     const hint = orientation === "image" ? " Switch to Follow video for up to 30 s." : "";
     throw badRequest(`The reference video is ${Math.round(durationSec)} s. ${model.name} takes up to ${max} s when following the ${orientation}.${hint}`);
   }
+}
+
+/** Check the video to edit against the model's limits before it is uploaded or inlined (a length it cannot read is left to the provider). */
+async function assertSourceVideo(model: VideoModel, mediaId: string): Promise<void> {
+  const blob = await getMediaBlob(mediaId);
+  if (!blob) throw badRequest(`Video to edit is no longer in the library (${mediaId})`);
+  const problem = sourceVideoProblem(model, await storedVideoLength(blob), blob.size);
+  if (problem) throw badRequest(problem);
 }
 
 async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
@@ -110,8 +124,10 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   if (req.lastFrame) inputs.lastFrame = req.lastFrame;
   if (req.references?.length) inputs.referenceImages = req.references;
   if (req.motionVideo) inputs.motionVideo = req.motionVideo;
+  if (req.sourceVideo) inputs.sourceVideo = req.sourceVideo;
   await assertInputsExist(inputs);
   if (inputs.motionVideo) await assertMotionVideo(model, inputs.motionVideo, req.orientation ?? "video");
+  if (inputs.sourceVideo) await assertSourceVideo(model, inputs.sourceVideo);
 
   const frames: { firstFrame?: string; lastFrame?: string } = {};
   if (inputs.firstFrame) frames.firstFrame = await inputDataUrl(inputs.firstFrame);
@@ -122,24 +138,39 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
     if (inputs.referenceImages?.length) {
       throw badRequest(`${model.name} on fal does not take style references. Remove them, or prefer OpenRouter in Settings.`);
     }
-    const motionVideo = inputs.motionVideo;
+    const { motionVideo, sourceVideo } = inputs;
     const payload = buildFalVideoPayload(
       model,
       { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, orientation: req.orientation },
-      { ...frames, ...(motionVideo ? { motionVideo: "pending-upload" } : {}) },
+      { ...frames, ...(motionVideo ? { motionVideo: "pending-upload" } : {}), ...(sourceVideo ? { sourceVideo: "pending-upload" } : {}) },
     );
+    // Both go in `video_url`: the reference video's movement, or the video being edited.
+    const video = motionVideo ?? sourceVideo;
     return {
       id, provider, model, prompt, inputs, params: payload.params,
       summary: `endpoint=${payload.endpoint} duration=${payload.params.duration}s res=${payload.params.resolution ?? "-"} ar=${payload.params.aspectRatio ?? "-"}`,
       submit: async (signal) => {
         const input = { ...payload.input };
-        if (motionVideo) {
-          const blob = await getMediaBlob(motionVideo);
-          if (!blob) throw badRequest(`Reference video is no longer in the library (${motionVideo})`);
-          input.video_url = await fal.upload(key, blob, motionVideo, signal);
+        if (video) {
+          const blob = await getMediaBlob(video);
+          if (!blob) throw badRequest(`${motionVideo ? "Reference video" : "Video to edit"} is no longer in the library (${video})`);
+          input.video_url = await fal.upload(key, blob, video, signal);
         }
         const queued = await fal.submit(key, payload.endpoint, input, signal);
         return { jobId: queued.requestId, pollingUrl: queued.statusUrl };
+      },
+    };
+  }
+
+  if (inputs.sourceVideo) {
+    // Inlined as a data URL, like frames: OpenRouter has no upload, and the browser no public url to give it.
+    const body = buildVideoEditPayload(model, prompt, await inputVideoDataUrl(inputs.sourceVideo));
+    return {
+      id, provider, model, prompt, inputs, params: { duration: 0 },
+      summary: "edit (source video inline)",
+      submit: async (signal) => {
+        const submitted = await or.submitVideo(key, body, { signal });
+        return { jobId: submitted.id, pollingUrl: submitted.pollingUrl };
       },
     };
   }
@@ -230,7 +261,7 @@ export interface VideoJob {
   provider: ProviderId;
   pollingUrl: string;
   createdAt: string;
-  /** The requested duration, used when the clip's own metadata has none (0 = unknown: motion control). */
+  /** The requested duration, used when the clip's own metadata has none (0 = unknown: motion control, video editing). */
   durationHint: number;
   params: VideoParams;
 }
@@ -328,7 +359,7 @@ async function finishVideo(job: VideoJob, download: () => Promise<Blob>, costUsd
     const elapsedMs = Date.parse(completedAt) - Date.parse(job.createdAt);
     const patch: GenerationPatch = { status: "completed", output, completedAt, elapsedMs, pollingUrl: undefined };
     if (costUsd !== undefined) patch.costUsd = costUsd;
-    // Motion control: the clip is as long as the reference video, known only now.
+    // Motion control and video editing: the clip is as long as the input video, known only now.
     if (job.durationHint === 0 && durationSec !== undefined) patch.params = { ...job.params, duration: Math.round(durationSec) };
     const done = await completeGeneration(job.id, patch, media);
     if (done) {

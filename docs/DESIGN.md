@@ -144,7 +144,8 @@ There is no page chrome: the app is four views under one floating nav, with one 
   cell (the lightbox shows the whole frame), pending cards show a shimmer skeleton with model name + elapsed timer,
   and failed cards show as much of the provider error and prompt as the cell's height holds, with Retry and Details
   (the full text). The loading skeletons and the route fallback use the same cells. Assets and Favorites keep the
-  masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) · Reuse prompt
+  masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) or, on a video, Edit video (→ the
+  composer on the last editor used, with this clip attached; same WandSparkles glyph) · Reuse prompt
   · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
 - Composer chips: [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds reference images (up to the
   largest count any model takes; the picker dims models that cannot take what is attached).
@@ -164,6 +165,15 @@ There is no page chrome: the app is four views under one floating nav, with one 
   video"; dropped images fill the character, dropped videos the reference. One chip replaces duration, aspect
   ratio, resolution and Sound: [Follow video ˅] / [Follow image ˅], with the reference video's limit (30 s / 10 s)
   in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
+- Video editing (`caps.videoEdit`; the picker lists editors in their own group, "Edit a video", under Featured): `+`
+  offers one item, "Video to edit" (Film icon), with the model's limits in the caption ("Takes clips up to 15 s."); a
+  dropped video fills it, images are refused. The clip shows in the attachment strip tagged SOURCE. The chips are the
+  model, a static length chip once the video's length is known ([⏱ 6s], what the edit will last), resolution when
+  the model has one, and the count; no aspect ratio, duration or Sound. Placeholder "Say what to change: swap, add,
+  remove, restyle…"; Generate is disabled with "Add a video to edit", "Say what to change", or the limit the video
+  breaks, which also shows under the prompt as a danger note ("The video is 12 s. Wan 2.7 Edit takes up to 10 s.").
+  A model that keeps only the start says so in a muted note ("Grok Imagine Edit edits the first 8s of this 12s
+  video."). The estimate is per second of the video, so it appears once its length is known.
 
 - **AI Prompt Editor**: in the video composer, a sparkle square under the `+` (same 33 px `rounded-control` button,
   6 px below it; tooltip "Prompt Editor: rewrite with AI, preview the shot"); row 2 keeps its options. It opens a dialog (`PromptEditorDialog`, 880 px) with a
@@ -191,8 +201,8 @@ There is no page chrome: the app is four views under one floating nav, with one 
   Videos), a status dropdown and a search field (`/` focuses it), then the grid. Select turns cards into checkboxes
   (shift-click for ranges, ⌘A for all) with a floating selection bar: Download / Delete / Done.
 - Clicking a card opens the **Lightbox** (full-screen dialog): media left, metadata right (prompt with copy, model,
-  params, cost, created, elapsed, provider job id, inputs) and actions (Download, Animate, Reuse prompt, Keep, Retry,
-  Delete). ← → move between items.
+  params, cost, created, elapsed, provider job id, inputs) and actions (Download, Animate on an image or Edit video on
+  a video, Reuse prompt, Keep, Retry, Delete). ← → move between items. An edit's inputs show its SOURCE video.
 
 ## Favorites view (`/favorites`)
 - The kept runs, images and videos together, newest first, type badge on each card. Empty: "Nothing kept yet. Hover a

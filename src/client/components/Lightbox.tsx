@@ -44,12 +44,12 @@ function Details({ g }: { g: Generation }) {
   const src = useMediaUrl(out?.id);
   const p = g.params;
   const image = isImageParams(p);
-  // Motion control: a character image and a reference video; the clip is as long as the video.
+  // Motion control: a character image and a reference video; the clip is as long as the video. Video editing too keeps the input's length.
   const motion = !image && (p.orientation !== undefined || Boolean(g.inputs?.motionVideo));
   // The model's maker from the catalog (a fal-only slug starts with `fal/`), else the slug's prefix.
   const catalogModel = useModels((s) => (g.type === "image" ? s.findImage(g.model) : s.findVideo(g.model)));
   const maker = catalogModel?.provider ?? g.model.split("/")[0] ?? "openrouter";
-  // 0 = not known yet (motion control, until the clip is back).
+  // 0 = not known yet (motion control, video editing, until the clip is back).
   const durationSec = out?.durationSec ?? (!image && p.duration > 0 ? p.duration : undefined);
   const status: { label: string; variant: "neutral" | "accent" | "danger" } =
     g.status === "completed"
@@ -124,12 +124,13 @@ function Details({ g }: { g: Generation }) {
         </dl>
       </section>
 
-      {g.inputs?.referenceImages?.length || g.inputs?.firstFrame || g.inputs?.lastFrame || g.inputs?.motionVideo ? (
+      {g.inputs?.referenceImages?.length || g.inputs?.firstFrame || g.inputs?.lastFrame || g.inputs?.motionVideo || g.inputs?.sourceVideo ? (
         <section>
           <h3 className="mb-2 text-label">Inputs</h3>
           <div className="flex flex-wrap gap-2">
             {g.inputs.firstFrame ? <InputThumb id={g.inputs.firstFrame} label={motion ? "Character" : "First frame"} /> : null}
             {g.inputs.motionVideo ? <InputThumb id={g.inputs.motionVideo} label="Motion" video /> : null}
+            {g.inputs.sourceVideo ? <InputThumb id={g.inputs.sourceVideo} label="Source" video /> : null}
             {g.inputs.lastFrame ? <InputThumb id={g.inputs.lastFrame} label="Last frame" /> : null}
             {g.inputs.referenceImages?.map((id, i) => (
               <InputThumb key={`${id}-${i}`} id={id} label={`Reference ${i + 1}`} />
@@ -151,6 +152,10 @@ function Details({ g }: { g: Generation }) {
         {out && g.type === "image" ? (
           <Button leftIcon={<WandSparkles />} onClick={actions.animate}>
             Animate
+          </Button>
+        ) : out && g.status === "completed" ? (
+          <Button leftIcon={<WandSparkles />} onClick={actions.editVideo}>
+            Edit video
           </Button>
         ) : null}
         <Button leftIcon={<RotateCcw />} onClick={actions.reuse}>

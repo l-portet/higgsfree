@@ -148,6 +148,19 @@ describe("video pipeline", () => {
     setOnVideoCompleted(undefined);
   });
 
+  it("edits a video on OpenRouter: the clip goes inline as a video reference, nothing else is sent, and its length comes from the result", async () => {
+    const source = (await api.uploadVideo(new Blob([MP4], { type: "video/mp4" }))).media.id;
+    const g = await submitVideo({ prompt: "make it snow", model: "black-forest-labs/flux-video-edit", resolution: "720p", sourceVideo: source });
+    expect(g).toMatchObject({ status: "running", provider: "openrouter", inputs: { sourceVideo: source }, params: { duration: 0 } });
+    expect(mock.last("/api/v1/videos")?.body).toEqual({
+      model: "black-forest-labs/flux-video-edit",
+      prompt: "make it snow",
+      input_references: [{ type: "video_url", video_url: { url: `data:video/mp4;base64,${Buffer.from(MP4).toString("base64")}` } }],
+    });
+    await waitFor(completed(g.id));
+    expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", costUsd: 1.17, params: { duration: 5 }, output: { durationSec: 5 } });
+  });
+
   it("surfaces the provider 400 body verbatim and keeps a failed record", async () => {
     const err = await api.generateVideo({ prompt: "p", model: "bytedance/seedance-2.0", duration: 5, aspectRatio: "16:9", resolution: "4K" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(api.ApiClientError);
@@ -257,6 +270,8 @@ describe("request validation", () => {
     await expect(submitVideo({ model: "minimax/hailuo-3", resolution: "1080p" })).rejects.toMatchObject({ status: 400, error: "MiniMax H3 does not support resolution 1080p (allowed: 2K)" });
     await expect(submitVideo({ model: "kwaivgi/kling-v3.0-pro", aspectRatio: "21:9" })).rejects.toMatchObject({ status: 400, error: expect.stringContaining("allowed: 16:9, 1:1, 9:16") });
     await expect(submitVideo({ prompt: "   " })).rejects.toMatchObject({ status: 400, error: "Prompt is required for text-to-video" });
+    await expect(submitVideo({ model: "runway/aleph-2" })).rejects.toMatchObject({ status: 400, error: "Runway Aleph 2 needs a video to edit" });
+    await expect(submitVideo({ sourceVideo: "up_abc123.mp4" })).rejects.toMatchObject({ status: 400, error: "Seedance 2.5 does not edit videos" });
     await expect(generateImage({ count: 5 })).rejects.toMatchObject({ status: 400 });
     expect(mock.seen.filter((s) => s.url === "/api/v1/videos" || s.url === "/api/v1/chat/completions")).toHaveLength(0);
   });
@@ -329,6 +344,18 @@ describe("reference counting", () => {
     expect(await mediaExists(ref)).toBe(false); // last reference gone
   });
 
+  it("keeps a video's output alive while an edit uses it as its source (Edit video)", async () => {
+    const video = await submitVideo();
+    await waitFor(completed(video.id));
+    const output = `${video.id}.mp4`;
+    const edit = await submitVideo({ prompt: "POLL_FORBIDDEN make it snow", model: "black-forest-labs/flux-video-edit", sourceVideo: output });
+    expect(edit.inputs?.sourceVideo).toBe(output);
+    await api.deleteGeneration(video.id);
+    expect(await mediaExists(output)).toBe(true);
+    await api.deleteGeneration(edit.id);
+    expect(await mediaExists(output)).toBe(false);
+  });
+
   it("keeps an image's output alive while a video uses it as first frame (Animate)", async () => {
     const image = await generateImage();
     await waitFor(completed(image.id));
@@ -381,8 +408,11 @@ describe("live model catalog", () => {
     const { video } = await api.getModels();
     const ids = video.map((m) => m.id);
     expect(ids).toContain("x-ai/grok-imagine-video-1.5-lite");
-    expect(ids).not.toContain("runway/aleph-2"); // video-to-video
-    expect(ids).not.toContain("black-forest-labs/flux-video-edit");
+    expect(ids).not.toContain("black-forest-labs/flux-video-upscale"); // upscaling
+    expect(ids).not.toContain("heygen/avatar-iv"); // needs audio
+    // Curated editors stay, with their own options and OpenRouter's price (and minimum).
+    expect(video.find((m) => m.id === "black-forest-labs/flux-video-edit")).toMatchObject({ caps: { videoEdit: true }, resolutions: ["720p"], estCostPerSecUsd: { "720p": 0.03 } });
+    expect(video.find((m) => m.id === "runway/aleph-2")).toMatchObject({ caps: { videoEdit: true }, estCostPerSecUsd: { "720p": 0.28 }, minCostUsd: 0.56 });
     const discovered = video.find((m) => m.id === "acme/motion-1");
     expect(discovered).toMatchObject({
       name: "Motion 1",

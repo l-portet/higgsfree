@@ -347,6 +347,8 @@ export async function importLibrary(file: Blob, opts: ImportOptions = {}): Promi
         if (last) inputs.lastFrame = last;
         const motion = await keep(record.inputs.motionVideo);
         if (motion) inputs.motionVideo = motion;
+        const source = await keep(record.inputs.sourceVideo);
+        if (source) inputs.sourceVideo = source;
         if (Object.keys(inputs).length > 0) record.inputs = inputs;
         else delete record.inputs;
       }

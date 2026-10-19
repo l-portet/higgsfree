@@ -128,6 +128,23 @@ describe("buildFalVideoPayload", () => {
     expect(buildFalVideoPayload(motion, { prompt: "dance", duration: 5, orientation: "image" }, { firstFrame: "data:c", motionVideo: "u" }).input).toMatchObject({ prompt: "dance", character_orientation: "image" });
     expect(() => buildFalVideoPayload(motion, { prompt: "", duration: 5 }, { firstFrame: "data:c" })).toThrow("needs a character image and a reference video");
   });
+
+  it("video editing: the prompt, the video and the resolution the route spells; no duration, aspect ratio or audio", () => {
+    const gemini = video("fal/gemini-omni-flash-1.1-edit");
+    expect(buildFalVideoPayload(gemini, { prompt: " make it snow ", duration: 5, aspectRatio: "9:16", resolution: "4K", audio: true }, { sourceVideo: "https://cdn/in.mp4" })).toEqual({
+      endpoint: "google/gemini-omni-flash/v1.1/edit",
+      input: { prompt: "make it snow", video_url: "https://cdn/in.mp4", resolution: "4k" },
+      params: { duration: 0, resolution: "4K" },
+    });
+    // No resolution list (Kling keeps the source's) or no fal spelling for it (FLUX): none sent.
+    expect(buildFalVideoPayload(video("fal/kling-o3-edit"), { prompt: "p", duration: 5, resolution: "1080p" }, { sourceVideo: "u" })).toEqual({
+      endpoint: "fal-ai/kling-video/o3/pro/video-to-video/edit",
+      input: { prompt: "p", video_url: "u" },
+      params: { duration: 0 },
+    });
+    expect(buildFalVideoPayload(video("black-forest-labs/flux-video-edit"), { prompt: "p", duration: 5, resolution: "720p" }, { sourceVideo: "u" }).input).toEqual({ prompt: "p", video_url: "u" });
+    expect(() => buildFalVideoPayload(gemini, { prompt: "p", duration: 5 }, { firstFrame: "data:c" })).toThrow("needs a video to edit");
+  });
 });
 
 describe("fal client guards", () => {

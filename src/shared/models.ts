@@ -995,24 +995,143 @@ export const VIDEO_MODELS: VideoModel[] = [
     fal: { textToVideo: "luma/agent/ray/v3.2/text-to-video", imageToVideo: "luma/agent/ray/v3.2/image-to-video", endImage: true, duration: "seconds", aspect: "always", resolutions: { "720p": "720p", "1080p": "1080p" } },
     falOnly: true,
   },
-  // Listed by OpenRouter but never offered: they need a video or audio input this app does not send.
+  // ---------- video editing: a source video and a prompt saying what to change ----------
+  // The clip keeps the source's length, so `durations` is a placeholder (as for motion control).
+  {
+    kind: "video",
+    id: "black-forest-labs/flux-video-edit",
+    name: "FLUX Video Edit",
+    provider: "black-forest-labs",
+    description: "Change, add or remove anything in a clip, keeping its motion and framing",
+    featured: false,
+    badges: ["new"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    editSource: { maxSec: 15, maxMb: 50 },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: ["720p"],
+    defaultResolution: "720p",
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: { "720p": 0.03 },
+    verified: false,
+    fal: { edit: "blackforestlabs/flux-3/edit-video" },
+  },
   {
     kind: "video",
     id: "runway/aleph-2",
     name: "Runway Aleph 2",
     provider: "runway",
-    description: "Video-to-video editing",
+    description: "Runway's in-context editor: restyle, relight, add or remove",
     featured: false,
-    badges: [],
-    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false },
-    durations: { options: [5, 10] },
+    badges: ["pro"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    durations: { options: [5] },
     defaultDuration: 5,
-    resolutions: ["1080p"],
+    resolutions: ["720p"],
+    defaultResolution: "720p",
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: { "720p": 0.28 },
+    minCostUsd: 0.56,
+    verified: false,
+  },
+  {
+    kind: "video",
+    id: "fal/kling-o3-edit",
+    name: "Kling O3 Edit",
+    provider: "kwaivgi",
+    description: "Edit a 3–15 s clip in plain words, keeping its sound",
+    featured: false,
+    badges: ["new"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    editSource: { minSec: 3, maxSec: 15 },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: [],
     aspectRatios: ["16:9"],
     estCostPerSecUsd: {},
     verified: false,
-    hidden: true,
+    fal: { edit: "fal-ai/kling-video/o3/pro/video-to-video/edit" },
+    falOnly: true,
   },
+  {
+    kind: "video",
+    id: "fal/kling-o3-edit-standard",
+    name: "Kling O3 Edit Standard",
+    provider: "kwaivgi",
+    description: "Kling O3 editing at a lower price",
+    featured: false,
+    badges: [],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    editSource: { minSec: 3, maxSec: 15 },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: [],
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: {},
+    verified: false,
+    fal: { edit: "fal-ai/kling-video/o3/standard/video-to-video/edit" },
+    falOnly: true,
+  },
+  {
+    kind: "video",
+    id: "fal/gemini-omni-flash-1.1-edit",
+    name: "Gemini Omni Flash 1.1 Edit",
+    provider: "google",
+    description: "Google's video model edits a clip from a simple instruction, up to 4K",
+    featured: false,
+    badges: ["new"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: ["720p", "1080p", "4K"],
+    defaultResolution: "720p",
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: {},
+    verified: false,
+    fal: { edit: "google/gemini-omni-flash/v1.1/edit", resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
+    falOnly: true,
+  },
+  {
+    kind: "video",
+    id: "fal/grok-imagine-edit",
+    name: "Grok Imagine Edit",
+    provider: "x-ai",
+    description: "Quick, cheap edits of the first 8 s of a clip",
+    featured: false,
+    badges: ["fast"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    editSource: { maxSec: 8, truncates: true },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: ["480p", "720p"],
+    defaultResolution: "480p",
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: {},
+    verified: false,
+    fal: { edit: "xai/grok-imagine-video/edit-video", resolutions: { "480p": "480p", "720p": "720p" } },
+    falOnly: true,
+  },
+  {
+    kind: "video",
+    id: "fal/wan-2.7-edit",
+    name: "Wan 2.7 Edit",
+    provider: "alibaba",
+    description: "Edit or restyle a 2–10 s clip at 720p or 1080p",
+    featured: false,
+    badges: [],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true },
+    editSource: { minSec: 2, maxSec: 10 },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: ["720p", "1080p"],
+    defaultResolution: "1080p",
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: {},
+    verified: false,
+    fal: { edit: "fal-ai/wan/v2.7/edit-video", resolutions: { "720p": "720p", "1080p": "1080p" } },
+    falOnly: true,
+  },
+  // Listed by OpenRouter but never offered: they need a video or audio input this app does not send.
   {
     kind: "video",
     id: "black-forest-labs/flux-video-upscale",
@@ -1047,27 +1166,12 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: false,
     hidden: true,
   },
-  {
-    kind: "video",
-    id: "black-forest-labs/flux-video-edit",
-    name: "FLUX Video Edit",
-    provider: "black-forest-labs",
-    description: "Video-to-video editing (video input)",
-    featured: false,
-    badges: [],
-    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false },
-    durations: { options: [5] },
-    defaultDuration: 5,
-    resolutions: [],
-    aspectRatios: ["16:9"],
-    estCostPerSecUsd: {},
-    verified: false,
-    hidden: true,
-  },
 ];
 
 export const DEFAULT_IMAGE_MODEL = "google/gemini-3-pro-image";
 export const DEFAULT_VIDEO_MODEL = "bytedance/seedance-2.5";
+/** What "Edit video" on a clip switches to when the composer is not on an editor: the cheapest, on both providers. */
+export const DEFAULT_VIDEO_EDIT_MODEL = "black-forest-labs/flux-video-edit";
 
 export function findImageModel(id: string): ImageModel | undefined {
   return IMAGE_MODELS.find((m) => m.id === id);
@@ -1101,7 +1205,13 @@ export function estimateImageCost(m: ImageModel, size: ImageModel["sizes"][numbe
 export function estimateVideoCost(m: VideoModel, duration: number, resolution?: VideoModel["resolutions"][number]): number | undefined {
   const res = resolution ?? m.defaultResolution ?? m.resolutions[0];
   const per = res ? m.estCostPerSecUsd[res] : undefined;
-  return per === undefined ? undefined : per * duration;
+  return per === undefined ? undefined : Math.max(per * duration, m.minCostUsd ?? 0);
+}
+
+/** Video editing: how long the edited clip is, from the source's length (a model that cuts long sources keeps its `maxSec`). */
+export function editedLength(m: VideoModel, sourceSec: number): number {
+  const max = m.editSource?.maxSec;
+  return m.editSource?.truncates && max !== undefined ? Math.min(sourceSec, max) : sourceSec;
 }
 
 /** Provider display metadata for icon tiles. */

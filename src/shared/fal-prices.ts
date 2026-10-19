@@ -114,4 +114,12 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   // fal prices Luma per 5 or 10 s clip, the same per second for both; image-to-video costs less.
   "luma/agent/ray/v3.2/text-to-video": { unit: "second", usd: { "720p": 0.2, "1080p": 0.4 } },
   "luma/agent/ray/v3.2/image-to-video": { unit: "second", usd: { "720p": 0.06, "1080p": 0.24 } },
+  // Video editing (read 19 Oct 2026): per second of the edited clip, which is as long as the source.
+  "blackforestlabs/flux-3/edit-video": { unit: "second", usd: 0.03 },
+  "fal-ai/kling-video/o3/pro/video-to-video/edit": { unit: "second", usd: 0.168 },
+  "fal-ai/kling-video/o3/standard/video-to-video/edit": { unit: "second", usd: 0.126 },
+  "google/gemini-omni-flash/v1.1/edit": GEMINI_OMNI_FLASH,
+  // $0.05 (480p) or $0.07 (720p) per second of output plus $0.01 per second of input.
+  "xai/grok-imagine-video/edit-video": { unit: "second", usd: { "480p": 0.06, "720p": 0.08 } },
+  "fal-ai/wan/v2.7/edit-video": { unit: "second", usd: { "720p": 0.1, "1080p": 0.15 } },
 };

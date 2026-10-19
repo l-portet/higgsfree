@@ -126,15 +126,21 @@ export interface InputReference {
   type: "image_url";
   image_url: { url: string };
 }
+/** The video an editor changes, as one of `input_references` (docs/OPENROUTER.md). */
+export interface VideoReference {
+  type: "video_url";
+  video_url: { url: string };
+}
 
 export interface VideoBody {
   model: string;
   prompt: string;
-  duration: number;
+  /** Absent for video editing: the clip keeps the source's length. */
+  duration?: number;
   aspect_ratio?: VideoAspectRatio;
   resolution?: VideoResolution;
   frame_images?: FrameImage[];
-  input_references?: InputReference[];
+  input_references?: (InputReference | VideoReference)[];
   /** Native audio track on/off; only meaningful for models with `caps.audio` (OpenRouter defaults to on). */
   generate_audio?: boolean;
 }
@@ -186,4 +192,13 @@ export function buildVideoPayload(model: VideoModel, req: VideoRequestParams, fr
   // `generate_audio` is only sent when the model has an audio track to switch and the user chose explicitly.
   if (model.caps.audio && req.audio !== undefined) body.generate_audio = req.audio;
   return { body, effective };
+}
+
+/**
+ * Video editing: the prompt says what to change and the source video is the one reference. Nothing else is
+ * sent: the clip keeps the source's length and framing, and OpenRouter lists no options for editors (an
+ * unlisted field is refused).
+ */
+export function buildVideoEditPayload(model: VideoModel, prompt: string, sourceUrl: string): VideoBody {
+  return { model: model.id, prompt, input_references: [{ type: "video_url", video_url: { url: sourceUrl } }] };
 }

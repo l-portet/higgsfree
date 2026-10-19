@@ -51,6 +51,8 @@ export interface GenerationInputs {
   lastFrame?: string;
   /** Motion control: the reference video whose movement is copied (media id of an uploaded video). */
   motionVideo?: string;
+  /** Video editing: the video being edited (media id of an upload, or another record's output). */
+  sourceVideo?: string;
 }
 
 export interface Generation {
@@ -186,6 +188,16 @@ export interface VideoModel {
     references?: boolean;
     /** Motion control: a character image (`firstFrame`) and a reference video (`motionVideo`) are required. */
     motionControl?: boolean;
+    /** Video editing: a source video (`sourceVideo`) and a prompt saying what to change are required; the clip keeps the source's length. */
+    videoEdit?: boolean;
+  };
+  /** Video editing: the provider's limits on the source video (absent = not known, left to the provider). */
+  editSource?: {
+    minSec?: number;
+    maxSec?: number;
+    /** Longer sources are cut to `maxSec` rather than refused (Grok Imagine keeps the first 8 s). */
+    truncates?: boolean;
+    maxMb?: number;
   };
   /** Either a contiguous integer range or an explicit list of allowed durations (seconds). */
   durations: { min: number; max: number; step?: number } | { options: number[] };
@@ -197,8 +209,10 @@ export interface VideoModel {
   omitAspectRatioOnI2v?: boolean;
   /** Rough USD per second by resolution. */
   estCostPerSecUsd: Partial<Record<VideoResolution, number>>;
+  /** The provider's minimum charge per run, when it has one (Runway Aleph 2). */
+  minCostUsd?: number;
   verified: boolean;
-  /** Not selectable in the UI (video-to-video, avatar models, etc.). */
+  /** Not selectable in the UI (upscaling, avatar models, etc.). */
   hidden?: boolean;
   /**
    * Listed by OpenRouter but not in the curated catalog: options and price come from
@@ -239,6 +253,8 @@ export interface FalVideoRoute {
   imageToVideo?: string;
   /** Character image + reference video (Kling Motion Control). */
   motionControl?: string;
+  /** Source video + prompt (video editing), as `video_url` and `prompt`. */
+  edit?: string;
   /** Field for the first frame: `image_url` (default) or `start_image_url`. */
   imageField?: "image_url" | "start_image_url";
   /** The last frame goes in `end_image_url`. */
@@ -298,6 +314,8 @@ export interface VideoGenerateRequest {
   /** Motion control: media id of the reference video (an upload). */
   motionVideo?: string;
   orientation?: MotionOrientation;
+  /** Video editing: media id of the video to edit (an upload, or a video record's output). */
+  sourceVideo?: string;
 }
 
 export interface GenerateResponse {
