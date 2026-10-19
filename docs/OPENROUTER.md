@@ -152,7 +152,10 @@ there is one):
 `live.available` (what the picker marks unavailable) is the union of both lists. Video prices come
 from `pricing_skus` (`src/client/lib/catalog.ts` `perSecondUsd`): a with-audio SKU wins because
 audio is on by default, then the per-resolution one, then text-to-video, then cents SKUs (÷ 100),
-then a flat per-second price. Per-token SKUs (`video_tokens*`, Seedance) are converted at width ×
+then a flat per-second price. The price with Sound off reads the without-audio SKUs
+(`duration_seconds_without_audio[_<res>]`, `video_tokens_without_audio`), a plain `duration_seconds`
+next to a with-audio one, or the resolution's own price first; it is kept (`estCostPerSecNoAudioUsd`)
+only where it is lower. Per-token SKUs (`video_tokens*`, Seedance) are converted at width ×
 height × 24 / 1024 tokens a second for a 16:9 frame.
 
 The snapshot is cached for 10 minutes in memory and mirrored to localStorage

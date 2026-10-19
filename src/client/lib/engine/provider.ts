@@ -1,8 +1,9 @@
-/** Pick the provider for a run from the stored keys and the preference, or explain why there is none. */
-import type { CatalogModel, ProviderId } from "@shared/types";
+/** Pick the provider for a run from the stored keys, the price (videos) and the preference, or explain why there is none. */
+import type { CatalogModel, ProviderId, VideoModel } from "@shared/types";
 import { ApiClientError } from "../errors";
 import { chooseProvider, providerNotice } from "../providers";
 import { getPreferredProvider, getStoredFalKey, getStoredKey } from "../settings";
+import { quoteVideo, type VideoQuoteRequest } from "../video-cost";
 
 export function keyFor(provider: ProviderId): string | undefined {
   return provider === "fal" ? getStoredFalKey() : getStoredKey();
@@ -29,4 +30,14 @@ export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "falOnly">
   const key = keyFor(provider);
   if (!key) throw new ApiClientError(401, "No key configured. Add one in Settings.");
   return { provider, key };
+}
+
+/**
+ * A video goes to the cheaper provider that takes the request (`quoteVideo`). Undefined when none with a
+ * key takes it: the caller keeps `resolveRun`'s choice, whose errors say why.
+ */
+export function videoRun(model: VideoModel, req: VideoQuoteRequest): ProviderRun | undefined {
+  const { provider } = quoteVideo(model, req, storedKeys(), getPreferredProvider());
+  const key = provider ? keyFor(provider) : undefined;
+  return provider && key ? { provider, key } : undefined;
 }

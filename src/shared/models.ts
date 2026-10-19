@@ -469,6 +469,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultResolution: "720p",
     aspectRatios: ["16:9", "1:1", "9:16"],
     estCostPerSecUsd: { "720p": 0.168 },
+    estCostPerSecNoAudioUsd: { "720p": 0.112 },
     verified: true,
     fal: { textToVideo: "fal-ai/kling-video/v3/pro/text-to-video", imageToVideo: "fal-ai/kling-video/v3/pro/image-to-video", imageField: "start_image_url", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
   },
@@ -555,6 +556,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultResolution: "1080p",
     aspectRatios: ["16:9", "9:16"],
     estCostPerSecUsd: { "720p": 0.4, "1080p": 0.4, "4K": 0.6 },
+    estCostPerSecNoAudioUsd: { "720p": 0.2, "1080p": 0.2, "4K": 0.4 },
     verified: true,
   },
   {
@@ -572,6 +574,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultResolution: "1080p",
     aspectRatios: ["16:9", "9:16"],
     estCostPerSecUsd: { "720p": 0.1, "1080p": 0.12, "4K": 0.3 },
+    estCostPerSecNoAudioUsd: { "720p": 0.08, "1080p": 0.1, "4K": 0.25 },
     verified: false,
   },
   {
@@ -589,6 +592,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultResolution: "720p",
     aspectRatios: ["16:9", "9:16"],
     estCostPerSecUsd: { "720p": 0.05, "1080p": 0.08 },
+    estCostPerSecNoAudioUsd: { "720p": 0.03, "1080p": 0.05 },
     verified: false,
   },
   {
@@ -657,6 +661,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultResolution: "720p",
     aspectRatios: ["16:9", "1:1", "9:16"],
     estCostPerSecUsd: { "720p": 0.126 },
+    estCostPerSecNoAudioUsd: { "720p": 0.084 },
     verified: false,
     fal: { textToVideo: "fal-ai/kling-video/v3/standard/text-to-video", imageToVideo: "fal-ai/kling-video/v3/standard/image-to-video", imageField: "start_image_url", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
   },
@@ -795,6 +800,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"],
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: { "480p": 0.0231, "720p": 0.0518, "1080p": 0.1166 },
+    estCostPerSecNoAudioUsd: { "480p": 0.0115, "720p": 0.0259, "1080p": 0.0583 },
     verified: false,
   },
   // ---------- fal only (need a fal key) ----------
@@ -1229,9 +1235,10 @@ export function estimateImageCost(m: ImageModel, size: ImageModel["sizes"][numbe
   return per === undefined ? undefined : per * count;
 }
 
-export function estimateVideoCost(m: VideoModel, duration: number, resolution?: VideoModel["resolutions"][number]): number | undefined {
+/** `audio: false` takes the no-audio price where the model has one. */
+export function estimateVideoCost(m: VideoModel, duration: number, resolution?: VideoModel["resolutions"][number], audio?: boolean): number | undefined {
   const res = resolution ?? m.defaultResolution ?? m.resolutions[0];
-  const per = res ? m.estCostPerSecUsd[res] : undefined;
+  const per = res ? ((audio === false ? m.estCostPerSecNoAudioUsd?.[res] : undefined) ?? m.estCostPerSecUsd[res]) : undefined;
   return per === undefined ? undefined : Math.max(per * duration, m.minCostUsd ?? 0);
 }
 

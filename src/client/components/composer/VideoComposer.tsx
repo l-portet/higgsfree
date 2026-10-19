@@ -3,11 +3,10 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Clipboar
 import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Generation, MotionOrientation, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
-import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, estimateVideoCost, snapDuration } from "@shared/models";
+import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { estimateFalVideoCost } from "@/lib/fal-pricing";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
 import { formatSeconds, formatUsd, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
@@ -16,9 +15,11 @@ import { editSourceHint, isVideoAspectRatio, isVideoResolution } from "@/lib/mod
 import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
+import { quoteVideo, shownQuote, type VideoQuote } from "@/lib/video-cost";
 import { readVideoDuration } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
+import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 import { Chip, StaticChip } from "@/components/ui/Chip";
 import { Popover, PopoverContent, PopoverItem, PopoverLabel, PopoverTrigger } from "@/components/ui/Popover";
@@ -29,6 +30,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { DurationControl } from "@/components/video/DurationControl";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS, type Attachment } from "./ComposerFrame";
+import { CostEstimate, VideoCostBreakdown } from "./CostEstimate";
 import { PromptEditorDialog } from "./PromptEditorDialog";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
@@ -121,6 +123,9 @@ export function VideoComposer() {
   const draft = useUi((s) => s.draft);
   const pendingFirstFrame = useUi((s) => s.pendingFirstFrame);
   const pendingSourceVideo = useUi((s) => s.pendingSourceVideo);
+  const hasOpenRouterKey = useSettings((s) => Boolean(s.settings?.hasKey));
+  const hasFalKey = useSettings((s) => Boolean(s.settings?.hasFalKey));
+  const preferred = useSettings((s) => s.settings?.preferredProvider ?? "openrouter");
   const router = useRouter();
   const pathname = usePathname() ?? "/";
 
@@ -386,36 +391,33 @@ export function VideoComposer() {
               : null
           : (modelReason(model) ?? (!i2v && !trimmed ? "Enter a prompt" : null));
 
-  // OpenRouter's prices from the catalog, or fal's list prices for the request fal would get (its endpoint
-  // depends on the frames, its price on the audio too).
-  const runsOnFal = keyGate.runsOnFal;
+  // Each provider's price for this request (OpenRouter's from the catalog, fal's list prices for the endpoint the
+  // inputs pick), and who runs it: the cheaper one that can, as the engine decides. Motion control and editing
+  // are priced by the input video's length, once it is known.
   const hasFirst = Boolean(firstFrame);
   const hasLast = showLast && Boolean(lastFrame);
+  const hasRefs = showRefs && refs.length > 0;
   const clipSec = clip?.durationSec;
-  const estimateAt = useCallback(
-    (d: number, r: VideoResolution | undefined) =>
-      !model
-        ? undefined
-        : model.caps.videoEdit
-          ? // The edit is as long as the source (or what the model keeps of it), priced once that length is known.
-            clipSec === undefined
-            ? undefined
-            : runsOnFal
-              ? estimateFalVideoCost(model, { duration: 0, resolution: r, videoSec: clipSec })
-              : estimateVideoCost(model, editedLength(model, clipSec), r)
-          : runsOnFal
-            ? estimateFalVideoCost(model, { duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast })
-            : estimateVideoCost(model, d, r),
-    [model, runsOnFal, aspectRatio, sound, hasFirst, hasLast, clipSec],
+  const quoteAt = useCallback(
+    (d: number, r: VideoResolution | undefined): VideoQuote | undefined =>
+      model
+        ? quoteVideo(
+            model,
+            { duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, videoSec: clipSec },
+            { openrouter: hasOpenRouterKey, fal: hasFalKey },
+            preferred,
+          )
+        : undefined,
+    [model, aspectRatio, sound, hasFirst, hasLast, hasRefs, clipSec, hasOpenRouterKey, hasFalKey, preferred],
   );
+  const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
+    const q = quoteAt(d, r);
+    return q ? shownQuote(q)?.usd : undefined;
+  }, [quoteAt]);
   const estimateFor = useCallback((d: number) => estimateAt(d, resolution), [estimateAt, resolution]);
-  // Motion control: the clip is as long as the reference video, priced once its length is known.
-  const perClip = motionMode
-    ? model && runsOnFal
-      ? estimateFalVideoCost(model, { duration: 0, videoSec: clipSec })
-      : undefined
-    : estimateFor(duration);
-  const estimate = perClip !== undefined ? perClip * count : undefined;
+  const quote = quoteAt(duration, resolution);
+  const shown = quote ? shownQuote(quote) : undefined;
+  const estimate = shown?.usd !== undefined ? shown.usd * count : undefined;
 
   const submit = async () => {
     if (!model || disabledReason || submitting) return;
@@ -779,7 +781,11 @@ export function VideoComposer() {
 
         </>
       }
-      estimate={estimate !== undefined ? formatUsd(estimate, { approx: true }) : undefined}
+      estimate={
+        estimate !== undefined ? (
+          <CostEstimate usd={estimate} provider={shown?.provider} breakdown={quote ? <VideoCostBreakdown quote={quote} count={count} /> : undefined} />
+        ) : undefined
+      }
       generate={{ disabledReason, submitting, reasonId }}
       className={cn(submitting && "cursor-progress")}
     />

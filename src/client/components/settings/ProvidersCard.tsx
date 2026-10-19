@@ -180,7 +180,7 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
     setSwitching(true);
     try {
       await save({ preferredProvider: id });
-      toast.success(`Shared models now run on ${providerName(id)}`);
+      toast.success(`Shared models now run on ${providerName(id)}`, { description: "Videos still go to whichever provider costs less." });
     } catch (err) {
       toast.error("Couldn't change the provider", { description: describeApiError(err) });
     } finally {
@@ -298,7 +298,7 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
             />
             <p id={preferHintId} className="mt-2 text-meta">
               {canChoose
-                ? "Models only one provider offers always run there."
+                ? "Videos go to whichever costs less; this decides images, and videos at the same price. Models only one provider offers always run there."
                 : "Add both keys to choose. Until then, each model uses the provider you have a key for."}
             </p>
           </div>

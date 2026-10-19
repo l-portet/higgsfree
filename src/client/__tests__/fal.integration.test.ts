@@ -100,6 +100,26 @@ describe("who runs a model", () => {
     expect(mock.calls("/api/v1/chat/completions")).toHaveLength(1);
   });
 
+  it("both keys: a video goes to the cheaper provider, and the preference only breaks a tie", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    await api.updateSettings({ preferredProvider: "fal" });
+    const video = async (extra: Record<string, unknown>): Promise<Generation> => {
+      const g = (await api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, ...extra })).generations[0];
+      if (!g) throw new Error("no generation");
+      return g;
+    };
+    // Seedance 2.5 at 720p: about $0.23/s on OpenRouter, $0.47/s on fal.
+    expect((await video({ model: "bytedance/seedance-2.5", resolution: "720p", aspectRatio: "16:9" })).provider).toBe("openrouter");
+    expect(mock.calls("/api/v1/videos")).toHaveLength(1);
+    // Kling 3.0 Pro without sound: $0.112/s on both, so the preference.
+    expect((await video({ audio: false })).provider).toBe("fal");
+    expect(mock.fal("/fal-ai/kling-video/v3/pro/text-to-video")[0]?.body).toMatchObject({ generate_audio: false });
+    // fal takes no style references: OpenRouter runs it, whatever the preference.
+    expect((await video({ references: [await uploadImage()] })).provider).toBe("openrouter");
+    expect(mock.calls("/api/v1/videos")).toHaveLength(2);
+  });
+
   it("a fal error is shown verbatim on the failed card", async () => {
     setStoredFalKey(FAL_KEY);
     const g = await image({ model: "fal/flux-dev", prompt: "FAL_FAIL", aspectRatio: "1:1", size: "1K" });

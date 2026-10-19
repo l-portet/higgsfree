@@ -17,13 +17,19 @@ turns out to behave differently, fix the code and this page in the same PR.
 
 - A model is on OpenRouter unless it is `falOnly`, and on fal when it has a `fal` route
   (`modelProviders`). Every model is listed in the picker whichever keys are set.
-- Only providers with a stored key count. None: the model cannot run. One: that one runs it. Both: the
-  preference decides (`higgsfree.preferredProvider`, OpenRouter by default). The preference only matters
-  for a model both offer when both keys are set (`chooseProvider`).
+- Only providers with a stored key count. None: the model cannot run. One: that one runs it. Both:
+  - **Videos go to the cheaper provider** (`quoteVideo` in `src/client/lib/video-cost.ts`, used by the
+    composer for the price it shows and by the engine to route the run, so the two agree). Each side is
+    priced for the request as it stands: OpenRouter from the live catalog (its no-audio price when Sound
+    is off), fal from `FAL_PRICES` for the endpoint the inputs pick, both for the duration, resolution
+    and audio sent. Prices within half a cent are a tie. A provider that refuses the request (fal and
+    style references) is left out, so the other runs it.
+  - The preference (`higgsfree.preferredProvider`, OpenRouter by default) decides images, a video tie,
+    and a video whose price is not known yet (an edit before its video's length is).
 - The provider is chosen when the job is submitted and saved on the record (`Generation.provider`).
   Polling, resume and the download use that provider and its key, re-read every tick, whatever the
   preference says later. A record made before fal support has no `provider` and counts as OpenRouter.
-  Retry chooses again from the keys and the preference at that moment.
+  Retry chooses again from the keys, the prices and the preference at that moment.
 - No usable key: the submit is a 401 and nothing is created. The message is the composer notice
   (`providerNotice`), e.g. "Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it."
   or "Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.". With no key at

@@ -155,6 +155,13 @@ There is no page chrome: the app is four views under one floating nav, with one 
 - Feed: the same grid with identical 16:9 cells, video cards with inline `<video muted loop playsInline>` preview on
   hover, duration + resolution + cost in the badge. One line above it, always there so the grid never moves:
   "N rendering · usually 2–5 min" while clips render, the clip count otherwise.
+- The price before Generate (`CostEstimate`, 13 px `fg-subtle`, hidden below `sm`) starts with the mark of the
+  provider that runs the video (13 px, OpenRouter or fal; the cheapest one while no key is set). Hovering or focusing
+  it opens a tooltip, "Cost by provider" (`· 3 videos` for a batch): a row per provider offering the model, mark,
+  name and total, and a caption under it: accent "Runs this video", "~$1.20 more", "Same price", "No key yet", or
+  why that provider cannot take the request ("Takes no style references"). A rule, then one line why ("The cheaper
+  one runs it.", "Same price: fal runs it, as set in Settings › Keys.", "Only fal offers this model."). The image
+  composer shows the price alone.
 - Composer chips: [⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
   slider (ranges) or a list (fixed options) limited to the model's values; aspect ratio locks to the first frame for
   models that drop it on i2v; resolution is a list with per-option estimates; Sound is an accent toggle shown only for

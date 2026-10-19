@@ -26,7 +26,7 @@ import { isQuotaError } from "../storage-health";
 import { sourceVideoProblem, validateVideoRequest } from "../validate";
 import { DONE_STATUSES, FAILED_STATUSES, JOB_TIMEOUT_MS, limits, PENDING_STATUSES, timing } from "./constants";
 import { assertInputsExist, inputDataUrl, inputDataUrls, inputVideoDataUrl } from "./inputs";
-import { keyFor, resolveRun } from "./provider";
+import { keyFor, resolveRun, videoRun } from "./provider";
 import { failGeneration, isCancelled, NOT_ACQUIRED, savePublish, tryWithJobLock } from "./state";
 
 const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$${c.toFixed(4)}`);
@@ -105,18 +105,24 @@ async function assertMotionVideo(model: VideoModel, mediaId: string, orientation
   }
 }
 
-/** Check the video to edit against the model's limits before it is uploaded or inlined (a length it cannot read is left to the provider). */
-async function assertSourceVideo(model: VideoModel, mediaId: string): Promise<void> {
+/**
+ * Check the video to edit against the model's limits before it is uploaded or inlined (a length it cannot
+ * read is left to the provider). Returns its length, which prices the run.
+ */
+async function assertSourceVideo(model: VideoModel, mediaId: string): Promise<number | undefined> {
   const blob = await getMediaBlob(mediaId);
   if (!blob) throw badRequest(`Video to edit is no longer in the library (${mediaId})`);
-  const problem = sourceVideoProblem(model, await storedVideoLength(blob), blob.size);
+  const durationSec = await storedVideoLength(blob);
+  const problem = sourceVideoProblem(model, durationSec, blob.size);
   if (problem) throw badRequest(problem);
+  return durationSec;
 }
 
 async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   const model = await lookupVideoModel(req.model, getStoredKey());
   if (!model || model.hidden) throw badRequest(`Unknown video model: ${req.model}`);
-  const { provider, key } = resolveRun(model);
+  // 401 now when no provider of the model has a key; which one runs it is settled below, once the inputs are known.
+  const keyed = resolveRun(model);
   const prompt = req.prompt.trim();
   validateVideoRequest(model, req, prompt);
   const inputs: GenerationInputs = {};
@@ -127,7 +133,21 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   if (req.sourceVideo) inputs.sourceVideo = req.sourceVideo;
   await assertInputsExist(inputs);
   if (inputs.motionVideo) await assertMotionVideo(model, inputs.motionVideo, req.orientation ?? "video");
-  if (inputs.sourceVideo) await assertSourceVideo(model, inputs.sourceVideo);
+  const sourceSec = inputs.sourceVideo ? await assertSourceVideo(model, inputs.sourceVideo) : undefined;
+
+  // The cheaper provider that takes the request runs it; when none with a key does, the key-based choice
+  // stands and its refusal below says why.
+  const { provider, key } =
+    videoRun(model, {
+      duration: req.duration,
+      resolution: req.resolution,
+      aspectRatio: req.aspectRatio,
+      audio: req.audio,
+      firstFrame: Boolean(req.firstFrame),
+      lastFrame: Boolean(req.lastFrame),
+      references: Boolean(inputs.referenceImages?.length),
+      videoSec: sourceSec,
+    }) ?? keyed;
 
   const frames: { firstFrame?: string; lastFrame?: string } = {};
   if (inputs.firstFrame) frames.firstFrame = await inputDataUrl(inputs.firstFrame);
@@ -136,7 +156,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
 
   if (provider === "fal") {
     if (inputs.referenceImages?.length) {
-      throw badRequest(`${model.name} on fal does not take style references. Remove them, or prefer OpenRouter in Settings.`);
+      throw badRequest(`${model.name} on fal does not take style references. Remove them, or add an OpenRouter key in Settings.`);
     }
     const { motionVideo, sourceVideo } = inputs;
     const payload = buildFalVideoPayload(

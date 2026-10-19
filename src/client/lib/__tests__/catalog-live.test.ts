@@ -34,9 +34,24 @@ describe("perSecondUsd", () => {
     expect(perSecondUsd({}, "720p")).toBeUndefined();
     expect(perSecondUsd({ duration_seconds: "free" }, "720p")).toBeUndefined();
   });
+
+  it("reads the price without audio where OpenRouter lists one, a resolution's own price first", () => {
+    expect(perSecondUsd(videoSpec("kwaivgi/kling-v3.0-pro").pricing, "720p", false)).toBe(0.112);
+    expect(perSecondUsd(videoSpec("google/veo-3.1").pricing, "1080p", false)).toBe(0.2);
+    expect(perSecondUsd(videoSpec("google/veo-3.1").pricing, "4K", false)).toBe(0.4);
+    expect(perSecondUsd(videoSpec("google/veo-3.1-fast").pricing, "720p", false)).toBe(0.08);
+    expect(perSecondUsd(videoSpec("bytedance/seedance-1-5-pro").pricing, "720p", false)).toBeCloseTo(0.0259, 4);
+    expect(perSecondUsd(videoSpec("minimax/hailuo-3").pricing, "2K", false)).toBe(0.13); // one price either way
+  });
 });
 
 describe("buildVideoModel", () => {
+  it("keeps a no-audio price only where it is lower than the price with audio", () => {
+    expect(buildVideoModel(videoSpec("kwaivgi/kling-v3.0-pro"), findVideoModel("kwaivgi/kling-v3.0-pro")).estCostPerSecNoAudioUsd).toEqual({ "720p": 0.112 });
+    expect(buildVideoModel(videoSpec("google/veo-3.1"), findVideoModel("google/veo-3.1")).estCostPerSecNoAudioUsd).toEqual({ "720p": 0.2, "1080p": 0.2, "4K": 0.4 });
+    expect(buildVideoModel(videoSpec("bytedance/seedance-2.5"), findVideoModel("bytedance/seedance-2.5")).estCostPerSecNoAudioUsd).toBeUndefined();
+  });
+
   it("keeps a curated editor's own options (OpenRouter lists none) and takes OpenRouter's price and minimum", () => {
     const flux = buildVideoModel(videoSpec("black-forest-labs/flux-video-edit"), findVideoModel("black-forest-labs/flux-video-edit"));
     expect(flux).toMatchObject({ caps: { videoEdit: true }, resolutions: ["720p"], estCostPerSecUsd: { "720p": 0.03 }, editSource: { maxSec: 15, maxMb: 50 } });

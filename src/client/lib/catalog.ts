@@ -80,27 +80,37 @@ const tokensPerSecond = (res: VideoResolution): number => (FRAME_PIXELS[res] * 2
 /**
  * USD per second of output at `res`, read from OpenRouter's `pricing_skus`. Audio is on by
  * default on OpenRouter, so a with-audio price wins when there is one; text-to-video is the
- * reference when the two differ. Undefined when no SKU applies.
+ * reference when the two differ. `audio: false` reads the without-audio SKUs instead (a price
+ * for the resolution beats a flat one). Undefined when no SKU applies.
  */
-export function perSecondUsd(pricing: Record<string, string>, res: VideoResolution): number | undefined {
+export function perSecondUsd(pricing: Record<string, string>, res: VideoResolution, audio = true): number | undefined {
   const r = res.toLowerCase();
   const usd = (key: string, scale = 1): number | undefined => {
     const v = Number.parseFloat(pricing[key] ?? "");
     return Number.isFinite(v) && v > 0 ? v * scale : undefined;
   };
+  const tokens = (key: string): number | undefined => {
+    const v = usd(key);
+    return v === undefined ? undefined : v * tokensPerSecond(res);
+  };
   const round = (v: number): number => Math.round(v * 10_000) / 10_000;
-  const perSecond =
-    usd(`duration_seconds_with_audio_${r}`) ??
-    usd("duration_seconds_with_audio") ??
+  const atRes =
     usd(`duration_seconds_${r}`) ??
     usd(`text_to_video_duration_seconds_${r}`) ??
     usd(`cents_per_video_output_second_${r}`, 0.01) ??
-    usd(`cents_per_second_output_${r}`, 0.01) ??
-    usd("duration_seconds") ??
-    usd("cents_per_second_output", 0.01);
-  if (perSecond !== undefined) return round(perSecond);
-  const perToken = usd(`video_tokens_${r}`) ?? usd("video_tokens");
-  return perToken === undefined ? undefined : round(perToken * tokensPerSecond(res));
+    usd(`cents_per_second_output_${r}`, 0.01);
+  const flat = usd("duration_seconds") ?? usd("cents_per_second_output", 0.01);
+  const perSecond = audio
+    ? (usd(`duration_seconds_with_audio_${r}`) ?? usd("duration_seconds_with_audio") ?? atRes ?? flat ?? tokens(`video_tokens_${r}`) ?? tokens("video_tokens"))
+    : (usd(`duration_seconds_without_audio_${r}`) ??
+      atRes ??
+      usd("duration_seconds_without_audio") ??
+      flat ??
+      tokens(`video_tokens_without_audio_${r}`) ??
+      tokens(`video_tokens_${r}`) ??
+      tokens("video_tokens_without_audio") ??
+      tokens("video_tokens"));
+  return perSecond === undefined ? undefined : round(perSecond);
 }
 
 /** The provider's minimum charge per run in `pricing_skus` (Runway Aleph 2), in USD. */
@@ -161,9 +171,12 @@ export function buildVideoModel(spec: LiveVideoSpec, curated?: VideoModel): Vide
   const durations = durationsOf(spec.durations);
   const durationList = "options" in durations ? durations.options : spec.durations;
   const estCostPerSecUsd: VideoModel["estCostPerSecUsd"] = {};
+  const estCostPerSecNoAudioUsd: NonNullable<VideoModel["estCostPerSecNoAudioUsd"]> = {};
   for (const res of resolutions) {
     const per = perSecondUsd(spec.pricing, res) ?? curated?.estCostPerSecUsd[res];
     if (per !== undefined) estCostPerSecUsd[res] = per;
+    const silent = spec.audio ? perSecondUsd(spec.pricing, res, false) : undefined;
+    if (silent !== undefined && silent !== per) estCostPerSecNoAudioUsd[res] = silent;
   }
   const defaultDuration =
     curated && durationList.includes(curated.defaultDuration) ? curated.defaultDuration : (nearest(durationList, 5) ?? curated?.defaultDuration ?? 5);
@@ -205,6 +218,8 @@ export function buildVideoModel(spec: LiveVideoSpec, curated?: VideoModel): Vide
   };
   if (defaultResolution) model.defaultResolution = defaultResolution;
   else delete model.defaultResolution;
+  if (Object.keys(estCostPerSecNoAudioUsd).length > 0) model.estCostPerSecNoAudioUsd = estCostPerSecNoAudioUsd;
+  else delete model.estCostPerSecNoAudioUsd;
   if (!(model.caps.textToVideo || model.caps.imageToVideo)) model.hidden = true;
   return model;
 }

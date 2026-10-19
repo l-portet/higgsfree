@@ -139,8 +139,8 @@ export interface ComposerFrameProps extends Omit<ComponentProps<"form">, "childr
   chips: ReactNode;
   /** Optional line between the rows (warnings, hints). */
   note?: ReactNode;
-  /** Shown just before Generate, e.g. "~$0.13". */
-  estimate?: string;
+  /** Shown just before Generate: a `CostEstimate` ("~$0.13", with who runs it). */
+  estimate?: ReactNode;
   generate: GenerateButtonProps;
 }
 
@@ -169,11 +169,7 @@ export function ComposerFrame({ dragging, notice, addControl, secondaryControl, 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {chips}
         <div className="ml-auto flex items-center gap-3">
-          {estimate ? (
-            <span className="hidden text-[13px] tabular-nums tracking-[-0.01em] text-fg-subtle sm:inline" aria-label={`Estimated cost ${estimate}`}>
-              {estimate}
-            </span>
-          ) : null}
+          {estimate}
           <GenerateButton {...generate} />
         </div>
       </div>

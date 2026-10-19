@@ -207,8 +207,10 @@ export interface VideoModel {
   aspectRatios: VideoAspectRatio[];
   /** Model rejects `aspect_ratio` on image-to-video jobs (output follows the input frame). */
   omitAspectRatioOnI2v?: boolean;
-  /** Rough USD per second by resolution. */
+  /** Rough USD per second by resolution (with the audio track, for a model that has one). */
   estCostPerSecUsd: Partial<Record<VideoResolution, number>>;
+  /** USD per second with the audio track off, where that costs less (Kling 3.0, Veo 3.1 on OpenRouter). */
+  estCostPerSecNoAudioUsd?: Partial<Record<VideoResolution, number>>;
   /** The provider's minimum charge per run, when it has one (Runway Aleph 2). */
   minCostUsd?: number;
   verified: boolean;

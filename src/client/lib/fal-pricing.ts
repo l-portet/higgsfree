@@ -6,7 +6,7 @@
 import { type ByResolution, FAL_PRICES } from "@shared/fal-prices";
 import { editedLength } from "@shared/models";
 import type { ImageModel, VideoModel, VideoResolution } from "@shared/types";
-import { buildFalImagePayload, buildFalVideoPayload, type FalImageParams, type FalVideoParams } from "./fal-payloads";
+import { buildFalImagePayload, buildFalVideoPayload, type FalImageParams, type FalVideoParams, type FalVideoPayload } from "./fal-payloads";
 
 /** fal's named sizes in pixels. */
 const PRESET_PIXELS: Record<string, number> = {
@@ -58,21 +58,23 @@ export interface FalVideoEstimate extends Omit<FalVideoParams, "prompt"> {
   videoSec?: number;
 }
 
+/** The payload fal would get for `req` (placeholder media); throws when fal would refuse it. */
+export function falVideoPayloadFor(model: VideoModel, req: FalVideoEstimate): FalVideoPayload {
+  const media = model.caps.motionControl
+    ? { firstFrame: "frame", motionVideo: "video" }
+    : model.caps.videoEdit
+      ? { sourceVideo: "video" }
+      : { firstFrame: req.firstFrame ? "frame" : undefined, lastFrame: req.lastFrame ? "frame" : undefined };
+  return buildFalVideoPayload(model, { ...req, prompt: "" }, media);
+}
+
 /** Estimated USD for one clip of `req` on fal. `now` picks promotional rates (tests pass a date). */
 export function estimateFalVideoCost(model: VideoModel, req: FalVideoEstimate, now = new Date()): number | undefined {
   const motion = Boolean(model.caps.motionControl);
   const edit = Boolean(model.caps.videoEdit);
   let payload;
   try {
-    payload = buildFalVideoPayload(
-      model,
-      { ...req, prompt: "" },
-      motion
-        ? { firstFrame: "frame", motionVideo: "video" }
-        : edit
-          ? { sourceVideo: "video" }
-          : { firstFrame: req.firstFrame ? "frame" : undefined, lastFrame: req.lastFrame ? "frame" : undefined },
-    );
+    payload = falVideoPayloadFor(model, req);
   } catch {
     return undefined;
   }
