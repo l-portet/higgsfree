@@ -95,6 +95,11 @@ describe("video models (visible)", () => {
       expect(estimateVideoCost(m, 10, res)).toBeCloseTo((per ?? 0) * 10, 10);
     }
     for (const res of Object.keys(m.estCostPerSecUsd)) expect(m.resolutions, `${m.id} prices unlisted resolution ${res}`).toContain(res);
+    for (const [res, per] of Object.entries(m.estCostPerSecNoAudioUsd ?? {})) {
+      expect(m.caps.audio, `${m.id} has a no-audio price without audio`).toBe(true);
+      expect(m.resolutions, `${m.id} prices unlisted resolution ${res} without audio`).toContain(res);
+      expect(per, `${m.id} no-audio price at ${res}`).toBeLessThan(m.estCostPerSecUsd[res as keyof typeof m.estCostPerSecUsd] ?? 0);
+    }
 
     if (m.defaultResolution !== undefined) expect(m.resolutions, `${m.id} defaultResolution ${m.defaultResolution}`).toContain(m.defaultResolution);
     if (!m.falOnly) expect(estimateVideoCost(m, m.defaultDuration), `${m.id} default cost`).toBeGreaterThan(0);
@@ -139,6 +144,16 @@ describe("video models (visible)", () => {
     expect(snapDuration(seedance, 999)).toBe(30);
     expect(snapDuration(veo, 5)).toBe(4); // ties resolve to the first listed option
     expect(snapDuration(veo, 7.5)).toBe(8);
+  });
+});
+
+describe("estimateVideoCost", () => {
+  it("takes the no-audio price only when the sound is off", () => {
+    const kling = findVideoModel("kwaivgi/kling-v3.0-pro");
+    if (!kling) throw new Error("catalog changed");
+    expect(estimateVideoCost(kling, 5, "720p", false)).toBeCloseTo(0.56);
+    expect(estimateVideoCost(kling, 5, "720p", true)).toBeCloseTo(0.84);
+    expect(estimateVideoCost(kling, 5, "720p")).toBeCloseTo(0.84);
   });
 });
 

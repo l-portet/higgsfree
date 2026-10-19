@@ -9,7 +9,7 @@ import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { estimateFalImageCost } from "@/lib/fal-pricing";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles } from "@/lib/files";
-import { formatUsd, pluralize, ratioLabel } from "@/lib/format";
+import { pluralize, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { isImageAspectRatio, isImageSize } from "@/lib/models";
 import { readJson, writeJson } from "@/lib/storage";
@@ -25,6 +25,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS } from "./ComposerFrame";
+import { CostEstimate } from "./CostEstimate";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
 
@@ -354,7 +355,7 @@ export function ImageComposer() {
           <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of images" />
         </>
       }
-      estimate={estimate !== undefined ? formatUsd(estimate, { approx: true }) : undefined}
+      estimate={estimate !== undefined ? <CostEstimate usd={estimate} /> : undefined}
       generate={{ disabledReason, submitting, reasonId }}
       className={cn(submitting && "cursor-progress")}
     />

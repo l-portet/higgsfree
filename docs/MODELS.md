@@ -200,8 +200,11 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 
 ### Models on both
 
-These are in the OpenRouter tables above and also have a fal route. With both keys, Settings decides
-who runs them (OpenRouter by default); with one key, that provider does. The options are the same
+These are in the OpenRouter tables above and also have a fal route. With both keys, a video runs on
+whichever is cheaper for that request (Seedance 2.5 is about half the price on OpenRouter; Kling 3.0,
+MiniMax H3 and FLUX Video Edit cost the same on both, so Settings decides), and Settings decides the
+images (OpenRouter by default); with one key, that provider does. The price next to Generate shows who
+runs it, and hovering it compares the two ([FAL.md](FAL.md#which-provider-runs-a-model)). The options are the same
 whoever runs them (OpenRouter's live values for video, the curated ones for images), mapped onto
 fal's fields. Style references are never sent to fal.
 
@@ -383,7 +386,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `resolutions` / `defaultResolution` | Values the provider accepts for `resolution`. Some accept exactly one (H3 → `2K`, Kling 3.0 Pro → `720p`); if the list is empty the app doesn't send `resolution` at all. |
 | `aspectRatios` | Subset of `VideoAspectRatio`. |
 | `omitAspectRatioOnI2v` | Set when the provider returns 400 if `aspect_ratio` is sent together with `frame_images` (all Seedance models). The output then follows the input image. |
-| `estCostPerSecUsd` | USD per second keyed by resolution. Multiplied by the duration for the estimate. |
+| `estCostPerSecUsd` | USD per second keyed by resolution (with audio, for a model that has it). Multiplied by the duration for the estimate. |
+| `estCostPerSecNoAudioUsd` | USD per second with Sound off, where OpenRouter charges less for that (Kling 3.0, Veo 3.1, Seedance 1.5 Pro). Read from the live catalog's without-audio SKUs. |
 | `minCostUsd` | The provider's minimum charge per run (Runway Aleph 2: $0.56); the estimate never goes below it. |
 | `verified` | `true` only after the checklist below. |
 | `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |
