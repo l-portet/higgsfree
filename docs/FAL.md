@@ -246,7 +246,7 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   endpoint, size and resolution the catalog offers. fal's pricing API needs a key and gives one unit
   price per endpoint, without the tiers below, so the app does not read it.
 - A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on
-  Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4), per image (by size, or by the
+  Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4 and FLUX.3 Max), per image (by size, or by the
   output size the ratio asks for, as on GPT Image), or per started megapixel of 1024 x 1024 (FLUX.1
   [dev] and [schnell], Z-Image, Qwen).
 - `estimateFalImageCost` / `estimateFalVideoCost` (`src/client/lib/fal-pricing.ts`) build the payload
