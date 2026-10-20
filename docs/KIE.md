@@ -32,7 +32,7 @@ kie.ai credits: …", 400 / 404 / 422 → 400 with kie's `msg`, 429 kept, 455 (m
 
 ## Jobs
 
-- Inputs first: kie takes images and videos by url only, so at submit each frame and reference image is
+- kie.ai and APIMart share one shape in the engine (`task-providers.ts`). Inputs first: kie takes images and videos by url only, so at submit each frame and reference image is
   uploaded with the base64 endpoint and the video to edit with the stream endpoint, into `higgsfree/` (kie
   deletes uploads after 24 h). Then `createTask`; `data.taskId` is the record's `providerJobId`.
 - The payload is built once before anything exists with placeholder urls, so a request kie cannot take is a

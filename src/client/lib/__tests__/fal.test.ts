@@ -22,9 +22,10 @@ describe("provider choice", () => {
   const both = { openrouter: true, fal: true };
   it("lists who serves a model", () => {
     expect(modelProviders(image("krea/krea-2-large"))).toEqual(["openrouter"]);
-    expect(modelProviders(image("google/gemini-3-pro-image"))).toEqual(["openrouter", "fal", "kie"]);
+    expect(modelProviders(image("google/gemini-3-pro-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(video("fal/kling-v3-pro-motion-control"))).toEqual(["fal"]);
-    expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie"]);
+    expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart"]);
+    expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart"]);
   });
 
   it("uses the preference only when both keys can run the model", () => {
@@ -40,8 +41,8 @@ describe("provider choice", () => {
     const motion = video("fal/kling-v3-pro-motion-control");
     expect(providerNotice(motion, { openrouter: true, fal: false }, "openrouter")).toBe("Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it.");
     expect(providerNotice(image("krea/krea-2-large"), { openrouter: false, fal: true }, "fal")).toBe("Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.");
-    expect(providerNotice(video("kwaivgi/kling-v3.0-pro"), { openrouter: false, fal: false }, "openrouter")).toBe("Kling 3.0 Pro needs an OpenRouter, fal or kie.ai key. Add one in Settings to use it.");
-    expect(providerNotice(video("fal/vidu-q4"), { openrouter: true }, "openrouter")).toBe("Vidu Q4 needs a fal or kie.ai key. Add one in Settings to use it.");
+    expect(providerNotice(video("kwaivgi/kling-v3.0-pro"), { openrouter: false, fal: false }, "openrouter")).toBe("Kling 3.0 Pro needs an OpenRouter, fal, kie.ai or APIMart key. Add one in Settings to use it.");
+    expect(providerNotice(video("fal/vidu-q4"), { openrouter: true }, "openrouter")).toBe("Vidu Q4 needs a fal, kie.ai or APIMart key. Add one in Settings to use it.");
     expect(chooseProvider(video("fal/vidu-q4"), { kie: true }, "openrouter").provider).toBe("kie");
     expect(providerNotice(motion, both, "openrouter")).toBeUndefined();
   });

@@ -3,14 +3,12 @@
  * priced by building the payload it would send, so the estimate follows the same model, tier, resolution,
  * duration and audio as the run. `undefined` when kie would refuse the request or the price is not known.
  */
-import { KIE_PRICES, type CreditsByResolution } from "@shared/kie-prices";
+import { KIE_PRICES } from "@shared/kie-prices";
 import { editedLength } from "@shared/models";
-import type { ImageModel, VideoModel, VideoResolution } from "@shared/types";
+import type { ImageModel, VideoModel } from "@shared/types";
 import { KIE_CREDIT_USD } from "./kie";
 import { buildKieImagePayload, buildKieVideoPayload, type KieImageParams, type KieVideoParams, type KieVideoPayload } from "./kie-payloads";
-
-const at = (credits: CreditsByResolution | undefined, res: VideoResolution | undefined): number | undefined =>
-  typeof credits === "number" ? credits : res && credits ? credits[res] : undefined;
+import { imageListUsd, videoListUsd } from "./list-pricing";
 
 export interface KieVideoEstimate extends Omit<KieVideoParams, "prompt"> {
   prompt?: string;
@@ -40,18 +38,8 @@ export function estimateKieVideoCost(model: VideoModel, req: KieVideoEstimate): 
   } catch {
     return undefined;
   }
-  const price = KIE_PRICES[payload.priceKey];
-  const res = payload.params.resolution ?? (req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution);
-  if (price?.unit === "video") {
-    const credits = at(price.byDuration?.[payload.params.duration] ?? price.credits, res);
-    return credits === undefined ? undefined : credits * KIE_CREDIT_USD;
-  }
-  if (price?.unit !== "second") return undefined;
   const seconds = model.caps.videoEdit ? req.videoSec && editedLength(model, req.videoSec) : payload.params.duration;
-  if (!seconds) return undefined;
-  const base = at(price.credits, res);
-  const perSecond = payload.params.audio === false ? base : (at(price.audioCredits, res) ?? base);
-  return perSecond === undefined ? undefined : perSecond * seconds * KIE_CREDIT_USD;
+  return videoListUsd(KIE_PRICES[payload.priceKey], model, payload.params, req.resolution, seconds, KIE_CREDIT_USD);
 }
 
 /** Estimated USD for `count` images of `req` on kie.ai, with or without reference images. */
@@ -62,8 +50,5 @@ export function estimateKieImageCost(model: ImageModel, req: Omit<KieImageParams
   } catch {
     return undefined;
   }
-  const price = KIE_PRICES[payload.priceKey];
-  if (price?.unit !== "image") return undefined;
-  const per = typeof price.credits === "number" ? price.credits : (price.credits[req.size] ?? price.credits["1K"]);
-  return per === undefined ? undefined : per * KIE_CREDIT_USD * count;
+  return imageListUsd(KIE_PRICES[payload.priceKey], req.size, count, KIE_CREDIT_USD);
 }

@@ -15,8 +15,8 @@ turns out to behave differently, fix the code and this page in the same PR.
 
 ## Which provider runs a model
 
-- A model is on OpenRouter unless it is `offOpenRouter`, on fal when it has a `fal` route and on kie.ai
-  when it has a `kie` route (`modelProviders`, in that order). Every model is listed in the picker
+- A model is on OpenRouter unless it is `offOpenRouter`, on fal when it has a `fal` route, on kie.ai with a
+  `kie` route and on APIMart with an `apimart` route (`modelProviders`, in that order). Every model is listed in the picker
   whichever keys are set.
 - Only providers with a stored key that can take the request count (a provider refuses what its payload
   builder throws on: fal and style references, kie and a clip shorter than the model takes there…). None:
@@ -24,12 +24,13 @@ turns out to behave differently, fix the code and this page in the same PR.
   - **Videos go to the cheapest** (`quoteVideo` in `src/client/lib/video-cost.ts`, used by the composer for
     the price it shows and by the engine to route the run, so the two agree). Each provider is priced for
     the request as it stands: OpenRouter from the live catalog (its no-audio price when Sound is off), fal
-    from `FAL_PRICES` and kie.ai from `KIE_PRICES` ([KIE.md](KIE.md)) for the endpoint or model the inputs
-    pick, all for the duration, resolution and audio sent. Prices within half a cent are a tie: the
+    from `FAL_PRICES`, kie.ai from `KIE_PRICES` ([KIE.md](KIE.md)) and APIMart from `APIMART_PRICES`
+    ([APIMART.md](APIMART.md)) for the endpoint or model the inputs pick, all for the duration, resolution
+    and audio sent. Prices within half a cent are a tie: the
     preferred provider if it is among the cheapest, else the first of them.
   - **Images go to the preferred one** among them (`quoteImage` in `src/client/lib/image-cost.ts`), else
-    the first (OpenRouter, fal, kie.ai).
-  - The preference (`higgsfree.preferredProvider`, OpenRouter by default, any of the three) also decides a
+    the first (OpenRouter, fal, kie.ai, APIMart).
+  - The preference (`higgsfree.preferredProvider`, OpenRouter by default, any of the four) also decides a
     video whose price is not known yet (an edit before its video's length is).
 - The provider is chosen when the job is submitted and saved on the record (`Generation.provider`).
   Polling, resume and the download use that provider and its key, re-read every tick, whatever the

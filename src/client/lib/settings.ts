@@ -7,7 +7,12 @@ import { readJson, removeKey, writeJson } from "./storage";
 export const KEY_STORAGE = "higgsfree.apiKey";
 export const FAL_KEY_STORAGE = "higgsfree.falKey";
 /** Where each provider's key is kept (OpenRouter's and fal's names predate the others). */
-export const KEY_STORAGE_BY_PROVIDER: Record<ProviderId, string> = { openrouter: KEY_STORAGE, fal: FAL_KEY_STORAGE, kie: "higgsfree.kieKey" };
+export const KEY_STORAGE_BY_PROVIDER: Record<ProviderId, string> = {
+  openrouter: KEY_STORAGE,
+  fal: FAL_KEY_STORAGE,
+  kie: "higgsfree.kieKey",
+  apimart: "higgsfree.apimartKey",
+};
 export const PROVIDER_STORAGE = "higgsfree.preferredProvider";
 /** Survive "Reset local settings": losing a key or the provider choice is never what that button means. */
 export const PROTECTED_STORAGE_KEYS: readonly string[] = [...Object.values(KEY_STORAGE_BY_PROVIDER), PROVIDER_STORAGE];

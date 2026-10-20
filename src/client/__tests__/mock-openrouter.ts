@@ -60,11 +60,23 @@ export interface Seen {
 
 export interface MockOpenRouter {
   seen: Seen[];
-  state: { pollCount: number; unknownPolls: number; catalogDown: boolean; falPolls: number; uploads: number; kieTasks: Record<string, { model: string; polls: number }>; kieUploads: number };
+  state: {
+    pollCount: number;
+    unknownPolls: number;
+    catalogDown: boolean;
+    falPolls: number;
+    uploads: number;
+    kieTasks: Record<string, { model: string; polls: number }>;
+    kieUploads: number;
+    apimartTasks: Record<string, { kind: string; polls: number }>;
+    apimartUploads: number;
+  };
   /** Calls to fal hosts (API, uploads, CDN), by path. */
   fal(path: string): Seen[];
   /** Calls to kie.ai hosts (API, uploads, CDN), by path. */
   kie(path: string): Seen[];
+  /** Calls to APIMart hosts (API, file host), by path. */
+  apimart(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
 }
@@ -74,7 +86,7 @@ const json = (status: number, payload: unknown): Response => new Response(JSON.s
 /** Replace `fetch` for the current test (undone by `vi.unstubAllGlobals()` in the setup's afterEach). */
 export function installMockOpenRouter(): MockOpenRouter {
   const seen: Seen[] = [];
-  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0 };
+  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0 };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
     const u = new URL(input instanceof Request ? input.url : String(input));
@@ -92,6 +104,7 @@ export function installMockOpenRouter(): MockOpenRouter {
     }
     seen.push(entry);
     if (KIE_HOSTS.includes(u.hostname)) return kieRoute(u, entry, state);
+    if (APIMART_HOSTS.includes(u.hostname)) return apimartRoute(u, entry, state);
     if (u.hostname !== "openrouter.ai") return falRoute(u, entry, state);
     // The two catalogs are public: no key needed.
     if (url === "/api/v1/videos/models" || url === "/api/v1/images/models") {
@@ -134,7 +147,8 @@ export function installMockOpenRouter(): MockOpenRouter {
   return {
     seen,
     state,
-    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && !KIE_HOSTS.includes(s.host) && s.url === path),
+    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && !KIE_HOSTS.includes(s.host) && !APIMART_HOSTS.includes(s.host) && s.url === path),
+    apimart: (path) => seen.filter((s) => APIMART_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     kie: (path) => seen.filter((s) => KIE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     calls: (url) => seen.filter((s) => s.url === url),
     last: (url) => seen.filter((s) => s.url === url).at(-1),
@@ -241,4 +255,47 @@ function kieRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response
   if (path === "/r/out.png") return new Response(new Blob([PNG_2X2]), { status: 200, headers: { "content-type": "image/png" } });
   if (path === "/r/out.mp4") return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
   return json(404, { error: `no kie route ${u.hostname}${path}` });
+}
+
+export const APIMART_KEY = "sk-test-apimart-key";
+const APIMART_HOSTS = ["api.apimart.ai", "upload.apimart.ai"];
+
+/**
+ * APIMart: \`api.apimart.ai\` (generations, tasks, balance, image uploads) and \`upload.apimart.ai\` (inputs and
+ * results). Errors are HTTP statuses with \`{ error: { message } }\`. A task is \`processing\` on its first poll and
+ * \`completed\` after; prompts containing APIMART_FAIL make it fail, APIMART_REJECT makes the submit a 400.
+ */
+function apimartRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
+  const path = u.pathname;
+  if (u.hostname === "upload.apimart.ai") {
+    if (path === "/f/video/out.mp4") return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
+    if (path === "/f/image/out.png") return new Response(new Blob([PNG_2X2]), { status: 200, headers: { "content-type": "image/png" } });
+    return json(404, { error: "not found" });
+  }
+  if (entry.auth !== `Bearer ${APIMART_KEY}`) return json(401, { error: { code: "", message: "invalid API key (request id: x)", param: "", type: "apimart_error" } });
+  if (path === "/v1/balance") return json(200, { success: true, remain_balance: 12.5, remain_credits: 125, used_balance: 1, used_credits: 10, unlimited_quota: false });
+  if (path === "/v1/uploads/images") {
+    state.apimartUploads++;
+    return json(200, { url: `https://upload.apimart.ai/f/image/up-${state.apimartUploads}.png`, filename: "input.png", content_type: "image/png", bytes: 70 });
+  }
+  const gen = path.match(/^\/v1\/(videos|images)\/generations$/);
+  if (gen && entry.method === "POST") {
+    const prompt = String(entry.body?.prompt ?? "");
+    if (prompt.includes("APIMART_REJECT")) return json(400, { error: { code: 400, message: "invalid size for this model", type: "invalid_request_error" } });
+    const id = prompt.includes("APIMART_FAIL") ? "task_am_fail" : `task_am_${Object.keys(state.apimartTasks).length + 1}`;
+    state.apimartTasks[id] = { kind: gen[1] ?? "videos", polls: 0 };
+    return json(200, { code: 200, data: [{ status: "submitted", task_id: id }] });
+  }
+  const t = path.match(/^\/v1\/tasks\/([^/]+)$/);
+  if (t) {
+    const id = decodeURIComponent(t[1] ?? "");
+    const task = state.apimartTasks[id];
+    if (!task) return json(404, { error: { message: "task not found", type: "invalid_request_error" } });
+    task.polls++;
+    if (id === "task_am_fail") return json(200, { code: 200, data: { id, status: "failed", cost: 0, error: { code: "task_failed", message: "The input image cannot be accessed", type: "task_failed" } } });
+    if (task.polls === 1) return json(200, { code: 200, data: { id, status: "processing", progress: 40 } });
+    const result = task.kind === "images" ? { images: [{ url: ["https://upload.apimart.ai/f/image/out.png"], expires_at: 1 }] } : { videos: [{ url: ["https://upload.apimart.ai/f/video/out.mp4"], expires_at: 1 }] };
+    return json(200, { code: 200, data: { id, status: "completed", progress: 100, cost: 0.42, credits_cost: 4.2, result } });
+  }
+  return json(404, { error: { message: `no APIMart route ${path}` } });
 }

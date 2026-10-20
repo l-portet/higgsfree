@@ -3,7 +3,7 @@ import type { ProviderId } from "@shared/types";
 import { cn } from "@/lib/cn";
 import { formatUsd } from "@/lib/format";
 import { PROVIDER_NAME } from "@/lib/providers";
-import type { ProviderQuote, VideoQuote } from "@/lib/video-cost";
+import { SAME_PRICE_USD, type ProviderQuote, type VideoQuote } from "@/lib/video-cost";
 import { hasProviderLogo } from "@/components/icons/marks";
 import { ProviderLogo } from "@/components/icons/providers";
 import { ProviderTile } from "@/components/ProviderTile";
@@ -46,37 +46,39 @@ export function CostEstimate({ usd, provider, breakdown }: { usd: number; provid
 /** Whole cents, as the prices are shown, so a difference adds up with them. */
 const cents = (usd: number): number => Math.round(usd * 100) / 100;
 
-/** One line under a provider's name: why it runs the video, or why not. */
+/** One line under a provider's name: why it runs the video, or why not, against the one that does. */
 function rowNote(q: ProviderQuote, quote: VideoQuote, count: number): string | undefined {
   if (q.refusal) return q.refusal;
   if (q.noKey) return "No key yet";
   if (q.provider === quote.provider) return count > 1 ? "Runs these videos" : "Runs this video";
   if (q.usd === undefined) return "Price not known yet";
-  if (quote.reason === "tie") return "Same price";
-  const runner = quote.quotes.find((x) => x.provider === quote.provider);
-  if (quote.reason === "cheaper" && runner?.usd !== undefined) return `${formatUsd(cents(q.usd * count) - cents(runner.usd * count), { approx: true })} more`;
-  return undefined;
+  const runner = quote.quotes.find((x) => x.provider === quote.provider)?.usd;
+  if (runner === undefined) return undefined;
+  if (Math.abs(q.usd - runner) < SAME_PRICE_USD) return "Same price";
+  return q.usd > runner ? `${formatUsd(cents(q.usd * count) - cents(runner * count), { approx: true })} more` : undefined;
 }
 
-function footer(quote: VideoQuote): string | undefined {
+function footer(quote: VideoQuote, preferred: ProviderId | undefined): string | undefined {
   const runner = quote.provider ? PROVIDER_NAME[quote.provider] : undefined;
+  if (!runner) return undefined;
+  const picked = quote.provider === preferred ? ", as set in Settings › Keys" : "";
   switch (quote.reason) {
     case "only":
-      return runner ? `Only ${runner} offers this model.` : undefined;
+      return `Only ${runner} offers this model.`;
     case "cheaper":
-      return "The cheaper one runs it.";
+      return "The cheapest one runs it.";
     case "tie":
-      return runner ? `Same price: ${runner} runs it, as set in Settings › Keys.` : undefined;
+      return `Same price: ${runner} runs it${picked}.`;
     case "unpriced":
-      return runner ? `Not priced yet: ${runner} runs it, as set in Settings › Keys.` : undefined;
+      return `Not priced yet: ${runner} runs it${picked}.`;
     default:
       return undefined;
   }
 }
 
 /** The tooltip: each provider that offers the model, its total for `count` clips, and which one runs them. */
-export function VideoCostBreakdown({ quote, count }: { quote: VideoQuote; count: number }) {
-  const note = footer(quote);
+export function VideoCostBreakdown({ quote, count, preferred }: { quote: VideoQuote; count: number; preferred?: ProviderId }) {
+  const note = footer(quote, preferred);
   return (
     <div className="flex w-[236px] flex-col gap-2 py-1">
       <div className="text-label">Cost by provider{count > 1 ? ` · ${count} videos` : ""}</div>

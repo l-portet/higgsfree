@@ -19,7 +19,7 @@ export interface ProviderRun {
 }
 
 /** 401 with a message the composer can show when no provider of the model has a key. */
-export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "kie" | "offOpenRouter">): ProviderRun {
+export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "kie" | "apimart" | "offOpenRouter">): ProviderRun {
   const keys = storedKeys();
   const preferred = getPreferredProvider();
   const { provider } = chooseProvider(model, keys, preferred);

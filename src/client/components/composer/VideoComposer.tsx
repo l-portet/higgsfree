@@ -784,7 +784,7 @@ export function VideoComposer() {
       }
       estimate={
         estimate !== undefined ? (
-          <CostEstimate usd={estimate} provider={shown?.provider} breakdown={quote ? <VideoCostBreakdown quote={quote} count={count} /> : undefined} />
+          <CostEstimate usd={estimate} provider={shown?.provider} breakdown={quote ? <VideoCostBreakdown quote={quote} count={count} preferred={preferred} /> : undefined} />
         ) : undefined
       }
       generate={{ disabledReason, submitting, reasonId }}
