@@ -1,39 +1,38 @@
-/** The OpenRouter and fal keys and the provider choice, in this browser's localStorage. */
+/** Each provider's key and the provider choice, in this browser's localStorage. */
 import type { ProviderId, SettingsResponse } from "@shared/types";
 import { ApiClientError } from "./errors";
+import { isProviderId, PROVIDER_IDS } from "./providers";
 import { readJson, removeKey, writeJson } from "./storage";
 
 export const KEY_STORAGE = "higgsfree.apiKey";
 export const FAL_KEY_STORAGE = "higgsfree.falKey";
+/** Where each provider's key is kept (OpenRouter's and fal's names predate the others). */
+export const KEY_STORAGE_BY_PROVIDER: Record<ProviderId, string> = { openrouter: KEY_STORAGE, fal: FAL_KEY_STORAGE, kie: "higgsfree.kieKey" };
 export const PROVIDER_STORAGE = "higgsfree.preferredProvider";
 /** Survive "Reset local settings": losing a key or the provider choice is never what that button means. */
-export const PROTECTED_STORAGE_KEYS: readonly string[] = [KEY_STORAGE, FAL_KEY_STORAGE, PROVIDER_STORAGE];
+export const PROTECTED_STORAGE_KEYS: readonly string[] = [...Object.values(KEY_STORAGE_BY_PROVIDER), PROVIDER_STORAGE];
 
-export function getStoredKey(): string | undefined {
-  const key = readJson<string>(KEY_STORAGE, "").trim();
+export function getProviderKey(provider: ProviderId): string | undefined {
+  const key = readJson<string>(KEY_STORAGE_BY_PROVIDER[provider], "").trim();
   return key || undefined;
 }
 
-export function setStoredKey(key: string): void {
+/** Store a provider's key, or remove it with `""`. */
+export function setProviderKey(provider: ProviderId, key: string): void {
   const trimmed = key.trim();
-  if (trimmed) writeJson(KEY_STORAGE, trimmed);
-  else removeKey(KEY_STORAGE);
+  if (trimmed) writeJson(KEY_STORAGE_BY_PROVIDER[provider], trimmed);
+  else removeKey(KEY_STORAGE_BY_PROVIDER[provider]);
 }
 
-export function getStoredFalKey(): string | undefined {
-  const key = readJson<string>(FAL_KEY_STORAGE, "").trim();
-  return key || undefined;
-}
+export const getStoredKey = (): string | undefined => getProviderKey("openrouter");
+export const setStoredKey = (key: string): void => setProviderKey("openrouter", key);
+export const getStoredFalKey = (): string | undefined => getProviderKey("fal");
+export const setStoredFalKey = (key: string): void => setProviderKey("fal", key);
 
-export function setStoredFalKey(key: string): void {
-  const trimmed = key.trim();
-  if (trimmed) writeJson(FAL_KEY_STORAGE, trimmed);
-  else removeKey(FAL_KEY_STORAGE);
-}
-
-/** Which provider runs a model both offer. OpenRouter unless the user picked fal. */
+/** Which provider runs a model several offer. OpenRouter unless the user picked another. */
 export function getPreferredProvider(): ProviderId {
-  return readJson<string>(PROVIDER_STORAGE, "openrouter") === "fal" ? "fal" : "openrouter";
+  const stored = readJson<string>(PROVIDER_STORAGE, "openrouter");
+  return isProviderId(stored) ? stored : "openrouter";
 }
 
 export function setPreferredProvider(provider: ProviderId): void {
@@ -53,10 +52,12 @@ export function maskKey(key: string): string {
 }
 
 export function settingsResponse(): SettingsResponse {
-  const key = getStoredKey();
-  const falKey = getStoredFalKey();
-  const res: SettingsResponse = { hasKey: Boolean(key), hasFalKey: Boolean(falKey), preferredProvider: getPreferredProvider() };
-  if (key) res.keyMasked = maskKey(key);
-  if (falKey) res.falKeyMasked = maskKey(falKey);
+  const keys: SettingsResponse["keys"] = {};
+  for (const p of PROVIDER_IDS) {
+    const key = getProviderKey(p);
+    if (key) keys[p] = maskKey(key);
+  }
+  const res: SettingsResponse = { hasKey: Boolean(keys.openrouter), keys, preferredProvider: getPreferredProvider() };
+  if (keys.openrouter) res.keyMasked = keys.openrouter;
   return res;
 }

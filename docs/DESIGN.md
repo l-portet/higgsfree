@@ -156,7 +156,8 @@ There is no page chrome: the app is four views under one floating nav, with one 
   hover, duration + resolution + cost in the badge. One line above it, always there so the grid never moves:
   "N rendering · usually 2–5 min" while clips render, the clip count otherwise.
 - The price before Generate (`CostEstimate`, 13 px `fg-subtle`, hidden below `sm`) starts with the mark of the
-  provider that runs the video (13 px, OpenRouter or fal; the cheapest one while no key is set). Hovering or focusing
+  provider that runs the video (13 px, OpenRouter or fal; kie.ai, which has no mark, gets its letter in a 15 px
+  tile; the cheapest one while no key is set). The image composer shows the mark too, with no tooltip. Hovering or focusing
   it opens a tooltip, "Cost by provider" (`· 3 videos` for a batch): a row per provider offering the model, mark,
   name and total, and a caption under it: accent "Runs this video", "~$1.20 more", "Same price", "No key yet", or
   why that provider cannot take the request ("Takes no style references"). A rule, then one line why ("The cheaper
@@ -242,16 +243,17 @@ There is no page chrome: the app is four views under one floating nav, with one 
   `rounded-control`; the open one raised on `surface-2`), and the open section's cards on the right, shown flat
   (no card border or fill, sections separated by a divider). Below `sm` the sections become a scrolling row under the
   title. Keys: the OpenRouter key (masked key, Save / Test connection / Remove key, a Connected / Not set badge),
-  then the fal key card. There is no credits breakdown (the key box shows the balance) and no default-model setting:
+  then the fal and kie.ai key cards, then "Models several providers offer". There is no credits breakdown (the key box shows the balance) and no default-model setting:
   each composer starts on the app's default and then remembers the last model picked. Old `/settings` links (`#fal`,
   `#providers`, `#library`…) open the dialog over the Image view.
-- **fal key card**: the OpenRouter
-  card's anatomy, titled "fal key" with a Connected / Not set badge, a line naming the fal-only models with a link to
-  fal.ai/dashboard/keys, a monospace password field (`key_id:key_secret`), Save / Test connection / Remove key
-  (confirm dialog). Below a divider, "Run models both providers offer on": a two-option segmented control, OpenRouter
-  · fal (`surface-2` track, `rounded-control`, 4 px padding; 32 px options at `rounded-tag`, the selected one on
-  `surface-3` with `fg` text; radio semantics, arrow keys move and select). OpenRouter by default; disabled, with a
-  hint saying so, until both keys are saved.
+- **fal and kie.ai key cards** (`ProviderKeyCard`): the OpenRouter card's anatomy, titled "fal key" / "kie.ai key" with
+  a Connected / Not set badge, a line on what the key opens with a link to the provider's keys page, a monospace
+  password field, Save / Test connection / Remove key (confirm dialog). kie's test result adds the balance ("Balance:
+  1,234 credits ($6.17)").
+- **"Models several providers offer"** card (shuffle icon): "Prefer" and a segmented control, OpenRouter · fal · kie.ai
+  (`surface-2` track, `rounded-control`, 4 px padding; 32 px options at `rounded-tag`, the selected one on `surface-3`
+  with `fg` text; radio semantics, arrow keys move and select). OpenRouter by default; disabled, with a hint saying
+  so, until two keys are saved. The hint says videos go to the cheapest and this decides images and price ties.
 - **Library card**: a usage line ("Using 1.2 GB of 60 GB the browser allows") over a thin bar (accent, `danger` from
   90 %), then two tiles, Images and Videos (count · size, files), with a reference-images line under them. Below a
   divider, "Protected from eviction" with a Yes / Not yet badge and a Protect button while it is not (Safari gets a

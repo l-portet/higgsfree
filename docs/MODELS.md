@@ -129,7 +129,7 @@ hidden the same way, unless it is a curated [video editor](#video-editing).
 ## fal models
 
 With a fal key these run on fal ([FAL.md](FAL.md) has the request rules). **fal-only** models
-(`falOnly: true`) are not on OpenRouter: their ids (`fal/<name>`) are the app's own, not fal endpoint
+(`offOpenRouter: true`) are not on OpenRouter: their ids (`fal/<name>`) are the app's own, not fal endpoint
 ids, and their options are curated, since the app reads no catalog from fal. None of them is
 verified yet.
 
@@ -197,6 +197,25 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 | **Z-Image Turbo** <sub>FAST</sub> | `fal/z-image-turbo` | `fal-ai/z-image/turbo` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [dev]** | `fal/flux-dev` | `fal-ai/flux/dev` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [schnell]** <sub>FAST</sub> | `fal/flux-schnell` | `fal-ai/flux/schnell` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+
+### kie.ai
+
+With a kie.ai key, these also run on kie ([KIE.md](../docs/KIE.md) has the fields and the rules), at kie's
+list prices (`KIE_PRICES`), and a video goes there whenever it is the cheapest for that run. kie records
+what each run cost.
+
+| Video | kie model | Image | kie model |
+|---|---|---|---|
+| Veo 3.1 / Fast / Lite | `veo-3-1` (`veo3` / `veo3_fast` / `veo3_lite`) | Nano Banana Pro | `nano-banana-pro` |
+| Kling 3.0 Pro / Standard | `kling-3.0/video` (`pro` / `std`) | Nano Banana 2 | `nano-banana-2` |
+| Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini | `bytedance/seedance-2-5`, `-2`, `-2-fast`, `-2-mini` | Nano Banana 2 Lite | `nano-banana-2-lite` |
+| MiniMax H3 | `minimax-h3/text-to-video` / `image-to-video` | Nano Banana | `google/nano-banana` (`-edit`) |
+| Wan 3.0, Wan 3.0 Prime | `wan/3-0-video`, `wan/3-0-video-prime` | GPT Image 2 | `gpt-image-2-text-to-image` / `-image-to-image` |
+| Wan 2.7 | `wan/2-7-text-to-video` / `image-to-video` | FLUX.1 Kontext Pro | `flux1-kontext` (`flux-kontext-pro`) |
+| Grok Imagine Video, Grok Imagine 1.5 | `grok-imagine/…`, `grok-imagine-video-1-5-preview` | Z-Image Turbo | `z-image` |
+| Gemini Omni Flash 1.1 | `google/gemini-omni-flash-1-1` | | |
+| PixVerse 6, Vidu Q4 | `pixverse-v6/…`, `vidu-q4/image-to-video` | | |
+| Wan 2.7 Edit | `wan/2-7-videoedit` | | |
 
 ### Models on both
 
@@ -334,7 +353,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
    `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=<endpoint>`. Write down how it spells
    each option; endpoints of the same family often differ.
 2. A model OpenRouter also has: add a `fal` route to its existing entry. A fal-only model: add an
-   entry with `id: "fal/<name>"`, `falOnly: true`, a `fal` route, `verified: false` and empty
+   entry with `id: "fal/<name>"`, `offOpenRouter: true`, a `fal` route, `verified: false` and empty
    `estCostUsd` / `estCostPerSecUsd`; image models also take `endpoint: "fal"`. Fill `caps`,
    durations, resolutions and aspect ratios from the schema's enums.
 3. Fill the route (fields below). If the endpoint needs something `FalImageRoute` / `FalVideoRoute`
@@ -366,7 +385,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `estCostUsd` | USD per image keyed by size. Missing sizes fall back to `"1K"`. Shown as `~$0.13` in the Generate button. Empty for fal-only models (no estimate shown). |
 | `verified` | `true` only after the checklist below. For a model on both, it is about the OpenRouter route. |
 | `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
-| `falOnly` | Not on OpenRouter: runs only with a fal key, and is never looked up in OpenRouter's catalogs. |
+| `kie` | How kie.ai serves the model (`KieImageRoute`): its `family` (which builder maps the fields), the createTask `model`, an `editModel` used with references, a `tier`. See [KIE.md](KIE.md#image-fields-buildkieimagepayload). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`), and is never looked up in OpenRouter's catalogs. |
 
 ### `VideoModel` fields
 
@@ -393,7 +413,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |
 | `discovered` | Set by the browser (`src/client/lib/catalog.ts`), never in `models.ts`: OpenRouter lists the model but the curated catalog does not (see above). |
 | `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
-| `falOnly` | Not on OpenRouter: runs only with a fal key, and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with a `fal` route that OpenRouter stopped listing. |
+| `kie` | How kie.ai serves the model (`KieVideoRoute`): its `family` (which builder maps the fields), the createTask `model`, an `imageModel` used with a frame where kie splits the two, a `tier` (Veo's `model`, Kling's `mode`). See [KIE.md](KIE.md#video-fields-buildkievideopayload). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with a `fal` or `kie` route that OpenRouter stopped listing. |
 
 ## Verification checklist
 

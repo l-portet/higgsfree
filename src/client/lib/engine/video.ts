@@ -4,8 +4,9 @@
  * exists, so a pending video without a polling url whose lock is free can only be a submit that
  * died with its tab.
  *
- * Two providers share that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
- * the Bearer key) and fal (queue submit, `status_url`, result json with a public CDN url).
+ * Three providers share that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
+ * the Bearer key), fal (queue submit, `status_url`, result json with a public CDN url) and kie.ai
+ * (inputs uploaded first, `createTask`, `recordInfo` with the result urls and the credits charged).
  */
 import type { Generation, GenerationInputs, MotionOrientation, ProviderId, VideoGenerateRequest, VideoModel, VideoParams } from "@shared/types";
 import { lookupVideoModel } from "../catalog";
@@ -15,6 +16,8 @@ import type { MediaRow } from "../db/schema";
 import { ApiClientError, badRequest, conflict } from "../errors";
 import * as fal from "../fal";
 import { buildFalVideoPayload } from "../fal-payloads";
+import * as kie from "../kie";
+import { buildKieVideoPayload } from "../kie-payloads";
 import { publish } from "../live";
 import { errorMessage, log } from "../log";
 import { newGenerationId, outputMediaId } from "../media-ids";
@@ -37,7 +40,10 @@ const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$
  * is configured until `JOB_TIMEOUT_MS` runs out.
  */
 const isPermanent = (err: unknown): boolean =>
-  err instanceof or.ForeignOriginError || err instanceof fal.FalOriginError || (err instanceof ApiClientError && [400, 404, 422].includes(err.status));
+  err instanceof or.ForeignOriginError ||
+  err instanceof fal.FalOriginError ||
+  err instanceof kie.KieOriginError ||
+  (err instanceof ApiClientError && [400, 404, 422].includes(err.status));
 
 // ---------- a pause that ends early when the tab becomes visible or the job is cancelled ----------
 
@@ -139,6 +145,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   // stands and its refusal below says why.
   const { provider, key } =
     videoRun(model, {
+      prompt,
       duration: req.duration,
       resolution: req.resolution,
       aspectRatio: req.aspectRatio,
@@ -178,6 +185,38 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
         }
         const queued = await fal.submit(key, payload.endpoint, input, signal);
         return { jobId: queued.requestId, pollingUrl: queued.statusUrl };
+      },
+    };
+  }
+
+  if (provider === "kie") {
+    const refDataUrls = await inputDataUrls(inputs.referenceImages ?? []);
+    const sourceVideo = inputs.sourceVideo;
+    const params = { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio };
+    // Checked now with placeholders (a refusal is a 400 before anything exists), sent at submit with the uploaded urls.
+    const placeholder = "https://pending-upload";
+    const planned = buildKieVideoPayload(model, params, {
+      firstFrame: frames.firstFrame && placeholder,
+      lastFrame: frames.lastFrame && placeholder,
+      references: refDataUrls.map(() => placeholder),
+      sourceVideo: sourceVideo && placeholder,
+    });
+    return {
+      id, provider, model, prompt, inputs, params: planned.params,
+      summary: `model=${planned.model} duration=${planned.params.duration}s res=${planned.params.resolution ?? "-"} ar=${planned.params.aspectRatio ?? "-"} audio=${planned.params.audio ?? "-"}`,
+      submit: async (signal) => {
+        // kie takes inputs by url only: each one goes to kie's file host first (kept 24 h).
+        const upload = (dataUrl: string | undefined): Promise<string | undefined> => (dataUrl ? kie.uploadDataUrl(key, dataUrl, signal) : Promise.resolve(undefined));
+        const [firstFrame, lastFrame, ...references] = await Promise.all([upload(frames.firstFrame), upload(frames.lastFrame), ...refDataUrls.map(upload)]);
+        let sourceUrl: string | undefined;
+        if (sourceVideo) {
+          const blob = await getMediaBlob(sourceVideo);
+          if (!blob) throw badRequest(`Video to edit is no longer in the library (${sourceVideo})`);
+          sourceUrl = await kie.uploadFile(key, blob, sourceVideo, signal);
+        }
+        const payload = buildKieVideoPayload(model, params, { firstFrame, lastFrame, references: references.filter((u): u is string => Boolean(u)), sourceVideo: sourceUrl });
+        const taskId = await kie.createTask(key, payload.model, payload.input, signal);
+        return { jobId: taskId, pollingUrl: kie.taskUrl(taskId) };
       },
     };
   }
@@ -312,6 +351,20 @@ async function pollOpenRouter(key: string, job: VideoJob, signal: AbortSignal): 
   return poll.error ? { kind: "failed", error: poll.error } : { kind: "pending", unknownStatus: poll.status };
 }
 
+async function pollKie(key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
+  const t = await kie.task(key, job.pollingUrl, signal);
+  if (t.state === "fail") return { kind: "failed", error: t.error ?? "kie.ai reported a failure" };
+  if (t.state === "success") {
+    const url = t.urls[0];
+    if (!url) return { kind: "failed", error: "kie.ai reported success but returned no video url" };
+    const out: PollOutcome = { kind: "done", download: () => kie.download(url, signal) };
+    if (t.costUsd !== undefined) out.costUsd = t.costUsd;
+    return out;
+  }
+  if (t.state === "waiting" || t.state === "queuing" || t.state === "generating") return { kind: "pending" };
+  return { kind: "pending", unknownStatus: t.state };
+}
+
 async function pollFal(key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
   const st = await fal.status(key, job.pollingUrl, signal);
   if (st.status === "IN_QUEUE" || st.status === "IN_PROGRESS") return { kind: "pending" };
@@ -331,7 +384,7 @@ export async function pollLoop(job: VideoJob, signal: AbortSignal): Promise<void
     if (key) {
       let outcome: PollOutcome | undefined;
       try {
-        outcome = job.provider === "fal" ? await pollFal(key, job, signal) : await pollOpenRouter(key, job, signal);
+        outcome = job.provider === "fal" ? await pollFal(key, job, signal) : job.provider === "kie" ? await pollKie(key, job, signal) : await pollOpenRouter(key, job, signal);
       } catch (err) {
         if (signal.aborted) return;
         if (isPermanent(err)) {

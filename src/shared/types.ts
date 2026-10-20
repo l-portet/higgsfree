@@ -4,8 +4,8 @@
  */
 
 export type GenerationType = "image" | "video";
-/** Who runs a generation. A model can be offered by one or both. */
-export type ProviderId = "openrouter" | "fal";
+/** Who runs a generation. A model can be offered by several. */
+export type ProviderId = "openrouter" | "fal" | "kie";
 /** Motion control: whose orientation the character keeps (fal caps the reference video at 30 s for `video`, 10 s for `image`). */
 export type MotionOrientation = "video" | "image";
 export type GenerationStatus = "pending" | "running" | "completed" | "failed";
@@ -126,7 +126,7 @@ export interface FolderRequest {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "fal" | "openrouter";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "fal" | "openrouter" | "kie";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -161,10 +161,12 @@ export interface ImageModel {
   verified: boolean;
   /** Listed by OpenRouter but not in the curated catalog: options from OpenRouter, not tested here. */
   discovered?: boolean;
-  /** fal serves it too (or only fal does, with `falOnly`). */
+  /** fal serves it too. */
   fal?: FalImageRoute;
-  /** Not on OpenRouter: needs a fal key. */
-  falOnly?: boolean;
+  /** kie.ai serves it too. */
+  kie?: KieImageRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`). */
+  offOpenRouter?: boolean;
 }
 
 export interface VideoModel {
@@ -221,10 +223,12 @@ export interface VideoModel {
    * OpenRouter's video catalog, quirks (faces, references, i2v aspect) are unknown.
    */
   discovered?: boolean;
-  /** fal serves it too (or only fal does, with `falOnly`). */
+  /** fal serves it too. */
   fal?: FalVideoRoute;
-  /** Not on OpenRouter: needs a fal key. */
-  falOnly?: boolean;
+  /** kie.ai serves it too. */
+  kie?: KieVideoRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`). */
+  offOpenRouter?: boolean;
 }
 
 export type CatalogModel = ImageModel | VideoModel;
@@ -276,6 +280,36 @@ export interface FalVideoRoute {
   audio?: "generate_audio" | "generate_audio_switch";
   extra?: Record<string, string | number | boolean>;
 }
+
+/**
+ * How kie.ai serves a model: `POST /api/v1/jobs/createTask { model, input }`. kie spells the input
+ * differently for every model family, so a route names its family (one builder each in
+ * `kie-payloads.ts`), the createTask model ids and a tier inside the model.
+ */
+export interface KieVideoRoute {
+  family: KieVideoFamily;
+  /** createTask `model` (text-to-video, and image-to-video unless `imageModel` is set). */
+  model: string;
+  /** createTask `model` when a frame is attached, for families that split the two. */
+  imageModel?: string;
+  /** A tier inside the model, sent in its own field: Veo's `model` (`veo3`, `veo3_fast`), Kling's `mode` (`std`, `pro`). */
+  tier?: string;
+}
+
+export type KieVideoFamily =
+  | "veo" | "kling3" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "pixverse" | "vidu" | "wan27-edit";
+
+export interface KieImageRoute {
+  family: KieImageFamily;
+  /** createTask `model` (text-to-image, and edits unless `editModel` is set). */
+  model: string;
+  /** createTask `model` with reference images, for families that split the two. */
+  editModel?: string;
+  /** A tier inside the model (FLUX.1 Kontext's `model`). */
+  tier?: string;
+}
+
+export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "flux-kontext" | "z-image";
 
 export interface ModelsResponse {
   image: ImageModel[];
@@ -359,17 +393,17 @@ export interface SettingsResponse {
   hasKey: boolean;
   /** e.g. `sk-or-v1-…a1b2` */
   keyMasked?: string;
-  hasFalKey: boolean;
-  falKeyMasked?: string;
-  /** Which provider runs a model both offer (when both keys are set). */
+  /** Every provider with a stored key, masked (`sk-or-v1-…a1b2`). */
+  keys: Partial<Record<ProviderId, string>>;
+  /** Which provider runs an image several offer, and a video at the same price on several. */
   preferredProvider: ProviderId;
 }
 
 export interface UpdateSettingsRequest {
   /** Pass a new OpenRouter key, or `""` to clear the stored one. */
   apiKey?: string;
-  /** Pass a new fal key, or `""` to clear the stored one. */
-  falKey?: string;
+  /** A new key for each provider given, or `""` to clear it. */
+  keys?: Partial<Record<ProviderId, string>>;
   preferredProvider?: ProviderId;
 }
 

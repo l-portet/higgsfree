@@ -19,7 +19,7 @@ beforeEach(() => {
 
 describe("settings", () => {
   it("stores the key in localStorage and only ever shows it masked", async () => {
-    expect(await api.getSettings()).toEqual({ hasKey: false, hasFalKey: false, preferredProvider: "openrouter" });
+    expect(await api.getSettings()).toEqual({ hasKey: false, keys: {}, preferredProvider: "openrouter" });
     const saved = await api.updateSettings({ apiKey: ` ${KEY} ` });
     expect(saved).toMatchObject({ hasKey: true, keyMasked: "sk-or-v1-…0123" });
     expect(JSON.stringify(saved)).not.toContain("abcdefgh");
@@ -27,6 +27,15 @@ describe("settings", () => {
     expect((await api.updateSettings({ apiKey: "" })).hasKey).toBe(false);
     expect(localStorage.getItem(KEY_STORAGE)).toBeNull();
     await expect(api.getCredits()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("keeps each provider's key under its own name, and any of them can be preferred", async () => {
+    const saved = await api.updateSettings({ keys: { kie: "kie-0123456789abcdef" }, preferredProvider: "kie" });
+    expect(saved).toMatchObject({ hasKey: false, keys: { kie: "kie-01234…cdef" }, preferredProvider: "kie" });
+    expect(localStorage.getItem("higgsfree.kieKey")).toBe(JSON.stringify("kie-0123456789abcdef"));
+    expect(PROTECTED_STORAGE_KEYS).toContain("higgsfree.kieKey");
+    localStorage.setItem("higgsfree.preferredProvider", JSON.stringify("nobody"));
+    expect((await api.getSettings()).preferredProvider).toBe("openrouter");
   });
 
   it("survives 'Reset local settings'", async () => {

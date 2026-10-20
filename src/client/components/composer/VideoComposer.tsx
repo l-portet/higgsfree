@@ -15,6 +15,7 @@ import { editSourceHint, isVideoAspectRatio, isVideoResolution } from "@/lib/mod
 import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
+import { PROVIDER_IDS } from "@/lib/providers";
 import { quoteVideo, shownQuote, type VideoQuote } from "@/lib/video-cost";
 import { readVideoDuration } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
@@ -123,8 +124,8 @@ export function VideoComposer() {
   const draft = useUi((s) => s.draft);
   const pendingFirstFrame = useUi((s) => s.pendingFirstFrame);
   const pendingSourceVideo = useUi((s) => s.pendingSourceVideo);
-  const hasOpenRouterKey = useSettings((s) => Boolean(s.settings?.hasKey));
-  const hasFalKey = useSettings((s) => Boolean(s.settings?.hasFalKey));
+  // A string, so the selector's value only changes when a key is added or removed.
+  const keyed = useSettings((s) => PROVIDER_IDS.filter((p) => s.settings?.keys[p]).join(","));
   const preferred = useSettings((s) => s.settings?.preferredProvider ?? "openrouter");
   const router = useRouter();
   const pathname = usePathname() ?? "/";
@@ -403,12 +404,12 @@ export function VideoComposer() {
       model
         ? quoteVideo(
             model,
-            { duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, videoSec: clipSec },
-            { openrouter: hasOpenRouterKey, fal: hasFalKey },
+            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, videoSec: clipSec },
+            Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
             preferred,
           )
         : undefined,
-    [model, aspectRatio, sound, hasFirst, hasLast, hasRefs, clipSec, hasOpenRouterKey, hasFalKey, preferred],
+    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, clipSec, keyed, preferred],
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);

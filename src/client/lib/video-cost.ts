@@ -1,16 +1,19 @@
 /**
- * What a video costs on each provider that offers its model, and who runs it: the cheaper of OpenRouter
- * and fal when both can take the request. The preference in Settings breaks a tie, and decides while a
- * price is not known (an edit before its video's length is). The composer shows the comparison next to
+ * What a video costs on each provider that offers its model, and who runs it: the cheapest of OpenRouter,
+ * fal and kie.ai that can take the request. The preference in Settings breaks a tie, and decides while no
+ * price is known (an edit before its video's length is). The composer shows the comparison next to
  * Generate and the engine routes the run with the same rule, so the two always agree.
  */
 import type { ProviderId, VideoAspectRatio, VideoModel, VideoResolution } from "@shared/types";
 import { editedLength, estimateVideoCost, snapDuration } from "@shared/models";
 import { estimateFalVideoCost, falVideoPayloadFor } from "./fal-pricing";
+import { estimateKieVideoCost, kieVideoPayloadFor } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
 
 /** The parts of a video request that set its price, or whether a provider takes it. */
 export interface VideoQuoteRequest {
+  /** Some providers refuse an empty or very short prompt. */
+  prompt?: string;
   duration: number;
   resolution?: VideoResolution;
   aspectRatio?: VideoAspectRatio;
@@ -29,15 +32,15 @@ export interface ProviderQuote {
   usd?: number;
   /** No key is stored for this provider. */
   noKey: boolean;
-  /** Why this provider cannot take the request as it is (fal and style references). */
+  /** Why this provider cannot take the request as it is ("Takes no style references"). */
   refusal?: string;
 }
 
 /**
- * Why the run goes where it goes. `only`: one provider offers the model. `cheaper`: both could run it,
- * this one costs less. `tie` / `unpriced`: both could, at the same price or with a price unknown, so the
- * preference decides. `one-ready`: the other has no key or refuses the request. `none`: no provider that
- * takes the request has a key.
+ * Why the run goes where it goes. `only`: one provider offers the model. `cheaper`: several could run it,
+ * this one costs least. `tie` / `unpriced`: several could, at the same lowest price or with no price
+ * known, so the preference decides. `one-ready`: the others have no key or refuse the request. `none`: no
+ * provider that takes the request has a key.
  */
 export type QuoteReason = "only" | "cheaper" | "tie" | "unpriced" | "one-ready" | "none";
 
@@ -57,31 +60,43 @@ function openRouterUsd(model: VideoModel, req: VideoQuoteRequest): number | unde
   return estimateVideoCost(model, snapDuration(model, req.duration), req.resolution, req.audio);
 }
 
-function falQuote(model: VideoModel, req: VideoQuoteRequest, now: Date): Pick<ProviderQuote, "usd" | "refusal"> {
-  if (req.references) return { refusal: "Takes no style references" };
+/** A provider's price, or why it cannot take the request: what its payload builder throws. */
+function quoted(check: () => unknown, price: () => number | undefined): Pick<ProviderQuote, "usd" | "refusal"> {
   try {
-    falVideoPayloadFor(model, req);
+    check();
   } catch (err) {
     return { refusal: err instanceof Error ? err.message : String(err) };
   }
-  const usd = estimateFalVideoCost(model, req, now);
+  const usd = price();
   return usd === undefined ? {} : { usd };
+}
+
+function priceOn(provider: ProviderId, model: VideoModel, req: VideoQuoteRequest, now: Date): Pick<ProviderQuote, "usd" | "refusal"> {
+  switch (provider) {
+    case "openrouter":
+      return { usd: openRouterUsd(model, req) };
+    case "fal":
+      if (req.references) return { refusal: "Takes no style references" };
+      return quoted(() => falVideoPayloadFor(model, req), () => estimateFalVideoCost(model, req, now));
+    case "kie":
+      return quoted(() => kieVideoPayloadFor(model, req), () => estimateKieVideoCost(model, req));
+  }
 }
 
 /** Each provider's price for one clip of `req`, and who runs it. `now` picks fal's promotional rates. */
 export function quoteVideo(model: VideoModel, req: VideoQuoteRequest, keys: ProviderKeys, preferred: ProviderId, now = new Date()): VideoQuote {
-  const quotes = modelProviders(model).map((provider): ProviderQuote => {
-    const priced = provider === "fal" ? falQuote(model, req, now) : { usd: openRouterUsd(model, req) };
-    return { provider, noKey: !keys[provider], ...priced };
-  });
+  const quotes = modelProviders(model).map((provider): ProviderQuote => ({ provider, noKey: !keys[provider], ...priceOn(provider, model, req, now) }));
   const ready = quotes.filter((q) => !q.noKey && !q.refusal);
-  const [a, b] = ready;
-  if (!a) return { quotes, reason: "none" };
-  if (quotes.length === 1) return { quotes, provider: a.provider, reason: "only" };
-  if (!b) return { quotes, provider: a.provider, reason: "one-ready" };
-  if (a.usd === undefined || b.usd === undefined) return { quotes, provider: preferred, reason: "unpriced" };
-  if (Math.abs(a.usd - b.usd) < SAME_PRICE_USD) return { quotes, provider: preferred, reason: "tie" };
-  return { quotes, provider: a.usd < b.usd ? a.provider : b.provider, reason: "cheaper" };
+  const pick = (among: ProviderQuote[]): ProviderId | undefined => (among.some((q) => q.provider === preferred) ? preferred : among[0]?.provider);
+  const first = ready[0];
+  if (!first) return { quotes, reason: "none" };
+  if (quotes.length === 1) return { quotes, provider: first.provider, reason: "only" };
+  if (ready.length === 1) return { quotes, provider: first.provider, reason: "one-ready" };
+  const priced = ready.filter((q) => q.usd !== undefined);
+  if (priced.length === 0) return { quotes, provider: pick(ready), reason: "unpriced" };
+  const low = Math.min(...priced.map((q) => q.usd ?? Infinity));
+  const cheapest = priced.filter((q) => (q.usd ?? Infinity) - low < SAME_PRICE_USD);
+  return { quotes, provider: pick(cheapest), reason: cheapest.length > 1 ? "tie" : "cheaper" };
 }
 
 /** The quote shown next to Generate: the provider that runs it, or (no key yet) the cheapest one that takes the request. */

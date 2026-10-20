@@ -3,11 +3,11 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Clipboar
 import { Check, Gem, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { ImageAspectRatio, ImageGenerateRequest, ImageModel, ImageSize } from "@shared/types";
-import { DEFAULT_IMAGE_MODEL, estimateImageCost } from "@shared/models";
+import { DEFAULT_IMAGE_MODEL } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { estimateFalImageCost } from "@/lib/fal-pricing";
+import { quoteImage } from "@/lib/image-cost";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles } from "@/lib/files";
 import { pluralize, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
@@ -173,13 +173,11 @@ export function ImageComposer() {
           ? "Enter a prompt"
           : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
 
-  // OpenRouter's prices from the catalog, or fal's list prices for the request fal would get.
-  const runsOnFal = keyGate.runsOnFal;
-  const estimate = !model
-    ? undefined
-    : runsOnFal
-      ? estimateFalImageCost(model, { aspectRatio, size }, count, refCount > 0)
-      : estimateImageCost(model, size, count);
+  // The price on the provider that runs it (the preferred one that can take the request): OpenRouter's from
+  // the catalog, fal's and kie.ai's list prices. No key yet: the price where it would run once one is added.
+  const quote = model ? quoteImage(model, { aspectRatio, size, count, references: refCount }, keyGate.keys, keyGate.preferred) : undefined;
+  const shown = quote?.quotes.find((q) => q.provider === quote.provider) ?? quote?.quotes.find((q) => !q.refusal);
+  const estimate = shown?.usd;
 
   const submit = async () => {
     if (!model || disabledReason || submitting) return;
@@ -355,7 +353,7 @@ export function ImageComposer() {
           <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of images" />
         </>
       }
-      estimate={estimate !== undefined ? <CostEstimate usd={estimate} /> : undefined}
+      estimate={estimate !== undefined ? <CostEstimate usd={estimate} provider={shown?.provider} /> : undefined}
       generate={{ disabledReason, submitting, reasonId }}
       className={cn(submitting && "cursor-progress")}
     />

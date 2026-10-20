@@ -81,8 +81,13 @@ On fal, two things also exist as **public urls** that anyone who has them can fe
   `file_url`. It is uploaded again at every run and retry.
 - **fal's results** (images and clips) are public CDN urls; the app downloads them without the key.
 
-The app does not keep these urls, but fal has them. Treat anything you send to fal, and anything it makes,
-as reachable by url.
+On kie.ai, every input is a public url: kie takes images and videos by url only, so each frame, reference
+image and video to edit is uploaded to kie's file host (`kieai.redpandaai.co`) first and kept there 24 hours.
+kie's results are public urls on its CDN (`*.aiquickdraw.com`) for 14 days; the app downloads them without
+the key.
+
+The app does not keep these urls, but fal and kie.ai have them. Treat anything you send to either, and
+anything they make, as reachable by url.
 
 ## What a hosted copy can see
 

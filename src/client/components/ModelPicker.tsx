@@ -304,7 +304,7 @@ export function ModelPicker(props: ModelPickerProps) {
                     highlighted={idx === highlighted}
                     disabledReason={reasonFor(m)}
                     // OpenRouter's listing says nothing about models only fal serves.
-                    unavailable={live ? !m.falOnly && !live.available.includes(m.id) : false}
+                    unavailable={live ? !m.offOpenRouter && !live.available.includes(m.id) : false}
                     onHover={() => setHighlighted(idx)}
                     onSelect={() => select(m)}
                   />

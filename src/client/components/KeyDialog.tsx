@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import type { ProviderId } from "@shared/types";
 import * as api from "@/lib/api";
 import { ApiClientError, describeApiError } from "@/lib/api";
-import { PROVIDER_NAME } from "@/lib/providers";
+import { PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 import { Button } from "@/components/ui/Button";
@@ -12,16 +12,11 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 
-const COPY: Record<ProviderId, { url: string; host: string; placeholder: string }> = {
-  openrouter: { url: "https://openrouter.ai/keys", host: "openrouter.ai", placeholder: "sk-or-v1-…" },
-  fal: { url: "https://fal.ai/dashboard/keys", host: "fal.ai", placeholder: "key-id:key-secret" },
-};
-
 /** The key is checked before it is saved; only a clear rejection blocks it (an unreachable provider does not). */
 async function checkKey(provider: ProviderId, key: string): Promise<string | null> {
   try {
-    if (provider === "fal") await api.testFalKey(key);
-    else await api.testSettings(key);
+    if (provider === "openrouter") await api.testSettings(key);
+    else await api.testProviderKey(provider, key);
     return null;
   } catch (err) {
     if (err instanceof ApiClientError && err.status === 401) return `${PROVIDER_NAME[provider]} rejected this key. Check it and try again.`;
@@ -49,7 +44,7 @@ export function KeyDialog() {
   const open = prompt !== null;
   const provider: ProviderId = prompt?.provider ?? "openrouter";
   const name = PROVIDER_NAME[provider];
-  const copy = COPY[provider];
+  const copy = PROVIDER_KEYS[provider];
   const trimmed = value.trim();
   const continues = Boolean(prompt?.onSaved);
 
@@ -72,7 +67,7 @@ export function KeyDialog() {
         setError(problem);
         return;
       }
-      await save(provider === "fal" ? { falKey: trimmed } : { apiKey: trimmed });
+      await save(provider === "openrouter" ? { apiKey: trimmed } : { keys: { [provider]: trimmed } });
       const onSaved = prompt.onSaved;
       close();
       if (onSaved) onSaved();

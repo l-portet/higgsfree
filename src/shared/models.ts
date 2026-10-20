@@ -34,6 +34,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: true,
     verified: true,
     fal: { textToImage: "fal-ai/nano-banana-pro", edit: "fal-ai/nano-banana-pro/edit", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
+    kie: { family: "nano-banana-2", model: "nano-banana-pro" },
   },
   {
     kind: "image",
@@ -51,6 +52,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: true,
     verified: false,
     fal: { textToImage: "fal-ai/nano-banana-2", edit: "fal-ai/nano-banana-2/edit", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
+    kie: { family: "nano-banana-2", model: "nano-banana-2" },
   },
   {
     kind: "image",
@@ -67,6 +69,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     estCostUsd: { "1K": 0.02 },
     supportsImageSize: false,
     verified: false,
+    kie: { family: "nano-banana-lite", model: "nano-banana-2-lite" },
   },
   {
     kind: "image",
@@ -83,6 +86,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     estCostUsd: { "1K": 0.039 },
     supportsImageSize: false,
     verified: true,
+    kie: { family: "nano-banana", model: "google/nano-banana", editModel: "google/nano-banana-edit" },
   },
   {
     kind: "image",
@@ -148,6 +152,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: true,
     fal: { textToImage: "openai/gpt-image-2", edit: "openai/gpt-image-2/edit", refs: "image_urls", aspect: "image_size" },
+    kie: { family: "gpt-image-2", model: "gpt-image-2-text-to-image", editModel: "gpt-image-2-image-to-image" },
   },
   {
     kind: "image",
@@ -214,7 +219,8 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "fal-ai/flux-pro/kontext/text-to-image", edit: "fal-ai/flux-pro/kontext", refs: "image_url", aspect: "aspect_ratio" },
-    falOnly: true,
+    offOpenRouter: true,
+    kie: { family: "flux-kontext", model: "flux1-kontext", tier: "flux-kontext-pro" },
   },
   {
     kind: "image",
@@ -232,7 +238,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "fal-ai/flux-pro/v1.1-ultra", aspect: "aspect_ratio" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "image",
@@ -250,7 +256,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "ideogram/v4.5", edit: "ideogram/v4.5/edit", refs: "image_url", aspect: "image_size" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "image",
@@ -268,7 +274,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "fal-ai/gpt-image-1.5", edit: "fal-ai/gpt-image-1.5/edit", refs: "image_urls", aspect: "image_size", imageSizes: { "1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536" } },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "image",
@@ -286,7 +292,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { edit: "fal-ai/qwen-image-edit-2511", refs: "image_urls", aspect: "image_size" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "image",
@@ -304,7 +310,8 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "fal-ai/z-image/turbo", aspect: "image_size" },
-    falOnly: true,
+    offOpenRouter: true,
+    kie: { family: "z-image", model: "z-image" },
   },
   {
     kind: "image",
@@ -322,7 +329,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "fal-ai/flux/dev", aspect: "image_size" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "image",
@@ -340,7 +347,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "fal-ai/flux/schnell", aspect: "image_size" },
-    falOnly: true,
+    offOpenRouter: true,
   },
 ];
 
@@ -363,6 +370,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "480p": 0.1028, "720p": 0.2311 },
     verified: true,
     fal: { textToVideo: "bytedance/seedance-2.5/text-to-video", imageToVideo: "bytedance/seedance-2.5/image-to-video", endImage: true, duration: "string", aspect: "always", resolutions: { "480p": "480p", "720p": "720p" }, audio: "generate_audio" },
+    kie: { family: "seedance", model: "bytedance/seedance-2-5" },
   },
   {
     kind: "video",
@@ -381,6 +389,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: { "480p": 0.0673, "720p": 0.1512, "1080p": 0.3742, "4K": 0.7776 },
     verified: true,
+    kie: { family: "seedance", model: "bytedance/seedance-2" },
   },
   {
     kind: "video",
@@ -399,6 +408,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: { "480p": 0.0404, "720p": 0.0907 },
     verified: false,
+    kie: { family: "seedance", model: "bytedance/seedance-2-fast" },
   },
   {
     kind: "video",
@@ -417,6 +427,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: { "480p": 0.0336, "720p": 0.0756 },
     verified: false,
+    kie: { family: "seedance", model: "bytedance/seedance-2-mini" },
   },
   {
     kind: "video",
@@ -435,6 +446,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "2K": 0.13 },
     verified: true,
     fal: { textToVideo: "minimax/h3/text-to-video", imageToVideo: "minimax/h3/image-to-video", endImage: true, duration: "number", aspect: "text", resolutions: { "2K": "2K" } },
+    kie: { family: "minimax-h3", model: "minimax-h3/text-to-video", imageModel: "minimax-h3/image-to-video" },
   },
   {
     kind: "video",
@@ -472,6 +484,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecNoAudioUsd: { "720p": 0.112 },
     verified: true,
     fal: { textToVideo: "fal-ai/kling-video/v3/pro/text-to-video", imageToVideo: "fal-ai/kling-video/v3/pro/image-to-video", imageField: "start_image_url", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
+    kie: { family: "kling3", model: "kling-3.0/video", tier: "pro" },
   },
   {
     kind: "video",
@@ -523,6 +536,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"],
     estCostPerSecUsd: { "480p": 0.08, "720p": 0.14, "1080p": 0.25 },
     verified: true,
+    kie: { family: "grok15", model: "grok-imagine-video-1-5-preview" },
   },
   {
     kind: "video",
@@ -540,6 +554,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["16:9", "4:3", "1:1", "3:4", "9:16"],
     estCostPerSecUsd: { "480p": 0.05, "720p": 0.1, "1080p": 0.2 },
     verified: false,
+    kie: { family: "wan3", model: "wan/3-0-video" },
   },
   {
     kind: "video",
@@ -558,6 +573,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "720p": 0.4, "1080p": 0.4, "4K": 0.6 },
     estCostPerSecNoAudioUsd: { "720p": 0.2, "1080p": 0.2, "4K": 0.4 },
     verified: true,
+    kie: { family: "veo", model: "veo-3-1", tier: "veo3" },
   },
   {
     kind: "video",
@@ -576,6 +592,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "720p": 0.1, "1080p": 0.12, "4K": 0.3 },
     estCostPerSecNoAudioUsd: { "720p": 0.08, "1080p": 0.1, "4K": 0.25 },
     verified: false,
+    kie: { family: "veo", model: "veo-3-1", tier: "veo3_fast" },
   },
   {
     kind: "video",
@@ -594,6 +611,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "720p": 0.05, "1080p": 0.08 },
     estCostPerSecNoAudioUsd: { "720p": 0.03, "1080p": 0.05 },
     verified: false,
+    kie: { family: "veo", model: "veo-3-1", tier: "veo3_lite" },
   },
   {
     kind: "video",
@@ -611,6 +629,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["16:9", "4:3", "1:1", "3:4", "9:16"],
     estCostPerSecUsd: { "480p": 0.068, "720p": 0.14, "1080p": 0.28 },
     verified: false,
+    kie: { family: "wan3", model: "wan/3-0-video-prime" },
   },
   {
     kind: "video",
@@ -628,6 +647,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["16:9", "4:3", "1:1", "3:4", "9:16"],
     estCostPerSecUsd: { "720p": 0.1, "1080p": 0.1 },
     verified: false,
+    kie: { family: "wan27", model: "wan/2-7-text-to-video", imageModel: "wan/2-7-image-to-video" },
   },
   {
     kind: "video",
@@ -664,6 +684,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecNoAudioUsd: { "720p": 0.084 },
     verified: false,
     fal: { textToVideo: "fal-ai/kling-video/v3/standard/text-to-video", imageToVideo: "fal-ai/kling-video/v3/standard/image-to-video", imageField: "start_image_url", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
+    kie: { family: "kling3", model: "kling-3.0/video", tier: "std" },
   },
   {
     kind: "video",
@@ -766,6 +787,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"],
     estCostPerSecUsd: { "480p": 0.05, "720p": 0.07 },
     verified: true,
+    kie: { family: "grok", model: "grok-imagine/text-to-video", imageModel: "grok-imagine/image-to-video" },
   },
   {
     kind: "video",
@@ -820,7 +842,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { motionControl: "fal-ai/kling-video/v3/pro/motion-control" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -839,7 +861,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { textToVideo: "google/gemini-omni-flash/v1.1/text-to-video", imageToVideo: "google/gemini-omni-flash/v1.1/image-to-video", endImage: true, duration: "number", aspect: "always", resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
-    falOnly: true,
+    offOpenRouter: true,
+    kie: { family: "gemini-omni", model: "google/gemini-omni-flash-1-1" },
   },
   {
     kind: "video",
@@ -866,7 +889,7 @@ export const VIDEO_MODELS: VideoModel[] = [
       resolutions: { "720p": "720p", "1080p": "1080p" },
       audio: "generate_audio",
     },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -892,7 +915,7 @@ export const VIDEO_MODELS: VideoModel[] = [
       aspect: "text",
       audio: "generate_audio",
     },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -910,7 +933,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { motionControl: "fal-ai/kling-video/v3/standard/motion-control" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -929,7 +952,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { textToVideo: "fal-ai/kling-video/o3/pro/text-to-video", imageToVideo: "fal-ai/kling-video/o3/pro/image-to-video", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -948,7 +971,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { textToVideo: "fal-ai/kling-video/v3/turbo/pro/text-to-video", imageToVideo: "fal-ai/kling-video/v3/turbo/pro/image-to-video", duration: "string", aspect: "text" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -968,7 +991,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { textToVideo: "fal-ai/pixverse/v6/text-to-video", imageToVideo: "fal-ai/pixverse/v6/image-to-video", duration: "number", aspect: "text", resolutions: { "720p": "720p", "1080p": "1080p" }, audio: "generate_audio_switch" },
-    falOnly: true,
+    offOpenRouter: true,
+    kie: { family: "pixverse", model: "pixverse-v6/text-to-video", imageModel: "pixverse-v6/image-to-video" },
   },
   {
     kind: "video",
@@ -988,7 +1012,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { imageToVideo: "fal-ai/vidu/q4/image-to-video", duration: "number", resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2K", "4K": "4K" } },
-    falOnly: true,
+    offOpenRouter: true,
+    kie: { family: "vidu", model: "vidu-q4/image-to-video" },
   },
   {
     kind: "video",
@@ -1007,7 +1032,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { textToVideo: "fal-ai/ltx-2.3/text-to-video", imageToVideo: "fal-ai/ltx-2.3/image-to-video", endImage: true, duration: "number", aspect: "always", resolutions: { "1080p": "1080p", "2K": "1440p", "4K": "2160p" }, audio: "generate_audio" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -1026,7 +1051,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { textToVideo: "luma/agent/ray/v3.2/text-to-video", imageToVideo: "luma/agent/ray/v3.2/image-to-video", endImage: true, duration: "seconds", aspect: "always", resolutions: { "720p": "720p", "1080p": "1080p" } },
-    falOnly: true,
+    offOpenRouter: true,
   },
   // ---------- video editing: a source video and a prompt saying what to change ----------
   // The clip keeps the source's length, so `durations` is a placeholder (as for motion control).
@@ -1084,7 +1109,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { edit: "fal-ai/kling-video/o3/pro/video-to-video/edit" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -1103,7 +1128,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { edit: "fal-ai/kling-video/o3/standard/video-to-video/edit" },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -1122,7 +1147,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { edit: "google/gemini-omni-flash/v1.1/edit", resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -1142,7 +1167,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { edit: "xai/grok-imagine-video/edit-video", resolutions: { "480p": "480p", "720p": "720p" } },
-    falOnly: true,
+    offOpenRouter: true,
   },
   {
     kind: "video",
@@ -1162,7 +1187,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: {},
     verified: false,
     fal: { edit: "fal-ai/wan/v2.7/edit-video", resolutions: { "720p": "720p", "1080p": "1080p" } },
-    falOnly: true,
+    offOpenRouter: true,
+    kie: { family: "wan27-edit", model: "wan/2-7-videoedit" },
   },
   // Listed by OpenRouter but never offered: they need a video or audio input this app does not send.
   {
@@ -1274,6 +1300,7 @@ export const PROVIDER_LABEL: Record<string, string> = {
   ideogram: "Ideogram",
   fal: "fal",
   openrouter: "OpenRouter",
+  kie: "kie.ai",
 };
 
 /** OpenRouter vendor prefixes that belong to a provider listed under another name. */

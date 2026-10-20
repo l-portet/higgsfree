@@ -50,6 +50,10 @@ Open http://localhost:3000 and paste your key behind **Add key** (top right). Th
 
 The rules are in [docs/FAL.md](docs/FAL.md).
 
+## kie.ai (optional)
+
+[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash, PixVerse, Vidu, Nano Banana Pro, GPT Image 2 and more. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares all three. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
+
 ## Deploy anywhere
 
 `pnpm build` writes a static site to `out/` (one HTML file per route plus the assets). Copy it to any static host:
@@ -88,7 +92,7 @@ What follows from that:
 
 ## Models
 
-Curated: 19 image models and 44 video models (7 of them video editors) with their real limits (sizes, durations, resolutions, audio); 8 of the image models and 16 of the video models run only on fal. Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 19 image models and 44 video models (7 of them video editors) with their real limits (sizes, durations, resolutions, audio); 8 of the image models and 16 of the video models are not on OpenRouter (they run on fal, and some on kie.ai too). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
 
@@ -100,6 +104,7 @@ Next.js (App Router) with `output: "export"`: `next build` writes plain HTML, CS
 
 - **OpenRouter** is called straight from the browser with your key (`src/client/lib/openrouter.ts`, request bodies in `payloads.ts`). OpenRouter allows cross-origin requests on every endpoint the app uses. Provider errors are kept verbatim so the supported values show on the card. The rules are in [docs/OPENROUTER.md](docs/OPENROUTER.md).
 - **fal** is called straight from the browser too, with the fal key (`src/client/lib/fal.ts`, request bodies in `fal-payloads.ts`): images in one request to `fal.run`, videos through fal's queue, polled like OpenRouter's. Results come from fal's CDN without the key. With both keys, `providers.ts` picks who runs a model both offer. The rules are in [docs/FAL.md](docs/FAL.md).
+- **kie.ai** likewise (`src/client/lib/kie.ts`, request bodies in `kie-payloads.ts`): inputs uploaded to kie's file host, then `createTask` and `recordInfo` polled until the result url is there, for images and videos alike. `video-cost.ts` sends a video to the cheapest provider with a key that can take it, `image-cost.ts` an image to the preferred one. The rules are in [docs/KIE.md](docs/KIE.md).
 - **Storage** is IndexedDB: a `generations` store for the records and a `media` store for the Blobs (`gen_abc.png`, `gen_abc.mp4`, `up_xyz.jpg`), shown through object urls.
 - **Image jobs** are N parallel calls in the tab that submitted them. A call cannot be resumed: if that tab closes, the job is lost (OpenRouter still charges) and the next visit marks it failed as "Interrupted…" with a Retry button. The tab warns before unloading while images are in flight.
 - **Video jobs** are submitted to `/api/v1/videos` (or fal's queue), then polled every 6 seconds by whichever open tab holds the job's Web Lock. The finished clip is downloaded straight into IndexedDB (with the key from OpenRouter, without it from fal's CDN). A steward in every tab adopts video jobs nobody is driving, so closing and reopening the app resumes polling. Jobs only advance while a tab is open; nothing runs when the site is closed.

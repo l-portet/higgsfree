@@ -1,0 +1,274 @@
+/**
+ * Pure request builders for kie.ai: the app's options mapped onto each model family's fields
+ * (`KieVideoRoute` / `KieImageRoute` in the catalog). kie takes inputs by url only, so the media
+ * here are the urls the files were uploaded to (placeholders when only checking or pricing).
+ * A request a family cannot take throws a 400, which also keeps a run off kie when another
+ * provider can take it (`video-cost.ts`).
+ */
+import type { ImageAspectRatio, ImageModel, ImageSize, KieImageRoute, KieVideoRoute, VideoAspectRatio, VideoModel, VideoParams, VideoResolution } from "@shared/types";
+import { snapDuration } from "@shared/models";
+import { badRequest } from "./errors";
+
+export interface KiePayload {
+  /** createTask `model`. */
+  model: string;
+  input: Record<string, unknown>;
+  /** What `KIE_PRICES` is keyed by: the model id, or `model#tier`. */
+  priceKey: string;
+}
+
+// ---------- video ----------
+
+export interface KieVideoParams {
+  prompt: string;
+  duration: number;
+  aspectRatio?: VideoAspectRatio;
+  resolution?: VideoResolution;
+  audio?: boolean;
+}
+
+export interface KieVideoMedia {
+  firstFrame?: string;
+  lastFrame?: string;
+  /** Style references. */
+  references?: string[];
+  /** The video being edited. */
+  sourceVideo?: string;
+}
+
+export interface KieVideoPayload extends KiePayload {
+  /** What was actually requested, stored with the generation. */
+  params: VideoParams;
+}
+
+const range = (min: number, max: number): number[] => Array.from({ length: max - min + 1 }, (_, i) => min + i);
+
+/** Each family's durations (seconds), aspect ratios and resolutions, as kie spells them. */
+const VIDEO_LIMITS: Record<KieVideoRoute["family"], { durations?: number[]; aspects?: VideoAspectRatio[]; resolutions?: Partial<Record<VideoResolution, string>> }> = {
+  veo: { durations: [4, 6, 8], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
+  kling3: { durations: range(3, 15), aspects: ["16:9", "9:16", "1:1"] },
+  seedance: { durations: range(4, 30), aspects: ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], resolutions: { "480p": "480p", "720p": "720p", "1080p": "1080p", "4K": "4k" } },
+  "minimax-h3": { durations: range(4, 15), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "768p": "768P", "2K": "2K" } },
+  wan3: { durations: range(2, 30), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "480p": "480P", "720p": "720P", "1080p": "1080P" } },
+  wan27: { durations: range(2, 15), aspects: ["16:9", "9:16", "1:1", "4:3", "3:4"], resolutions: { "720p": "720p", "1080p": "1080p" } },
+  grok: { durations: range(6, 30), aspects: ["2:3", "3:2", "1:1", "16:9", "9:16"], resolutions: { "480p": "480p", "720p": "720p", "1080p": "1080p" } },
+  grok15: { durations: range(1, 15), aspects: ["1:1", "16:9", "9:16", "3:2", "2:3"], resolutions: { "480p": "480p", "720p": "720p", "1080p": "1080p" } },
+  "gemini-omni": { durations: [4, 6, 8, 10], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
+  pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
+  vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2k", "4K": "4k" } },
+  "wan27-edit": { resolutions: { "720p": "720p", "1080p": "1080p" } },
+};
+
+/** "4–15 s" or "4, 6 or 8 s". */
+function durationsLabel(list: number[]): string {
+  const first = list[0];
+  const last = list[list.length - 1];
+  const contiguous = list.every((d, i) => i === 0 || d - (list[i - 1] ?? d) === 1);
+  if (contiguous && first !== undefined && last !== undefined) return `${first}–${last} s`;
+  return `${list.slice(0, -1).join(", ")} or ${last} s`;
+}
+
+/** Families whose clips always have sound: a run with the sound off goes elsewhere. */
+const ALWAYS_SOUND = new Set<KieVideoRoute["family"]>(["veo", "minimax-h3"]);
+
+export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, media: KieVideoMedia): KieVideoPayload {
+  const route = model.kie;
+  if (!route) throw badRequest(`${model.name} is not available on kie.ai`);
+  const on = `${model.name} on kie.ai`;
+  const limits = VIDEO_LIMITS[route.family];
+  const prompt = req.prompt.trim();
+  const first = media.firstFrame;
+  const last = media.lastFrame;
+  const refs = media.references ?? [];
+  const frames = Boolean(first || last);
+
+  if (Boolean(model.caps.videoEdit) !== (route.family === "wan27-edit")) throw badRequest(`${on} has no route for this kind of run`);
+  if (last && !first) throw badRequest(`${on} needs a first frame with the last frame`);
+  if (refs.length && (route.family !== "seedance" && route.family !== "wan3")) throw badRequest("Takes no style references");
+  if (refs.length && frames) throw badRequest("Takes frames or style references, not both");
+  if (req.audio === false && ALWAYS_SOUND.has(route.family)) throw badRequest("Always adds sound");
+
+  const params: VideoParams = { duration: model.caps.videoEdit ? 0 : snapDuration(model, req.duration) };
+  if (limits.durations && !limits.durations.includes(params.duration)) throw badRequest(`Takes clips of ${durationsLabel(limits.durations)}`);
+  const resolution = req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution;
+  let kieResolution: string | undefined;
+  if (limits.resolutions && resolution) {
+    kieResolution = limits.resolutions[resolution];
+    if (!kieResolution) throw badRequest(`Takes no ${resolution}`);
+    params.resolution = resolution;
+  }
+  // The ratio is sent for text-to-video (with a frame the clip follows it), and only one kie offers.
+  const aspect = !frames && req.aspectRatio && limits.aspects?.includes(req.aspectRatio) ? req.aspectRatio : undefined;
+  if (!frames && req.aspectRatio && limits.aspects && !aspect) throw badRequest(`Takes no ${req.aspectRatio}`);
+  if (aspect) params.aspectRatio = aspect;
+  const sound = (fallback: boolean): boolean => {
+    const wanted = req.audio ?? fallback;
+    if (model.caps.audio) params.audio = wanted;
+    return wanted;
+  };
+  const input: Record<string, unknown> = {};
+  let id = route.model;
+  let priceKey = route.model;
+
+  switch (route.family) {
+    case "veo":
+      Object.assign(input, { prompt, model: route.tier, generation_type: frames ? "FIRST_AND_LAST_FRAMES_2_VIDEO" : "TEXT_2_VIDEO", duration: params.duration, resolution: kieResolution });
+      if (frames) input.image_urls = [first, last].filter(Boolean);
+      input.aspect_ratio = aspect ?? (frames ? "Auto" : "16:9");
+      sound(true);
+      priceKey = `${route.model}#${route.tier}`;
+      break;
+    case "kling3":
+      Object.assign(input, { prompt, sound: sound(true), duration: String(params.duration), mode: route.tier, multi_shots: false });
+      if (frames) input.image_urls = [first, last].filter(Boolean);
+      if (aspect) input.aspect_ratio = aspect;
+      priceKey = `${route.model}#${route.tier}`;
+      break;
+    case "seedance":
+      if (prompt.length < 3) throw badRequest("Needs a prompt of 3 characters or more");
+      Object.assign(input, { prompt, generate_audio: sound(true), resolution: kieResolution, duration: params.duration, aspect_ratio: aspect ?? "adaptive" });
+      if (first) input.first_frame_url = first;
+      if (last) input.last_frame_url = last;
+      if (refs.length) input.reference_image_urls = refs;
+      break;
+    case "minimax-h3":
+      if (!prompt) throw badRequest("Needs a prompt");
+      Object.assign(input, { prompt, duration: params.duration, resolution: kieResolution });
+      sound(true);
+      if (frames) {
+        id = route.imageModel ?? route.model;
+        if (first) input.first_frame_url = first;
+        if (last) input.last_frame_url = last;
+      } else input.aspect_ratio = aspect ?? "16:9";
+      priceKey = "minimax-h3";
+      break;
+    case "wan3":
+      Object.assign(input, { prompt, resolution: kieResolution, duration: params.duration, aspect_ratio: aspect ?? "adaptive", audio: sound(true) });
+      if (first) input.first_frame_url = first;
+      if (last) input.last_frame_url = last;
+      if (refs.length) input.reference_image_urls = refs;
+      break;
+    case "wan27":
+      if (!prompt) throw badRequest("Needs a prompt");
+      Object.assign(input, { prompt, resolution: kieResolution, duration: params.duration });
+      if (frames) {
+        id = route.imageModel ?? route.model;
+        if (first) input.first_frame_url = first;
+        if (last) input.last_frame_url = last;
+      } else input.ratio = aspect ?? "16:9";
+      priceKey = "wan/2-7";
+      break;
+    case "grok":
+      if (frames) {
+        id = route.imageModel ?? route.model;
+        Object.assign(input, { image_urls: [first], duration: String(params.duration) });
+        if (prompt) input.prompt = prompt;
+      } else {
+        if (!prompt) throw badRequest("Needs a prompt");
+        Object.assign(input, { prompt, duration: params.duration, aspect_ratio: aspect ?? "16:9" });
+      }
+      Object.assign(input, { mode: "normal", resolution: kieResolution });
+      priceKey = "grok-imagine";
+      break;
+    case "grok15":
+      Object.assign(input, { duration: params.duration, resolution: kieResolution, aspect_ratio: aspect ?? "auto" });
+      if (prompt) input.prompt = prompt;
+      else if (!frames) throw badRequest("Needs a prompt");
+      if (first) input.image_urls = [first];
+      break;
+    case "gemini-omni":
+      if (!prompt) throw badRequest("Needs a prompt");
+      Object.assign(input, { prompt, duration: String(params.duration), resolution: kieResolution });
+      if (aspect) input.aspect_ratio = aspect;
+      if (first) input.first_frame_url = first;
+      if (last) input.last_frame_url = last;
+      break;
+    case "pixverse":
+      if (prompt.length < 3) throw badRequest("Needs a prompt of 3 characters or more");
+      Object.assign(input, { prompt, quality: kieResolution, duration: params.duration, generate_audio_switch: sound(false) });
+      if (frames) {
+        id = route.imageModel ?? route.model;
+        input.image_urls = [first];
+      } else input.aspect_ratio = aspect ?? "16:9";
+      priceKey = "pixverse-v6";
+      break;
+    case "vidu":
+      if (!first) throw badRequest("Needs a first frame");
+      Object.assign(input, { image_url: first, duration: params.duration, resolution: kieResolution, audio: sound(true) });
+      if (prompt) input.prompt = prompt;
+      break;
+    case "wan27-edit":
+      if (!media.sourceVideo) throw badRequest("Video editing needs a video to edit");
+      Object.assign(input, { prompt, video_url: media.sourceVideo, resolution: kieResolution });
+      break;
+  }
+  if (last && (route.family === "grok" || route.family === "grok15" || route.family === "pixverse" || route.family === "vidu")) throw badRequest("Takes no last frame");
+  return { model: id, input, priceKey, params };
+}
+
+// ---------- images ----------
+
+export interface KieImageParams {
+  prompt: string;
+  aspectRatio: ImageAspectRatio;
+  size: ImageSize;
+}
+
+/** Each family's aspect ratios (`auto` = kie's own default) and how many reference images it takes. */
+const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[]; maxRefs: number; sizes?: boolean }> = {
+  "nano-banana": { aspects: ["auto", "1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3", "5:4", "4:5", "21:9"], maxRefs: 10 },
+  "nano-banana-2": { aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"], maxRefs: 8, sizes: true },
+  "nano-banana-lite": { aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"], maxRefs: 10 },
+  "gpt-image-2": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"], maxRefs: 16, sizes: true },
+  "flux-kontext": { aspects: ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], maxRefs: 1 },
+  "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16"], maxRefs: 0 },
+};
+
+export function buildKieImagePayload(model: ImageModel, req: KieImageParams, referenceUrls: string[]): KiePayload {
+  const route = model.kie;
+  if (!route) throw badRequest(`${model.name} is not available on kie.ai`);
+  const limits = IMAGE_LIMITS[route.family];
+  if (referenceUrls.length > limits.maxRefs) throw badRequest(limits.maxRefs ? `Takes up to ${limits.maxRefs} reference image${limits.maxRefs > 1 ? "s" : ""}` : "Takes no reference images");
+  if (!limits.aspects.includes(req.aspectRatio)) throw badRequest(`Takes no ${req.aspectRatio}`);
+  const edit = referenceUrls.length > 0;
+  const input: Record<string, unknown> = { prompt: req.prompt };
+  let id = route.model;
+  let priceKey = route.model;
+  switch (route.family) {
+    case "nano-banana":
+      if (edit) {
+        id = route.editModel ?? route.model;
+        input.image_urls = referenceUrls;
+      }
+      Object.assign(input, { aspect_ratio: req.aspectRatio, output_format: "png" });
+      priceKey = "google/nano-banana";
+      break;
+    case "nano-banana-2":
+      Object.assign(input, { aspect_ratio: req.aspectRatio, resolution: req.size, output_format: "png" });
+      if (edit) input.image_input = referenceUrls;
+      break;
+    case "nano-banana-lite":
+      input.aspect_ratio = req.aspectRatio;
+      if (edit) input.image_urls = referenceUrls;
+      break;
+    case "gpt-image-2":
+      Object.assign(input, { aspect_ratio: req.aspectRatio, resolution: req.size });
+      if (edit) {
+        id = route.editModel ?? route.model;
+        input.input_urls = referenceUrls;
+      }
+      priceKey = "gpt-image-2";
+      break;
+    case "flux-kontext":
+      Object.assign(input, { model: route.tier, output_format: "png" });
+      if (req.aspectRatio !== "auto") input.aspect_ratio = req.aspectRatio;
+      if (edit) input.input_image = referenceUrls[0];
+      priceKey = `${route.model}#${route.tier}`;
+      break;
+    case "z-image":
+      input.aspect_ratio = req.aspectRatio === "auto" ? "1:1" : req.aspectRatio;
+      break;
+  }
+  if (limits.sizes === undefined && req.size !== "1K" && model.supportsImageSize) throw badRequest(`Takes no ${req.size}`);
+  return { model: id, input, priceKey };
+}
