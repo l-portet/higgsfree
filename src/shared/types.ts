@@ -5,7 +5,7 @@
 
 export type GenerationType = "image" | "video";
 /** Who runs a generation. A model can be offered by several. */
-export type ProviderId = "openrouter" | "fal" | "kie";
+export type ProviderId = "openrouter" | "fal" | "kie" | "apimart";
 /** Motion control: whose orientation the character keeps (fal caps the reference video at 30 s for `video`, 10 s for `image`). */
 export type MotionOrientation = "video" | "image";
 export type GenerationStatus = "pending" | "running" | "completed" | "failed";
@@ -126,7 +126,7 @@ export interface FolderRequest {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "fal" | "openrouter" | "kie";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "fal" | "openrouter" | "kie" | "apimart";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -165,7 +165,9 @@ export interface ImageModel {
   fal?: FalImageRoute;
   /** kie.ai serves it too. */
   kie?: KieImageRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`). */
+  /** APIMart serves it too. */
+  apimart?: ApimartImageRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`). */
   offOpenRouter?: boolean;
 }
 
@@ -227,7 +229,9 @@ export interface VideoModel {
   fal?: FalVideoRoute;
   /** kie.ai serves it too. */
   kie?: KieVideoRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`). */
+  /** APIMart serves it too. */
+  apimart?: ApimartVideoRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`). */
   offOpenRouter?: boolean;
 }
 
@@ -310,6 +314,27 @@ export interface KieImageRoute {
 }
 
 export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "flux-kontext" | "z-image";
+
+/**
+ * How APIMart serves a model: `POST /v1/videos/generations` or `/v1/images/generations` with `{ model, prompt, … }`.
+ * The fields differ by model family (one builder each in `apimart-payloads.ts`); `model` is APIMart's id.
+ */
+export interface ApimartVideoRoute {
+  family: ApimartVideoFamily;
+  model: string;
+  /** A tier sent in its own field: Kling's `mode` (`std`, `pro`). */
+  tier?: string;
+}
+
+export type ApimartVideoFamily =
+  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "pixverse" | "gemini-omni" | "flux3" | "vidu";
+
+export interface ApimartImageRoute {
+  family: ApimartImageFamily;
+  model: string;
+}
+
+export type ApimartImageFamily = "gemini" | "gpt-image-2" | "flux-kontext" | "z-image";
 
 export interface ModelsResponse {
   image: ImageModel[];

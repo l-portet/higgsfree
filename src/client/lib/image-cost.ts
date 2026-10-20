@@ -5,6 +5,8 @@
  */
 import type { ImageAspectRatio, ImageModel, ImageSize, ProviderId } from "@shared/types";
 import { estimateImageCost } from "@shared/models";
+import { buildApimartImagePayload } from "./apimart-payloads";
+import { estimateApimartImageCost } from "./apimart-pricing";
 import { buildFalImagePayload } from "./fal-payloads";
 import { estimateFalImageCost } from "./fal-pricing";
 import { buildKieImagePayload } from "./kie-payloads";
@@ -50,6 +52,10 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
     case "kie": {
       const why = refusal(() => buildKieImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
       return why ? { refusal: why } : usd(estimateKieImageCost(model, req, req.count, withRefs));
+    }
+    case "apimart": {
+      const why = refusal(() => buildApimartImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
+      return why ? { refusal: why } : usd(estimateApimartImageCost(model, req, req.count, withRefs));
     }
   }
 }

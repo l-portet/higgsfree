@@ -1,12 +1,13 @@
 /**
  * What a video costs on each provider that offers its model, and who runs it: the cheapest of OpenRouter,
- * fal and kie.ai that can take the request. The preference in Settings breaks a tie, and decides while no
+ * fal, kie.ai and APIMart that can take the request. The preference in Settings breaks a tie, and decides while no
  * price is known (an edit before its video's length is). The composer shows the comparison next to
  * Generate and the engine routes the run with the same rule, so the two always agree.
  */
 import type { ProviderId, VideoAspectRatio, VideoModel, VideoResolution } from "@shared/types";
 import { editedLength, estimateVideoCost, snapDuration } from "@shared/models";
 import { estimateFalVideoCost, falVideoPayloadFor } from "./fal-pricing";
+import { apimartVideoPayloadFor, estimateApimartVideoCost } from "./apimart-pricing";
 import { estimateKieVideoCost, kieVideoPayloadFor } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
 
@@ -53,7 +54,7 @@ export interface VideoQuote {
 }
 
 /** Prices closer than half a cent are the same price (the providers round differently). */
-const SAME_PRICE_USD = 0.005;
+export const SAME_PRICE_USD = 0.005;
 
 function openRouterUsd(model: VideoModel, req: VideoQuoteRequest): number | undefined {
   if (model.caps.videoEdit) return req.videoSec === undefined ? undefined : estimateVideoCost(model, editedLength(model, req.videoSec), req.resolution);
@@ -80,6 +81,8 @@ function priceOn(provider: ProviderId, model: VideoModel, req: VideoQuoteRequest
       return quoted(() => falVideoPayloadFor(model, req), () => estimateFalVideoCost(model, req, now));
     case "kie":
       return quoted(() => kieVideoPayloadFor(model, req), () => estimateKieVideoCost(model, req));
+    case "apimart":
+      return quoted(() => apimartVideoPayloadFor(model, req), () => estimateApimartVideoCost(model, req));
   }
 }
 

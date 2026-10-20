@@ -58,7 +58,7 @@ const falCalls = (): string[] => mock.seen.filter((s) => s.host !== "openrouter.
 describe("who runs a model", () => {
   it("only an OpenRouter key: a fal-only model is refused with the reason, nothing is created", async () => {
     setStoredKey("test-key");
-    await expect(image({ model: "fal/z-image-turbo" })).rejects.toMatchObject({ status: 401, error: "Z-Image Turbo needs a fal or kie.ai key. Add one in Settings to use it." });
+    await expect(image({ model: "fal/z-image-turbo" })).rejects.toMatchObject({ status: 401, error: "Z-Image Turbo needs a fal, kie.ai or APIMart key. Add one in Settings to use it." });
     expect((await api.listGenerations()).items).toHaveLength(0);
   });
 

@@ -1,0 +1,141 @@
+/** APIMart request builders and prices: each family's fields, what APIMart refuses, and what a run costs there. */
+import { describe, expect, it } from "vitest";
+import { APIMART_PRICES } from "@shared/apimart-prices";
+import { findImageModel, findVideoModel, IMAGE_MODELS, VIDEO_MODELS } from "@shared/models";
+import type { ImageModel, VideoModel } from "@shared/types";
+import { resultUrls } from "../apimart";
+import { buildApimartImagePayload, buildApimartVideoPayload } from "../apimart-payloads";
+import { apimartVideoPayloadFor, estimateApimartImageCost, estimateApimartVideoCost } from "../apimart-pricing";
+
+const video = (id: string): VideoModel => {
+  const m = findVideoModel(id);
+  if (!m) throw new Error(`catalog has no ${id}`);
+  return m;
+};
+const image = (id: string): ImageModel => {
+  const m = findImageModel(id);
+  if (!m) throw new Error(`catalog has no ${id}`);
+  return m;
+};
+
+describe("buildApimartVideoPayload", () => {
+  it("Veo 3.1: 8 s clips, frames as `image_urls` with `generation_type: frame`; Lite takes none", () => {
+    expect(buildApimartVideoPayload(video("google/veo-3.1-fast"), { prompt: "p", duration: 8, aspectRatio: "9:16", resolution: "4K" }, {})).toEqual({
+      kind: "videos",
+      body: { model: "veo3.1-fast", prompt: "p", duration: 8, resolution: "4k", aspect_ratio: "9:16" },
+      priceKey: "veo3.1-fast",
+      params: { duration: 8, resolution: "4K", aspectRatio: "9:16", audio: true },
+    });
+    expect(buildApimartVideoPayload(video("google/veo-3.1"), { prompt: "p", duration: 8 }, { firstFrame: "https://a", lastFrame: "https://b" }).body).toMatchObject({
+      generation_type: "frame",
+      image_urls: ["https://a", "https://b"],
+    });
+    expect(() => buildApimartVideoPayload(video("google/veo-3.1"), { prompt: "p", duration: 6 }, {})).toThrow("Takes clips of 8 s");
+    expect(() => buildApimartVideoPayload(video("google/veo-3.1-lite"), { prompt: "p", duration: 8 }, { firstFrame: "https://a" })).toThrow("Takes no frames");
+  });
+
+  it("Seedance: `size`, and frames and references as roles", () => {
+    const m = video("bytedance/seedance-2.0");
+    expect(buildApimartVideoPayload(m, { prompt: "a fox", duration: 6, resolution: "1080p", audio: false }, { firstFrame: "https://a", lastFrame: "https://b" })).toEqual({
+      kind: "videos",
+      body: {
+        model: "seedance-2.0",
+        prompt: "a fox",
+        size: "adaptive",
+        resolution: "1080p",
+        duration: 6,
+        generate_audio: false,
+        image_with_roles: [
+          { url: "https://a", role: "first_frame" },
+          { url: "https://b", role: "last_frame" },
+        ],
+      },
+      priceKey: "seedance-2.0",
+      params: { duration: 6, resolution: "1080p", audio: false },
+    });
+    expect(buildApimartVideoPayload(m, { prompt: "a fox", duration: 5 }, { references: ["https://r"] }).body).toMatchObject({ image_with_roles: [{ url: "https://r", role: "reference_image" }] });
+  });
+
+  it("maps the other families' own field names", () => {
+    expect(buildApimartVideoPayload(video("minimax/hailuo-3"), { prompt: "p", duration: 6 }, { firstFrame: "https://a" }).body).toEqual({
+      model: "MiniMax-H3",
+      prompt: "p",
+      duration: 6,
+      resolution: "2K",
+      first_frame_image: "https://a",
+    });
+    expect(buildApimartVideoPayload(video("kwaivgi/kling-v3.0-pro"), { prompt: "p", duration: 7, aspectRatio: "1:1", audio: true }, {}).body).toEqual({
+      model: "kling-v3",
+      prompt: "p",
+      mode: "pro",
+      duration: 7,
+      aspect_ratio: "1:1",
+      audio: true,
+    });
+    expect(buildApimartVideoPayload(video("kwaivgi/kling-video-o1"), { prompt: "p", duration: 5 }, { firstFrame: "https://a" }).body).toMatchObject({
+      mode: "std",
+      image_with_roles: [{ url: "https://a", role: "first_frame" }],
+    });
+    expect(buildApimartVideoPayload(video("black-forest-labs/flux-3-video"), { prompt: "p", duration: 12, resolution: "1080p" }, {}).body).toMatchObject({ resolution: "fhd", aspect_ratio: "auto" });
+    expect(buildApimartVideoPayload(video("fal/vidu-q4"), { prompt: "", duration: 5, resolution: "2K" }, { firstFrame: "https://a" }).body).toMatchObject({ first_frame_image: "https://a", resolution: "2K" });
+  });
+
+  it("refuses what the family cannot do", () => {
+    expect(() => buildApimartVideoPayload(video("minimax/hailuo-2.3"), { prompt: "p", duration: 10, resolution: "1080p" }, {})).toThrow("Takes 6 s clips at 1080p");
+    expect(() => buildApimartVideoPayload(video("fal/gemini-omni-flash-1.1"), { prompt: "p", duration: 8 }, { firstFrame: "https://a", lastFrame: "https://b" })).toThrow("Takes no last frame");
+    expect(() => buildApimartVideoPayload(video("minimax/hailuo-3"), { prompt: "p", duration: 6, audio: false }, {})).toThrow("Always adds sound");
+    expect(() => buildApimartVideoPayload(video("kwaivgi/kling-v3.0-pro"), { prompt: "", duration: 5 }, {})).toThrow("Needs a prompt");
+  });
+});
+
+describe("buildApimartImagePayload", () => {
+  it("sends the ratio as `size`, one image, and references as urls", () => {
+    expect(buildApimartImagePayload(image("google/gemini-3-pro-image"), { prompt: "p", aspectRatio: "16:9", size: "4K" }, ["https://r"])).toEqual({
+      kind: "images",
+      body: { model: "gemini-3-pro-image-preview", prompt: "p", n: 1, image_urls: ["https://r"], size: "16:9", resolution: "4K" },
+      priceKey: "gemini-3-pro-image-preview",
+    });
+    expect(buildApimartImagePayload(image("openai/gpt-image-2"), { prompt: "p", aspectRatio: "auto", size: "2K" }, []).body).toMatchObject({ resolution: "2k" });
+    expect(buildApimartImagePayload(image("fal/z-image-turbo"), { prompt: "p", aspectRatio: "auto", size: "1K" }, []).body).toEqual({
+      model: "z-image-turbo",
+      prompt: "p",
+      n: 1,
+      size: "1:1",
+      resolution: "1K",
+      prompt_extend: false,
+    });
+  });
+});
+
+describe("resultUrls", () => {
+  it("reads every url of every item, given as a list or a string", () => {
+    expect(resultUrls({ videos: [{ url: ["https://a.mp4"], expires_at: 1 }] })).toEqual(["https://a.mp4"]);
+    expect(resultUrls({ images: [{ url: ["https://b.png", "https://c.png"] }, { url: "https://d.png" }] })).toEqual(["https://b.png", "https://c.png", "https://d.png"]);
+    expect(resultUrls(undefined)).toEqual([]);
+  });
+});
+
+describe("APIMart prices", () => {
+  it("price every route at its defaults, and nothing else", () => {
+    const used = new Set<string>();
+    for (const m of VIDEO_MODELS.filter((v) => v.apimart && !v.hidden)) {
+      const durations: Partial<Record<string, number>> = { veo: 8, "gemini-omni": 8 };
+      const req = { prompt: "a prompt", duration: durations[m.apimart?.family ?? ""] ?? m.defaultDuration, firstFrame: !m.caps.textToVideo };
+      used.add(apimartVideoPayloadFor(m, req).priceKey);
+      expect(estimateApimartVideoCost(m, req), `${m.id} on APIMart`).toBeGreaterThan(0);
+    }
+    for (const m of IMAGE_MODELS.filter((i) => i.apimart)) {
+      used.add(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []).priceKey);
+      expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on APIMart`).toBeGreaterThan(0);
+    }
+    expect(Object.keys(APIMART_PRICES).filter((k) => !used.has(k))).toEqual([]);
+  });
+
+  it("price by the second, the clip or the image, with or without sound", () => {
+    expect(estimateApimartVideoCost(video("kwaivgi/kling-v3.0-pro"), { prompt: "p", duration: 5, audio: true })).toBeCloseTo(0.672);
+    expect(estimateApimartVideoCost(video("kwaivgi/kling-v3.0-pro"), { prompt: "p", duration: 5, audio: false })).toBeCloseTo(0.448);
+    expect(estimateApimartVideoCost(video("google/veo-3.1"), { prompt: "p", duration: 8, resolution: "1080p" })).toBeCloseTo(1);
+    expect(estimateApimartVideoCost(video("fal/gemini-omni-flash-1.1"), { prompt: "p", duration: 10, resolution: "4K" })).toBeCloseTo(0.9);
+    expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, false)).toBeCloseTo(0.12);
+  });
+});

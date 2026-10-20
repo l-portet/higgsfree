@@ -1,20 +1,21 @@
 /**
- * Which provider runs a model: OpenRouter, fal, kie.ai, or several. An image goes to the preferred one
+ * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, or several. An image goes to the preferred one
  * (OpenRouter unless Settings say otherwise) among those with a key; a video to the cheapest
  * (`video-cost.ts`). A model whose providers have no key cannot run; the composer says why.
  */
 import type { CatalogModel, ProviderId } from "@shared/types";
 
 /** Every provider, in the order they are listed (OpenRouter first). */
-export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie"];
+export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart"];
 
-export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai" };
+export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart" };
 
 /** Where to get a key, the host it is sent to, and what one looks like. */
 export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; placeholder: string }> = {
   openrouter: { url: "https://openrouter.ai/keys", host: "openrouter.ai", placeholder: "sk-or-v1-…" },
   fal: { url: "https://fal.ai/dashboard/keys", host: "fal.ai", placeholder: "key-id:key-secret" },
   kie: { url: "https://kie.ai/api-key", host: "kie.ai", placeholder: "Your kie.ai API key" },
+  apimart: { url: "https://apimart.ai/keys", host: "apimart.ai", placeholder: "sk-…" },
 };
 
 export function isProviderId(v: unknown): v is ProviderId {
@@ -25,11 +26,12 @@ export function isProviderId(v: unknown): v is ProviderId {
 export type ProviderKeys = Partial<Record<ProviderId, boolean>>;
 
 /** Providers that serve the model, OpenRouter first. */
-export function modelProviders(m: Pick<CatalogModel, "fal" | "kie" | "offOpenRouter">): ProviderId[] {
+export function modelProviders(m: Pick<CatalogModel, "fal" | "kie" | "apimart" | "offOpenRouter">): ProviderId[] {
   const out: ProviderId[] = [];
   if (!m.offOpenRouter) out.push("openrouter");
   if (m.fal) out.push("fal");
   if (m.kie) out.push("kie");
+  if (m.apimart) out.push("apimart");
   return out;
 }
 
@@ -40,7 +42,7 @@ export interface ProviderChoice {
   missing: ProviderId[];
 }
 
-type Routed = Pick<CatalogModel, "fal" | "kie" | "offOpenRouter">;
+type Routed = Pick<CatalogModel, "fal" | "kie" | "apimart" | "offOpenRouter">;
 
 export function chooseProvider(m: Routed, keys: ProviderKeys, preferred: ProviderId): ProviderChoice {
   const offered = modelProviders(m);

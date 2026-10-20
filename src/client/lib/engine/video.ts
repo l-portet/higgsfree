@@ -4,9 +4,9 @@
  * exists, so a pending video without a polling url whose lock is free can only be a submit that
  * died with its tab.
  *
- * Three providers share that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
- * the Bearer key), fal (queue submit, `status_url`, result json with a public CDN url) and kie.ai
- * (inputs uploaded first, `createTask`, `recordInfo` with the result urls and the credits charged).
+ * Four providers share that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
+ * the Bearer key), fal (queue submit, `status_url`, result json with a public CDN url), and kie.ai and
+ * APIMart (`task-providers.ts`: inputs uploaded first, a task polled until its result urls and cost are there).
  */
 import type { Generation, GenerationInputs, MotionOrientation, ProviderId, VideoGenerateRequest, VideoModel, VideoParams } from "@shared/types";
 import { lookupVideoModel } from "../catalog";
@@ -16,8 +16,7 @@ import type { MediaRow } from "../db/schema";
 import { ApiClientError, badRequest, conflict } from "../errors";
 import * as fal from "../fal";
 import { buildFalVideoPayload } from "../fal-payloads";
-import * as kie from "../kie";
-import { buildKieVideoPayload } from "../kie-payloads";
+import { isTaskProvider, TASK_PROVIDERS, type TaskProvider } from "../task-providers";
 import { publish } from "../live";
 import { errorMessage, log } from "../log";
 import { newGenerationId, outputMediaId } from "../media-ids";
@@ -42,7 +41,7 @@ const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$
 const isPermanent = (err: unknown): boolean =>
   err instanceof or.ForeignOriginError ||
   err instanceof fal.FalOriginError ||
-  err instanceof kie.KieOriginError ||
+  Object.values(TASK_PROVIDERS).some((tp) => tp.isOriginError(err)) ||
   (err instanceof ApiClientError && [400, 404, 422].includes(err.status));
 
 // ---------- a pause that ends early when the tab becomes visible or the job is cancelled ----------
@@ -189,34 +188,36 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
     };
   }
 
-  if (provider === "kie") {
+  if (isTaskProvider(provider)) {
+    const tp = TASK_PROVIDERS[provider];
     const refDataUrls = await inputDataUrls(inputs.referenceImages ?? []);
     const sourceVideo = inputs.sourceVideo;
     const params = { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio };
     // Checked now with placeholders (a refusal is a 400 before anything exists), sent at submit with the uploaded urls.
     const placeholder = "https://pending-upload";
-    const planned = buildKieVideoPayload(model, params, {
+    const planned = tp.video(model, params, {
       firstFrame: frames.firstFrame && placeholder,
       lastFrame: frames.lastFrame && placeholder,
       references: refDataUrls.map(() => placeholder),
       sourceVideo: sourceVideo && placeholder,
     });
     return {
-      id, provider, model, prompt, inputs, params: planned.params,
-      summary: `model=${planned.model} duration=${planned.params.duration}s res=${planned.params.resolution ?? "-"} ar=${planned.params.aspectRatio ?? "-"} audio=${planned.params.audio ?? "-"}`,
+      id, provider, model, prompt, inputs, params: planned.params ?? { duration: req.duration },
+      summary: planned.summary,
       submit: async (signal) => {
-        // kie takes inputs by url only: each one goes to kie's file host first (kept 24 h).
-        const upload = (dataUrl: string | undefined): Promise<string | undefined> => (dataUrl ? kie.uploadDataUrl(key, dataUrl, signal) : Promise.resolve(undefined));
+        // Inputs by url only: each one goes to the provider's file host first.
+        const upload = (dataUrl: string | undefined): Promise<string | undefined> => (dataUrl ? tp.uploadImage(key, dataUrl, signal) : Promise.resolve(undefined));
         const [firstFrame, lastFrame, ...references] = await Promise.all([upload(frames.firstFrame), upload(frames.lastFrame), ...refDataUrls.map(upload)]);
         let sourceUrl: string | undefined;
         if (sourceVideo) {
           const blob = await getMediaBlob(sourceVideo);
           if (!blob) throw badRequest(`Video to edit is no longer in the library (${sourceVideo})`);
-          sourceUrl = await kie.uploadFile(key, blob, sourceVideo, signal);
+          if (!tp.uploadVideo) throw badRequest(`${tp.name} cannot take a video`);
+          sourceUrl = await tp.uploadVideo(key, blob, sourceVideo, signal);
         }
-        const payload = buildKieVideoPayload(model, params, { firstFrame, lastFrame, references: references.filter((u): u is string => Boolean(u)), sourceVideo: sourceUrl });
-        const taskId = await kie.createTask(key, payload.model, payload.input, signal);
-        return { jobId: taskId, pollingUrl: kie.taskUrl(taskId) };
+        const request = tp.video(model, params, { firstFrame, lastFrame, references: references.filter((u): u is string => Boolean(u)), sourceVideo: sourceUrl });
+        const taskId = await request.submit(key, signal);
+        return { jobId: taskId, pollingUrl: tp.taskUrl(taskId) };
       },
     };
   }
@@ -351,18 +352,17 @@ async function pollOpenRouter(key: string, job: VideoJob, signal: AbortSignal): 
   return poll.error ? { kind: "failed", error: poll.error } : { kind: "pending", unknownStatus: poll.status };
 }
 
-async function pollKie(key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
-  const t = await kie.task(key, job.pollingUrl, signal);
-  if (t.state === "fail") return { kind: "failed", error: t.error ?? "kie.ai reported a failure" };
-  if (t.state === "success") {
+async function pollTask(tp: TaskProvider, key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
+  const t = await tp.status(key, job.pollingUrl, signal);
+  if (t.state === "failed") return { kind: "failed", error: t.error ?? `${tp.name} reported a failure` };
+  if (t.state === "done") {
     const url = t.urls[0];
-    if (!url) return { kind: "failed", error: "kie.ai reported success but returned no video url" };
-    const out: PollOutcome = { kind: "done", download: () => kie.download(url, signal) };
+    if (!url) return { kind: "failed", error: `${tp.name} reported success but returned no video url` };
+    const out: PollOutcome = { kind: "done", download: () => tp.download(url, signal) };
     if (t.costUsd !== undefined) out.costUsd = t.costUsd;
     return out;
   }
-  if (t.state === "waiting" || t.state === "queuing" || t.state === "generating") return { kind: "pending" };
-  return { kind: "pending", unknownStatus: t.state };
+  return t.raw.startsWith("unknown:") ? { kind: "pending", unknownStatus: t.raw.slice(8) } : { kind: "pending" };
 }
 
 async function pollFal(key: string, job: VideoJob, signal: AbortSignal): Promise<PollOutcome> {
@@ -384,7 +384,12 @@ export async function pollLoop(job: VideoJob, signal: AbortSignal): Promise<void
     if (key) {
       let outcome: PollOutcome | undefined;
       try {
-        outcome = job.provider === "fal" ? await pollFal(key, job, signal) : job.provider === "kie" ? await pollKie(key, job, signal) : await pollOpenRouter(key, job, signal);
+        outcome =
+          job.provider === "fal"
+            ? await pollFal(key, job, signal)
+            : isTaskProvider(job.provider)
+              ? await pollTask(TASK_PROVIDERS[job.provider], key, job, signal)
+              : await pollOpenRouter(key, job, signal);
       } catch (err) {
         if (signal.aborted) return;
         if (isPermanent(err)) {

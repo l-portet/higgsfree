@@ -17,7 +17,7 @@ describe("quoteVideo", () => {
   it("runs a video on the cheaper provider, whatever the preference", () => {
     const q = quoteVideo(video("bytedance/seedance-2.5"), { duration: 5, resolution: "720p", aspectRatio: "16:9", audio: true }, BOTH, "fal", NOW);
     expect(q).toMatchObject({ provider: "openrouter", reason: "cheaper" });
-    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie"]);
+    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(usd(q).openrouter).toBeCloseTo(1.1555);
     expect(usd(q).fal).toBeCloseTo(2.365);
     const pricier = { ...video("bytedance/seedance-2.5"), estCostPerSecUsd: { "720p": 1 } };
@@ -26,9 +26,9 @@ describe("quoteVideo", () => {
 
   it("lets the preference decide at the same price, with the sound on or off", () => {
     const kling = video("kwaivgi/kling-v3.0-pro");
-    const silent = quoteVideo(kling, { duration: 5, audio: false }, BOTH, "fal", NOW);
+    const silent = quoteVideo(kling, { prompt: "a fox", duration: 5, audio: false }, BOTH, "fal", NOW);
     expect(silent).toMatchObject({ provider: "fal", reason: "tie" });
-    expect(usd(silent)).toEqual({ openrouter: expect.closeTo(0.56), fal: expect.closeTo(0.56), kie: expect.closeTo(0.45) });
+    expect(usd(silent)).toEqual({ openrouter: expect.closeTo(0.56), fal: expect.closeTo(0.56), kie: expect.closeTo(0.45), apimart: expect.closeTo(0.448) });
     expect(quoteVideo(kling, { duration: 5, audio: true }, BOTH, "openrouter", NOW)).toMatchObject({ provider: "openrouter", reason: "tie" });
   });
 
@@ -52,7 +52,7 @@ describe("quoteVideo", () => {
     // Veo 3.1 at 1080p, 8 s with sound: $3.20 on OpenRouter, $1.275 a clip on kie.
     const veo = quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio: true }, ALL, "openrouter", NOW);
     expect(veo).toMatchObject({ provider: "kie", reason: "cheaper" });
-    expect(usd(veo)).toEqual({ openrouter: expect.closeTo(3.2), kie: expect.closeTo(1.275) });
+    expect(usd(veo)).toEqual({ openrouter: expect.closeTo(3.2), kie: expect.closeTo(1.275), apimart: expect.closeTo(1) }); // APIMart has no key here
     // kie's Veo always has sound: with it off, OpenRouter runs it.
     const silent = quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio: false }, ALL, "kie", NOW);
     expect(silent).toMatchObject({ provider: "openrouter", reason: "one-ready" });

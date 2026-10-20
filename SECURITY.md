@@ -86,8 +86,11 @@ image and video to edit is uploaded to kie's file host (`kieai.redpandaai.co`) f
 kie's results are public urls on its CDN (`*.aiquickdraw.com`) for 14 days; the app downloads them without
 the key.
 
-The app does not keep these urls, but fal and kie.ai have them. Treat anything you send to either, and
-anything they make, as reachable by url.
+On APIMart, each frame and reference image is uploaded to its file host (`upload.apimart.ai`) first and kept
+there 72 hours; its results are public urls on the same host, for 24 to 72 hours. APIMart takes no video.
+
+The app does not keep these urls, but the providers have them. Treat anything you send to fal, kie.ai or
+APIMart, and anything they make, as reachable by url.
 
 ## What a hosted copy can see
 

@@ -217,6 +217,22 @@ what each run cost.
 | PixVerse 6, Vidu Q4 | `pixverse-v6/…`, `vidu-q4/image-to-video` | | |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | | |
 
+### APIMart
+
+With an APIMart key, these also run on APIMart ([APIMART.md](APIMART.md)), at its Gold-tier prices
+(`APIMART_PRICES`), and a video goes there whenever it is the cheapest for that run. APIMart records what each
+run cost. It takes no video input, so editing and motion control never go there.
+
+| Video | APIMart model | Image | APIMart model |
+|---|---|---|---|
+| Veo 3.1 / Fast / Lite (8 s) | `veo3.1-quality`, `veo3.1-fast`, `veo3.1-lite` | Nano Banana Pro | `gemini-3-pro-image-preview` |
+| Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
+| MiniMax H3, H3 Max, Hailuo 2.3 | `MiniMax-H3`, `MiniMax-H3-Max`, `MiniMax-Hailuo-2.3` | Nano Banana 2 Lite | `gemini-3.1-flash-lite-image-ext` |
+| Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
+| Kling 3.0 Pro / Standard, Kling O1 | `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2 | `gpt-image-2` |
+| PixVerse 6, Vidu Q4 | `pixverse-v6`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
+| Gemini Omni Flash 1.1, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
+
 ### Models on both
 
 These are in the OpenRouter tables above and also have a fal route. With both keys, a video runs on
@@ -386,7 +402,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `verified` | `true` only after the checklist below. For a model on both, it is about the OpenRouter route. |
 | `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
 | `kie` | How kie.ai serves the model (`KieImageRoute`): its `family` (which builder maps the fields), the createTask `model`, an `editModel` used with references, a `tier`. See [KIE.md](KIE.md#image-fields-buildkieimagepayload). |
-| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`), and is never looked up in OpenRouter's catalogs. |
+| `apimart` | How APIMart serves the model (`ApimartImageRoute`): its `family` and APIMart's `model` id. See [APIMART.md](APIMART.md#image-fields-buildapimartimagepayload). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`), and is never looked up in OpenRouter's catalogs. |
 
 ### `VideoModel` fields
 
@@ -414,7 +431,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `discovered` | Set by the browser (`src/client/lib/catalog.ts`), never in `models.ts`: OpenRouter lists the model but the curated catalog does not (see above). |
 | `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
 | `kie` | How kie.ai serves the model (`KieVideoRoute`): its `family` (which builder maps the fields), the createTask `model`, an `imageModel` used with a frame where kie splits the two, a `tier` (Veo's `model`, Kling's `mode`). See [KIE.md](KIE.md#video-fields-buildkievideopayload). |
-| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with a `fal` or `kie` route that OpenRouter stopped listing. |
+| `apimart` | How APIMart serves the model (`ApimartVideoRoute`): its `family`, APIMart's `model` id and a `tier` (Kling's `mode`). See [APIMART.md](APIMART.md#video-fields-buildapimartvideopayload). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with another provider's route that OpenRouter stopped listing. |
 
 ## Verification checklist
 

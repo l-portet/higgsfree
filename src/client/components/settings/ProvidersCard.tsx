@@ -19,7 +19,7 @@ import { FieldLabel, SettingsCard } from "./SettingsCard";
 
 type KeyedProvider = Exclude<ProviderId, "openrouter">;
 
-type TestState = { kind: "ok"; credits?: number } | { kind: "error"; message: string } | null;
+type TestState = { kind: "ok"; credits?: number; balanceUsd?: number } | { kind: "error"; message: string } | null;
 
 function TestResult({ provider, state }: { provider: KeyedProvider; state: NonNullable<TestState> }) {
   if (state.kind === "error") {
@@ -36,6 +36,7 @@ function TestResult({ provider, state }: { provider: KeyedProvider; state: NonNu
       <span>
         {PROVIDER_NAME[provider]} accepted the key.
         {state.credits !== undefined ? ` Balance: ${state.credits.toLocaleString("en-US")} credits (${formatUsd(state.credits * KIE_CREDIT_USD)}).` : ""}
+        {state.balanceUsd !== undefined ? ` Balance: ${state.balanceUsd < 0 ? "unlimited" : formatUsd(state.balanceUsd)}.` : ""}
       </span>
     </div>
   );
@@ -146,7 +147,7 @@ function ProviderKeyCard({ provider, settings, description, offHint }: { provide
     setTest(null);
     try {
       const res = await api.testProviderKey(provider, trimmed || undefined);
-      setTest(res.credits !== undefined ? { kind: "ok", credits: res.credits } : { kind: "ok" });
+      setTest({ kind: "ok", ...(res.credits !== undefined ? { credits: res.credits } : {}), ...(res.balanceUsd !== undefined ? { balanceUsd: res.balanceUsd } : {}) });
       toast.success(`${name} accepted the key`);
     } catch (err) {
       const message = describeApiError(err);
@@ -297,7 +298,7 @@ function PreferenceCard({ settings }: { settings: SettingsResponse | null }) {
   );
 }
 
-/** The fal and kie.ai keys, and which provider runs what several offer. */
+/** The fal, kie.ai and APIMart keys, and which provider runs what several offer. */
 export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
   return (
     <>
@@ -318,6 +319,17 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
           <>
             kie.ai runs many of these models for less (Veo 3.1, Kling 3.0, MiniMax H3, Wan, Grok Imagine, Nano Banana Pro…): with a key, a video goes there
             whenever it is the cheapest. Get one at <KeysLink provider="kie" />.
+          </>
+        }
+        offHint="No key yet. Runs go to the other providers until one is saved here."
+      />
+      <ProviderKeyCard
+        provider="apimart"
+        settings={settings}
+        description={
+          <>
+            APIMart runs many of these models at its own prices (Veo 3.1, Seedance, Wan, Kling 3.0, PixVerse, Nano Banana Pro, GPT Image 2…): with a key, a
+            video goes there whenever it is the cheapest. Get one at <KeysLink provider="apimart" />.
           </>
         }
         offHint="No key yet. Runs go to the other providers until one is saved here."
