@@ -4,8 +4,19 @@ import { cn } from "@/lib/cn";
 import { formatUsd } from "@/lib/format";
 import { PROVIDER_NAME } from "@/lib/providers";
 import type { ProviderQuote, VideoQuote } from "@/lib/video-cost";
+import { hasProviderLogo } from "@/components/icons/marks";
 import { ProviderLogo } from "@/components/icons/providers";
+import { ProviderTile } from "@/components/ProviderTile";
 import { Tooltip } from "@/components/ui/Tooltip";
+
+/** A provider's mark, or its letter in a small tile when it has none (kie.ai). */
+function Mark({ provider, size, className }: { provider: ProviderId; size: number; className?: string }) {
+  return hasProviderLogo(provider) ? (
+    <ProviderLogo provider={provider} size={size} className={className} />
+  ) : (
+    <ProviderTile provider={provider} size={size + 2} className={cn("rounded-[4px] !text-[9px]", className)} />
+  );
+}
 
 /**
  * The price just before Generate: the mark of the provider that runs it, then "~$1.16". With a
@@ -19,7 +30,7 @@ export function CostEstimate({ usd, provider, breakdown }: { usd: number; provid
       aria-label={`Estimated cost ${label}${provider ? ` on ${PROVIDER_NAME[provider]}` : ""}`}
       className={cn("hidden items-center gap-1.5 rounded-button text-[13px] tabular-nums tracking-[-0.01em] text-fg-subtle sm:inline-flex", breakdown && "cursor-default")}
     >
-      {provider ? <ProviderLogo provider={provider} size={13} className="shrink-0" /> : null}
+      {provider ? <Mark provider={provider} size={13} className="shrink-0" /> : null}
       {label}
     </span>
   );
@@ -75,7 +86,7 @@ export function VideoCostBreakdown({ quote, count }: { quote: VideoQuote; count:
           const sub = rowNote(q, quote, count);
           return (
             <li key={q.provider} className="flex items-start gap-2">
-              <ProviderLogo provider={q.provider} size={14} className={cn("mt-[3px] shrink-0", runs ? "text-fg" : "text-fg-subtle")} />
+              <Mark provider={q.provider} size={14} className={cn("mt-[3px] shrink-0", runs ? "text-fg" : "text-fg-subtle")} />
               <div className="min-w-0 flex-1">
                 <div className={cn("flex items-baseline justify-between gap-3", runs ? "font-medium text-fg" : "text-fg-muted")}>
                   <span>{PROVIDER_NAME[q.provider]}</span>

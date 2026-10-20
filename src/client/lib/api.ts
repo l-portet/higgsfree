@@ -16,6 +16,7 @@ import type {
   ListGenerationsResponse,
   MediaRef,
   ModelsResponse,
+  ProviderId,
   SettingsResponse,
   StorageStats,
   TypeStats,
@@ -43,7 +44,9 @@ import { MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-i
 import { revokeAllMediaUrls } from "./media-urls";
 import { chatText, listLiveModels, nativeImage } from "./openrouter";
 import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DEFAULT_PREVIEW_CONFIG, MAX_RECREATE_VIDEO_BYTES, storyboardLayout, type PreviewConfig, type RewriteContext } from "./prompt-editor";
-import { getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setStoredFalKey, setStoredKey, settingsResponse } from "./settings";
+import * as kie from "./kie";
+import { isProviderId, PROVIDER_NAME } from "./providers";
+import { getProviderKey, getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setProviderKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
 import { detectVideo, OPENROUTER_VIDEO_MIME } from "./video-meta";
 
@@ -60,9 +63,14 @@ export async function updateSettings(body: UpdateSettingsRequest): Promise<Setti
     setStoredKey(body.apiKey);
     invalidateCredits();
   }
-  if (body.falKey !== undefined) setStoredFalKey(body.falKey);
+  for (const [provider, key] of Object.entries(body.keys ?? {})) {
+    if (!isProviderId(provider)) throw badRequest(`Unknown provider: ${provider}`);
+    if (key === undefined) continue;
+    setProviderKey(provider, key);
+    if (provider === "openrouter") invalidateCredits();
+  }
   if (body.preferredProvider !== undefined) {
-    if (body.preferredProvider !== "openrouter" && body.preferredProvider !== "fal") throw badRequest("preferredProvider must be openrouter or fal");
+    if (!isProviderId(body.preferredProvider)) throw badRequest(`Unknown provider: ${String(body.preferredProvider)}`);
     setPreferredProvider(body.preferredProvider);
   }
   return settingsResponse();
@@ -80,17 +88,19 @@ export async function testSettings(apiKey?: string): Promise<CreditsResponse> {
   }
 }
 
-/** Check a fal key (the stored one when none is passed). Resolves when fal accepts it. */
-export async function testFalKey(falKey?: string): Promise<{ ok: true }> {
-  const key = falKey?.trim() || getStoredFalKey();
-  if (!key) throw badRequest("No fal key to test. Paste one, or save one first.");
+/** Check a fal or kie.ai key (the stored one when none is passed). Resolves when the provider accepts it, with kie's balance in credits. */
+export async function testProviderKey(provider: Exclude<ProviderId, "openrouter">, apiKey?: string): Promise<{ ok: true; credits?: number }> {
+  const name = PROVIDER_NAME[provider];
+  const key = apiKey?.trim() || getProviderKey(provider);
+  if (!key) throw badRequest(`No ${name} key to test. Paste one, or save one first.`);
   try {
+    if (provider === "kie") return { ok: true, credits: (await kie.testKey(key)).credits };
     await fal.testKey(key);
+    return { ok: true };
   } catch (err) {
-    if (err instanceof ApiClientError && err.status === 401) throw new ApiClientError(401, "Invalid fal key", err.provider);
+    if (err instanceof ApiClientError && err.status === 401) throw new ApiClientError(401, `Invalid ${name} key`, err.provider);
     throw err;
   }
-  return { ok: true };
 }
 
 export async function getCredits(): Promise<CreditsResponse> {

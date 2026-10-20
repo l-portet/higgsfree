@@ -1,10 +1,13 @@
-import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from "react";
-import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, PlugZap, Trash2 } from "lucide-react";
+import { useEffect, useId, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, PlugZap, Shuffle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProviderId, SettingsResponse } from "@shared/types";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { formatUsd } from "@/lib/format";
+import { KIE_CREDIT_USD } from "@/lib/kie";
+import { PROVIDER_IDS, PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -14,18 +17,11 @@ import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { FieldLabel, SettingsCard } from "./SettingsCard";
 
-const KEYS_URL = "https://fal.ai/dashboard/keys";
+type KeyedProvider = Exclude<ProviderId, "openrouter">;
 
-const PROVIDERS: { id: ProviderId; label: string }[] = [
-  { id: "openrouter", label: "OpenRouter" },
-  { id: "fal", label: "fal" },
-];
+type TestState = { kind: "ok"; credits?: number } | { kind: "error"; message: string } | null;
 
-const providerName = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)?.label ?? id;
-
-type TestState = { kind: "ok" } | { kind: "error"; message: string } | null;
-
-function TestResult({ state }: { state: NonNullable<TestState> }) {
+function TestResult({ provider, state }: { provider: KeyedProvider; state: NonNullable<TestState> }) {
   if (state.kind === "error") {
     return (
       <div role="alert" className="mt-4 flex items-start gap-2 rounded-control border border-danger/25 bg-danger/5 p-3 text-meta">
@@ -37,12 +33,15 @@ function TestResult({ state }: { state: NonNullable<TestState> }) {
   return (
     <div role="status" className="mt-4 flex items-start gap-2 rounded-control border border-success/25 bg-success/5 p-3 text-meta">
       <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
-      <span>fal accepted the key.</span>
+      <span>
+        {PROVIDER_NAME[provider]} accepted the key.
+        {state.credits !== undefined ? ` Balance: ${state.credits.toLocaleString("en-US")} credits (${formatUsd(state.credits * KIE_CREDIT_USD)}).` : ""}
+      </span>
     </div>
   );
 }
 
-/** Two-option segmented control with radio semantics (arrow keys move and select). */
+/** Segmented control with radio semantics (arrow keys move and select). */
 function ProviderSwitch({
   value,
   onChange,
@@ -60,11 +59,11 @@ function ProviderSwitch({
     const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
     if (!step) return;
     e.preventDefault();
-    const next = (index + step + PROVIDERS.length) % PROVIDERS.length;
-    const target = PROVIDERS[next];
+    const next = (index + step + PROVIDER_IDS.length) % PROVIDER_IDS.length;
+    const target = PROVIDER_IDS[next];
     if (!target) return;
     e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
-    onChange(target.id);
+    onChange(target);
   };
 
   return (
@@ -73,19 +72,19 @@ function ProviderSwitch({
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
       aria-disabled={disabled || undefined}
-      className="flex w-fit gap-0.5 rounded-control border border-border bg-surface-2 p-1"
+      className="flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-control border border-border bg-surface-2 p-1"
     >
-      {PROVIDERS.map((p, i) => {
-        const checked = p.id === value;
+      {PROVIDER_IDS.map((id, i) => {
+        const checked = id === value;
         return (
           <button
-            key={p.id}
+            key={id}
             type="button"
             role="radio"
             aria-checked={checked}
             tabIndex={checked ? 0 : -1}
             disabled={disabled}
-            onClick={() => !checked && onChange(p.id)}
+            onClick={() => !checked && onChange(id)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
               "inline-flex h-8 min-w-24 flex-1 select-none items-center justify-center whitespace-nowrap rounded-tag px-3 text-[13px] font-medium",
@@ -93,7 +92,7 @@ function ProviderSwitch({
               checked && "bg-surface-3 text-fg",
             )}
           >
-            {p.label}
+            {PROVIDER_NAME[id]}
           </button>
         );
       })}
@@ -101,8 +100,8 @@ function ProviderSwitch({
   );
 }
 
-/** The fal key (paste, test, save, remove) and which provider runs the models both offer. */
-export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
+/** One provider's key: paste, test, save, remove. */
+function ProviderKeyCard({ provider, settings, description, offHint }: { provider: KeyedProvider; settings: SettingsResponse | null; description: ReactNode; offHint: string }) {
   const save = useSettings((s) => s.save);
   const [value, setValue] = useState("");
   const [reveal, setReveal] = useState(false);
@@ -111,34 +110,31 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [test, setTest] = useState<TestState>(null);
-  const [switching, setSwitching] = useState(false);
   const inputId = useId();
   const hintId = useId();
-  const preferLabelId = useId();
-  const preferHintId = useId();
 
-  const hasKey = Boolean(settings?.hasFalKey);
+  const name = PROVIDER_NAME[provider];
+  const masked = settings?.keys[provider];
+  const hasKey = Boolean(masked);
   const trimmed = value.trim();
   const canTest = Boolean(trimmed) || hasKey;
-  const canChoose = Boolean(settings?.hasKey && settings.hasFalKey);
-  const preferred = settings?.preferredProvider ?? "openrouter";
 
   // A different active key invalidates the last test result.
   useEffect(() => {
     setTest(null);
-  }, [settings?.falKeyMasked]);
+  }, [masked]);
 
   const onSave = async (e: FormEvent) => {
     e.preventDefault();
     if (!trimmed || saving) return;
     setSaving(true);
     try {
-      const next = await save({ falKey: trimmed });
+      const next = await save({ keys: { [provider]: trimmed } });
       setValue("");
       setReveal(false);
-      toast.success("fal key saved", { description: next.falKeyMasked ? `Now using ${next.falKeyMasked}` : undefined });
+      toast.success(`${name} key saved`, { description: next.keys[provider] ? `Now using ${next.keys[provider]}` : undefined });
     } catch (err) {
-      toast.error("Couldn't save the fal key", { description: describeApiError(err) });
+      toast.error(`Couldn't save the ${name} key`, { description: describeApiError(err) });
     } finally {
       setSaving(false);
     }
@@ -149,9 +145,9 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
     setTesting(true);
     setTest(null);
     try {
-      await api.testFalKey(trimmed || undefined);
-      setTest({ kind: "ok" });
-      toast.success("fal accepted the key");
+      const res = await api.testProviderKey(provider, trimmed || undefined);
+      setTest(res.credits !== undefined ? { kind: "ok", credits: res.credits } : { kind: "ok" });
+      toast.success(`${name} accepted the key`);
     } catch (err) {
       const message = describeApiError(err);
       setTest({ kind: "error", message });
@@ -164,23 +160,120 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
   const onRemove = async () => {
     setRemoving(true);
     try {
-      await save({ falKey: "" });
+      await save({ keys: { [provider]: "" } });
       setValue("");
-      toast.success("fal key removed");
+      toast.success(`${name} key removed`);
     } catch (err) {
-      toast.error("Couldn't remove the fal key", { description: describeApiError(err) });
+      toast.error(`Couldn't remove the ${name} key`, { description: describeApiError(err) });
     } finally {
       setRemoving(false);
       setConfirmRemove(false);
     }
   };
 
+  const badge = !settings ? null : hasKey ? <Badge variant="new">Connected</Badge> : <Badge variant="neutral">Not set</Badge>;
+
+  return (
+    <SettingsCard id={`provider-${provider}`} icon={<KeyRound />} title={`${name} key`} badge={badge} description={description}>
+      {!settings ? (
+        <div className="flex flex-col gap-3" aria-busy="true">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-40" />
+        </div>
+      ) : (
+        <form onSubmit={(e) => void onSave(e)} aria-describedby={hintId}>
+          <FieldLabel htmlFor={inputId}>{hasKey ? "Replace key" : "Key"}</FieldLabel>
+          <Input
+            id={inputId}
+            type="text"
+            masked={!reveal}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={PROVIDER_KEYS[provider].placeholder}
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby={hintId}
+            className="font-mono [&_input]:font-mono [&_input]:text-[12px]"
+            rightSlot={
+              <IconButton label={reveal ? "Hide key" : "Show key"} size="sm" onClick={() => setReveal((r) => !r)} aria-pressed={reveal} disabled={!value}>
+                {reveal ? <EyeOff /> : <Eye />}
+              </IconButton>
+            }
+          />
+          <p id={hintId} className="mt-2 text-meta">
+            {hasKey ? (
+              <>
+                Using <span className="text-mono text-fg">{masked}</span>. Stored in this browser only. Sent only to {name}.
+              </>
+            ) : (
+              offHint
+            )}
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button type="submit" variant="primary" loading={saving} disabled={!trimmed}>
+              Save
+            </Button>
+            <Button
+              variant="secondary"
+              leftIcon={<PlugZap />}
+              loading={testing}
+              disabled={!canTest}
+              onClick={() => void onTest()}
+              title={trimmed ? "Tests the key above without saving it" : "Tests the saved key"}
+            >
+              Test connection
+            </Button>
+            {hasKey ? (
+              <Button variant="ghost" leftIcon={<Trash2 />} className="text-danger hover:bg-danger/10 hover:text-danger" onClick={() => setConfirmRemove(true)}>
+                Remove key
+              </Button>
+            ) : null}
+          </div>
+
+          {test ? <TestResult provider={provider} state={test} /> : null}
+
+          <ConfirmDialog
+            open={confirmRemove}
+            onOpenChange={(o) => !removing && setConfirmRemove(o)}
+            title={`Remove the ${name} key?`}
+            description={`Models that run only on ${name} stop until you add a key again. Your library is kept.`}
+            confirmLabel="Remove key"
+            danger
+            loading={removing}
+            onConfirm={onRemove}
+          />
+        </form>
+      )}
+    </SettingsCard>
+  );
+}
+
+function KeysLink({ provider }: { provider: KeyedProvider }) {
+  const { url } = PROVIDER_KEYS[provider];
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="font-medium text-fg underline-offset-4 hover:underline">
+      {url.replace(/^https:\/\//, "")}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  );
+}
+
+/** Which provider runs what several offer: images, and videos at the same price. */
+function PreferenceCard({ settings }: { settings: SettingsResponse | null }) {
+  const save = useSettings((s) => s.save);
+  const [switching, setSwitching] = useState(false);
+  const labelId = useId();
+  const hintId = useId();
+  const preferred = settings?.preferredProvider ?? "openrouter";
+  const keyed = PROVIDER_IDS.filter((p) => settings?.keys[p]).length;
+
   const onPrefer = async (id: ProviderId) => {
     if (switching || id === preferred) return;
     setSwitching(true);
     try {
       await save({ preferredProvider: id });
-      toast.success(`Shared models now run on ${providerName(id)}`, { description: "Videos still go to whichever provider costs less." });
+      toast.success(`Shared models now run on ${PROVIDER_NAME[id]}`, { description: "Videos still go to whichever provider costs less." });
     } catch (err) {
       toast.error("Couldn't change the provider", { description: describeApiError(err) });
     } finally {
@@ -188,122 +281,48 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
     }
   };
 
-  const badge = !settings ? null : hasKey ? <Badge variant="new">Connected</Badge> : <Badge variant="neutral">Not set</Badge>;
-
-  const description = (
-    <>
-      Some models run only on fal (Kling 3.0 Motion Control, Gemini Omni Flash, Vidu, PixVerse…). Add a fal key to use them. Get one at{" "}
-      <a href={KEYS_URL} target="_blank" rel="noreferrer" className="font-medium text-fg underline-offset-4 hover:underline">
-        fal.ai/dashboard/keys
-        <span className="sr-only"> (opens in a new tab)</span>
-      </a>
-      .
-    </>
-  );
-
+  if (!settings) return null;
   return (
-    <SettingsCard id="providers" icon={<KeyRound />} title="fal key" badge={badge} description={description}>
-      {!settings ? (
-        <div className="flex flex-col gap-3" aria-busy="true">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-40" />
-        </div>
-      ) : (
-        <>
-          <form onSubmit={(e) => void onSave(e)} aria-describedby={hintId}>
-            <FieldLabel htmlFor={inputId}>{hasKey ? "Replace key" : "Key"}</FieldLabel>
-            <Input
-              id={inputId}
-              type="text"
-            masked={!reveal}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="key_id:key_secret"
-              autoComplete="off"
-              spellCheck={false}
-              aria-describedby={hintId}
-              className="font-mono [&_input]:font-mono [&_input]:text-[12px]"
-              rightSlot={
-                <IconButton
-                  label={reveal ? "Hide key" : "Show key"}
-                  size="sm"
-                  onClick={() => setReveal((r) => !r)}
-                  aria-pressed={reveal}
-                  disabled={!value}
-                >
-                  {reveal ? <EyeOff /> : <Eye />}
-                </IconButton>
-              }
-            />
-            <p id={hintId} className="mt-2 text-meta">
-              {hasKey ? (
-                <>
-                  Using <span className="text-mono text-fg">{settings.falKeyMasked}</span>. Stored in this browser only. Sent only to fal.
-                </>
-              ) : (
-                <>No key yet. Models that run only on fal stay off until one is saved here.</>
-              )}
-            </p>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button type="submit" variant="primary" loading={saving} disabled={!trimmed}>
-                Save
-              </Button>
-              <Button
-                variant="secondary"
-                leftIcon={<PlugZap />}
-                loading={testing}
-                disabled={!canTest}
-                onClick={() => void onTest()}
-                title={trimmed ? "Tests the key above without saving it" : "Tests the saved key"}
-              >
-                Test connection
-              </Button>
-              {hasKey ? (
-                <Button
-                  variant="ghost"
-                  leftIcon={<Trash2 />}
-                  className="text-danger hover:bg-danger/10 hover:text-danger"
-                  onClick={() => setConfirmRemove(true)}
-                >
-                  Remove key
-                </Button>
-              ) : null}
-            </div>
-
-            {test ? <TestResult state={test} /> : null}
-
-            <ConfirmDialog
-              open={confirmRemove}
-              onOpenChange={(o) => !removing && setConfirmRemove(o)}
-              title="Remove the fal key?"
-              description="Models that run only on fal stop until you add a key again. Your library is kept."
-              confirmLabel="Remove key"
-              danger
-              loading={removing}
-              onConfirm={onRemove}
-            />
-          </form>
-
-          <div className="mt-5 border-t border-border pt-4">
-            <div id={preferLabelId} className="mb-1.5 text-label">
-              Run models both providers offer on
-            </div>
-            <ProviderSwitch
-              value={preferred}
-              onChange={(id) => void onPrefer(id)}
-              disabled={!canChoose}
-              labelledBy={preferLabelId}
-              describedBy={preferHintId}
-            />
-            <p id={preferHintId} className="mt-2 text-meta">
-              {canChoose
-                ? "Videos go to whichever costs less; this decides images, and videos at the same price. Models only one provider offers always run there."
-                : "Add both keys to choose. Until then, each model uses the provider you have a key for."}
-            </p>
-          </div>
-        </>
-      )}
+    <SettingsCard id="providers" icon={<Shuffle />} title="Models several providers offer">
+      <div id={labelId} className="mb-1.5 text-label">
+        Prefer
+      </div>
+      <ProviderSwitch value={preferred} onChange={(id) => void onPrefer(id)} disabled={keyed < 2} labelledBy={labelId} describedBy={hintId} />
+      <p id={hintId} className="mt-2 text-meta">
+        {keyed >= 2
+          ? "Videos go to whichever costs less; this decides images, and videos at the same price, among the providers you have a key for. Models only one provider offers always run there."
+          : "Add a second key to choose. Until then, each model uses the provider you have a key for."}
+      </p>
     </SettingsCard>
+  );
+}
+
+/** The fal and kie.ai keys, and which provider runs what several offer. */
+export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
+  return (
+    <>
+      <ProviderKeyCard
+        provider="fal"
+        settings={settings}
+        description={
+          <>
+            Some models run only on fal (Kling 3.0 Motion Control, Gemini Omni Flash, Vidu, PixVerse…). Add a fal key to use them. Get one at <KeysLink provider="fal" />.
+          </>
+        }
+        offHint="No key yet. Models that run only on fal stay off until one is saved here."
+      />
+      <ProviderKeyCard
+        provider="kie"
+        settings={settings}
+        description={
+          <>
+            kie.ai runs many of these models for less (Veo 3.1, Kling 3.0, MiniMax H3, Wan, Grok Imagine, Nano Banana Pro…): with a key, a video goes there
+            whenever it is the cheapest. Get one at <KeysLink provider="kie" />.
+          </>
+        }
+        offHint="No key yet. Runs go to the other providers until one is saved here."
+      />
+      <PreferenceCard settings={settings} />
+    </>
   );
 }

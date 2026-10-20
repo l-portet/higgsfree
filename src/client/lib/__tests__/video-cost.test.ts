@@ -17,7 +17,7 @@ describe("quoteVideo", () => {
   it("runs a video on the cheaper provider, whatever the preference", () => {
     const q = quoteVideo(video("bytedance/seedance-2.5"), { duration: 5, resolution: "720p", aspectRatio: "16:9", audio: true }, BOTH, "fal", NOW);
     expect(q).toMatchObject({ provider: "openrouter", reason: "cheaper" });
-    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal"]);
+    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie"]);
     expect(usd(q).openrouter).toBeCloseTo(1.1555);
     expect(usd(q).fal).toBeCloseTo(2.365);
     const pricier = { ...video("bytedance/seedance-2.5"), estCostPerSecUsd: { "720p": 1 } };
@@ -28,7 +28,7 @@ describe("quoteVideo", () => {
     const kling = video("kwaivgi/kling-v3.0-pro");
     const silent = quoteVideo(kling, { duration: 5, audio: false }, BOTH, "fal", NOW);
     expect(silent).toMatchObject({ provider: "fal", reason: "tie" });
-    expect(usd(silent)).toEqual({ openrouter: expect.closeTo(0.56), fal: expect.closeTo(0.56) });
+    expect(usd(silent)).toEqual({ openrouter: expect.closeTo(0.56), fal: expect.closeTo(0.56), kie: expect.closeTo(0.45) });
     expect(quoteVideo(kling, { duration: 5, audio: true }, BOTH, "openrouter", NOW)).toMatchObject({ provider: "openrouter", reason: "tie" });
   });
 
@@ -45,6 +45,26 @@ describe("quoteVideo", () => {
     expect(none.reason).toBe("none");
     expect(none.provider).toBeUndefined();
     expect(shownQuote(none)?.provider).toBe("openrouter");
+  });
+
+  it("with a kie.ai key: the cheapest of three, and kie's refusals send the run elsewhere", () => {
+    const ALL = { openrouter: true, fal: true, kie: true };
+    // Veo 3.1 at 1080p, 8 s with sound: $3.20 on OpenRouter, $1.275 a clip on kie.
+    const veo = quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio: true }, ALL, "openrouter", NOW);
+    expect(veo).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(usd(veo)).toEqual({ openrouter: expect.closeTo(3.2), kie: expect.closeTo(1.275) });
+    // kie's Veo always has sound: with it off, OpenRouter runs it.
+    const silent = quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio: false }, ALL, "kie", NOW);
+    expect(silent).toMatchObject({ provider: "openrouter", reason: "one-ready" });
+    expect(silent.quotes[1]).toMatchObject({ provider: "kie", refusal: "Always adds sound" });
+    // Seedance 2.5 stays cheapest on OpenRouter.
+    expect(quoteVideo(video("bytedance/seedance-2.5"), { prompt: "a fox", duration: 5, resolution: "720p" }, ALL, "kie", NOW)).toMatchObject({ provider: "openrouter", reason: "cheaper" });
+    // Kling 3.0 Pro without sound: $0.45 on kie against $0.56 on the other two.
+    expect(quoteVideo(video("kwaivgi/kling-v3.0-pro"), { prompt: "a fox", duration: 5, audio: false }, ALL, "fal", NOW)).toMatchObject({ provider: "kie", reason: "cheaper" });
+    // A tie among the cheapest goes to the preferred one if it is among them, else the first.
+    const pricier = { ...video("kwaivgi/kling-v3.0-pro"), estCostPerSecNoAudioUsd: { "720p": 0.09 } };
+    expect(quoteVideo(pricier, { prompt: "a fox", duration: 5, audio: false }, ALL, "kie", NOW)).toMatchObject({ provider: "kie", reason: "tie" });
+    expect(quoteVideo(pricier, { prompt: "a fox", duration: 5, audio: false }, ALL, "fal", NOW)).toMatchObject({ provider: "openrouter", reason: "tie" });
   });
 
   it("prices motion control and editing by the input video, once its length is known", () => {

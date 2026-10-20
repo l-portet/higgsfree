@@ -54,13 +54,17 @@ export interface Seen {
   host: string;
   auth?: string;
   body?: Record<string, unknown>;
+  /** A multipart body's text fields, and its file field's name and size. */
+  form?: Record<string, string>;
 }
 
 export interface MockOpenRouter {
   seen: Seen[];
-  state: { pollCount: number; unknownPolls: number; catalogDown: boolean; falPolls: number; uploads: number };
+  state: { pollCount: number; unknownPolls: number; catalogDown: boolean; falPolls: number; uploads: number; kieTasks: Record<string, { model: string; polls: number }>; kieUploads: number };
   /** Calls to fal hosts (API, uploads, CDN), by path. */
   fal(path: string): Seen[];
+  /** Calls to kie.ai hosts (API, uploads, CDN), by path. */
+  kie(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
 }
@@ -70,7 +74,7 @@ const json = (status: number, payload: unknown): Response => new Response(JSON.s
 /** Replace `fetch` for the current test (undone by `vi.unstubAllGlobals()` in the setup's afterEach). */
 export function installMockOpenRouter(): MockOpenRouter {
   const seen: Seen[] = [];
-  const state = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0 };
+  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0 };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
     const u = new URL(input instanceof Request ? input.url : String(input));
@@ -82,7 +86,12 @@ export function installMockOpenRouter(): MockOpenRouter {
     const auth = headers.get("authorization");
     if (auth) entry.auth = auth;
     if (body) entry.body = body;
+    if (init?.body instanceof FormData) {
+      entry.form = {};
+      for (const [k, v] of init.body.entries()) entry.form[k] = typeof v === "string" ? v : `${v.name} (${v.size} bytes)`;
+    }
     seen.push(entry);
+    if (KIE_HOSTS.includes(u.hostname)) return kieRoute(u, entry, state);
     if (u.hostname !== "openrouter.ai") return falRoute(u, entry, state);
     // The two catalogs are public: no key needed.
     if (url === "/api/v1/videos/models" || url === "/api/v1/images/models") {
@@ -125,7 +134,8 @@ export function installMockOpenRouter(): MockOpenRouter {
   return {
     seen,
     state,
-    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && s.url === path),
+    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && !KIE_HOSTS.includes(s.host) && s.url === path),
+    kie: (path) => seen.filter((s) => KIE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     calls: (url) => seen.filter((s) => s.url === url),
     last: (url) => seen.filter((s) => s.url === url).at(-1),
   };
@@ -189,4 +199,46 @@ function falRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response
     if (path === "/files/out.mp4") return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
   }
   return json(404, { detail: `no fal route ${u.hostname}${path}` });
+}
+
+export const KIE_KEY = "test-kie-key";
+export const KIE_CDN = "https://tempfile.aiquickdraw.com";
+const KIE_HOSTS = ["api.kie.ai", "kieai.redpandaai.co", "tempfile.aiquickdraw.com"];
+
+/**
+ * kie.ai: \`api.kie.ai\` (createTask, recordInfo, chat/credit), \`kieai.redpandaai.co\` (uploads) and the
+ * CDN the results come from. Every API answer is HTTP 200 with the outcome in \`code\`. A task is
+ * \`generating\` on its first poll and \`success\` after; prompts containing KIE_FAIL make it fail, and
+ * KIE_REJECT makes createTask refuse it.
+ */
+function kieRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
+  const path = u.pathname;
+  if (u.hostname !== "tempfile.aiquickdraw.com" && entry.auth !== `Bearer ${KIE_KEY}`) return json(200, { code: 401, msg: "Unauthorized - Authentication failed." });
+  if (path === "/api/v1/chat/credit") return json(200, { code: 200, msg: "success", data: 1234.5 });
+  if (path === "/api/v1/jobs/createTask") {
+    const input = (entry.body?.input ?? {}) as Record<string, unknown>;
+    const prompt = String(input.prompt ?? "");
+    if (prompt.includes("KIE_REJECT")) return json(200, { code: 422, msg: "prompt is not allowed" });
+    const taskId = prompt.includes("KIE_FAIL") ? "task_fail" : `task_${Object.keys(state.kieTasks).length + 1}`;
+    state.kieTasks[taskId] = { model: String(entry.body?.model), polls: 0 };
+    return json(200, { code: 200, msg: "success", data: { taskId } });
+  }
+  if (path === "/api/v1/jobs/recordInfo") {
+    const taskId = u.searchParams.get("taskId") ?? "";
+    const t = state.kieTasks[taskId];
+    if (!t) return json(200, { code: 422, msg: "recordInfo is null" });
+    t.polls++;
+    if (taskId === "task_fail") return json(200, { code: 200, data: { taskId, state: "fail", failCode: "501", failMsg: "Content flagged by the provider" } });
+    if (t.polls === 1) return json(200, { code: 200, data: { taskId, state: "generating" } });
+    const file = /image|banana|z-image|kontext/.test(t.model) ? "out.png" : "out.mp4";
+    return json(200, { code: 200, data: { taskId, model: t.model, state: "success", resultJson: JSON.stringify({ resultUrls: [`${KIE_CDN}/r/${file}`] }), creditsConsumed: 63 } });
+  }
+  if (u.hostname === "kieai.redpandaai.co") {
+    state.kieUploads++;
+    const ext = path === "/api/file-stream-upload" ? "mp4" : "png";
+    return json(200, { success: true, code: 200, msg: "File uploaded successfully", data: { downloadUrl: `https://tempfile.redpandaai.co/higgsfree/up-${state.kieUploads}.${ext}` } });
+  }
+  if (path === "/r/out.png") return new Response(new Blob([PNG_2X2]), { status: 200, headers: { "content-type": "image/png" } });
+  if (path === "/r/out.mp4") return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
+  return json(404, { error: `no kie route ${u.hostname}${path}` });
 }

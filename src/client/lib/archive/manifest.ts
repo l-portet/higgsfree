@@ -3,6 +3,7 @@ import type { Folder, Generation, GenerationInputs, GenerationStatus, Generation
 import { isFolderId, normalizeFolderName } from "../folders";
 import { isGenerationId, isMediaId } from "../media-ids";
 import { normalizeNote } from "../notes";
+import { isProviderId } from "../providers";
 
 export const ARCHIVE_FORMAT = "higgsfree-library";
 export const ARCHIVE_VERSION = 1;
@@ -95,7 +96,7 @@ export function sanitizeRecord(v: unknown): Generation | undefined {
   if (providerJobId) g.providerJobId = providerJobId;
   const batchId = str(o.batchId);
   if (batchId) g.batchId = batchId;
-  if (o.provider === "openrouter" || o.provider === "fal") g.provider = o.provider;
+  if (isProviderId(o.provider)) g.provider = o.provider;
   const batchIndex = num(o.batchIndex);
   if (batchIndex !== undefined) g.batchIndex = batchIndex;
   if (o.favorite === true) {

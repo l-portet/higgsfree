@@ -1,16 +1,16 @@
 /** Pick the provider for a run from the stored keys, the price (videos) and the preference, or explain why there is none. */
 import type { CatalogModel, ProviderId, VideoModel } from "@shared/types";
 import { ApiClientError } from "../errors";
-import { chooseProvider, providerNotice } from "../providers";
-import { getPreferredProvider, getStoredFalKey, getStoredKey } from "../settings";
+import { chooseProvider, PROVIDER_IDS, providerNotice, type ProviderKeys } from "../providers";
+import { getPreferredProvider, getProviderKey } from "../settings";
 import { quoteVideo, type VideoQuoteRequest } from "../video-cost";
 
 export function keyFor(provider: ProviderId): string | undefined {
-  return provider === "fal" ? getStoredFalKey() : getStoredKey();
+  return getProviderKey(provider);
 }
 
-export function storedKeys(): { openrouter: boolean; fal: boolean } {
-  return { openrouter: Boolean(getStoredKey()), fal: Boolean(getStoredFalKey()) };
+export function storedKeys(): ProviderKeys {
+  return Object.fromEntries(PROVIDER_IDS.map((p) => [p, Boolean(getProviderKey(p))]));
 }
 
 export interface ProviderRun {
@@ -19,12 +19,12 @@ export interface ProviderRun {
 }
 
 /** 401 with a message the composer can show when no provider of the model has a key. */
-export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "falOnly">): ProviderRun {
+export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "kie" | "offOpenRouter">): ProviderRun {
   const keys = storedKeys();
   const preferred = getPreferredProvider();
   const { provider } = chooseProvider(model, keys, preferred);
   if (!provider) {
-    if (!keys.openrouter && !keys.fal && !model.falOnly) throw new ApiClientError(401, "No OpenRouter key configured. Add one in Settings.");
+    if (!Object.values(keys).some(Boolean) && !model.offOpenRouter) throw new ApiClientError(401, "No OpenRouter key configured. Add one in Settings.");
     throw new ApiClientError(401, providerNotice(model, keys, preferred) ?? "No key for this model. Add one in Settings.");
   }
   const key = keyFor(provider);

@@ -12,15 +12,18 @@ import { detectImage } from "../image-meta";
 import { publish } from "../live";
 import * as fal from "../fal";
 import { buildFalImagePayload } from "../fal-payloads";
+import { quoteImage } from "../image-cost";
+import * as kie from "../kie";
+import { buildKieImagePayload } from "../kie-payloads";
 import { errorMessage, log } from "../log";
 import { newBatchId, newGenerationId, outputMediaId } from "../media-ids";
 import * as or from "../openrouter";
 import { buildImagePayload } from "../payloads";
-import { getStoredKey } from "../settings";
+import { getPreferredProvider, getStoredKey } from "../settings";
 import { validateImageRequest } from "../validate";
-import { IMAGE_TIMEOUT_MS, limits } from "./constants";
+import { IMAGE_TIMEOUT_MS, limits, timing } from "./constants";
 import { assertInputsExist, inputDataUrls } from "./inputs";
-import { resolveRun } from "./provider";
+import { keyFor, resolveRun, storedKeys } from "./provider";
 import { failGeneration, isCancelled, savePublish, tryWithJobLock } from "./state";
 
 const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$${c.toFixed(4)}`);
@@ -34,11 +37,17 @@ export function setOnCompleted(fn: (() => void) | undefined): void {
 export async function submitImageBatch(req: ImageGenerateRequest): Promise<Generation[]> {
   const model = await lookupImageModel(req.model, getStoredKey());
   if (!model) throw badRequest(`Unknown image model: ${req.model}`);
-  const { provider, key } = resolveRun(model);
+  // 401 now when no provider of the model has a key.
+  const keyed = resolveRun(model);
   const prompt = req.prompt.trim();
   validateImageRequest(model, { ...req, prompt });
   const refIds = req.referenceImages ?? [];
   await assertInputsExist({ referenceImages: refIds });
+  // The preferred provider that can take the request (`quoteImage`); when none with a key can, the key-based
+  // choice stands and its refusal says why.
+  const chosen = quoteImage(model, { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length }, storedKeys(), getPreferredProvider()).provider;
+  const chosenKey = chosen ? keyFor(chosen) : undefined;
+  const { provider, key } = chosen && chosenKey ? { provider: chosen, key: chosenKey } : keyed;
 
   const ts = new Date().toISOString();
   const batchId = newBatchId();
@@ -79,6 +88,28 @@ async function falImageBytes(key: string, model: ImageModel, row: StoredGenerati
   return new Uint8Array(await (await fal.download(url, signal)).arrayBuffer());
 }
 
+/** kie.ai runs images as tasks too: the references are uploaded first, then the task is polled here until the image is ready. */
+async function kieImage(key: string, model: ImageModel, row: StoredGeneration, refDataUrls: string[], signal: AbortSignal): Promise<{ bytes: Uint8Array<ArrayBuffer>; costUsd?: number }> {
+  const params = row.params as ImageParams;
+  const refs = await Promise.all(refDataUrls.map((u) => kie.uploadDataUrl(key, u, signal)));
+  const payload = buildKieImagePayload(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size }, refs);
+  const url = kie.taskUrl(await kie.createTask(key, payload.model, payload.input, signal));
+  for (;;) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, timing.pollIntervalMs);
+      signal.addEventListener("abort", () => (clearTimeout(timer), resolve()), { once: true });
+    });
+    if (signal.aborted) throw kie.kieAbortedError(signal, signal.reason, "kie.ai unreachable");
+    const t = await kie.task(key, url, signal);
+    if (t.state === "fail") throw new ApiClientError(502, t.error ?? "kie.ai reported a failure");
+    if (t.state !== "success") continue;
+    const out = t.urls[0];
+    if (!out) throw new ApiClientError(502, "kie.ai reported success but returned no image url");
+    const bytes = new Uint8Array(await (await kie.download(out, signal)).arrayBuffer());
+    return t.costUsd !== undefined ? { bytes, costUsd: t.costUsd } : { bytes };
+  }
+}
+
 async function runImage(provider: ProviderId, key: string, model: ImageModel, row: StoredGeneration, refDataUrls: string[], cancel: AbortSignal): Promise<void> {
   const startedAt = Date.now();
   const running = await savePublish(row.id, { status: "running" });
@@ -89,7 +120,11 @@ async function runImage(provider: ProviderId, key: string, model: ImageModel, ro
   try {
     let bytes: Uint8Array<ArrayBuffer>;
     const payload = provider === "openrouter" ? buildImagePayload(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size }, refDataUrls) : undefined;
-    if (!payload) {
+    if (provider === "kie") {
+      const res = await kieImage(key, model, row, refDataUrls, signal);
+      bytes = res.bytes;
+      costUsd = res.costUsd;
+    } else if (!payload) {
       bytes = await falImageBytes(key, model, row, refDataUrls, signal);
     } else if (payload.endpoint === "chat") {
       const res = await or.chatImage(key, payload.body, { signal });

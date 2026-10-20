@@ -15,24 +15,30 @@ turns out to behave differently, fix the code and this page in the same PR.
 
 ## Which provider runs a model
 
-- A model is on OpenRouter unless it is `falOnly`, and on fal when it has a `fal` route
-  (`modelProviders`). Every model is listed in the picker whichever keys are set.
-- Only providers with a stored key count. None: the model cannot run. One: that one runs it. Both:
-  - **Videos go to the cheaper provider** (`quoteVideo` in `src/client/lib/video-cost.ts`, used by the
-    composer for the price it shows and by the engine to route the run, so the two agree). Each side is
-    priced for the request as it stands: OpenRouter from the live catalog (its no-audio price when Sound
-    is off), fal from `FAL_PRICES` for the endpoint the inputs pick, both for the duration, resolution
-    and audio sent. Prices within half a cent are a tie. A provider that refuses the request (fal and
-    style references) is left out, so the other runs it.
-  - The preference (`higgsfree.preferredProvider`, OpenRouter by default) decides images, a video tie,
-    and a video whose price is not known yet (an edit before its video's length is).
+- A model is on OpenRouter unless it is `offOpenRouter`, on fal when it has a `fal` route and on kie.ai
+  when it has a `kie` route (`modelProviders`, in that order). Every model is listed in the picker
+  whichever keys are set.
+- Only providers with a stored key that can take the request count (a provider refuses what its payload
+  builder throws on: fal and style references, kie and a clip shorter than the model takes there…). None:
+  the model cannot run. One: that one runs it. Several:
+  - **Videos go to the cheapest** (`quoteVideo` in `src/client/lib/video-cost.ts`, used by the composer for
+    the price it shows and by the engine to route the run, so the two agree). Each provider is priced for
+    the request as it stands: OpenRouter from the live catalog (its no-audio price when Sound is off), fal
+    from `FAL_PRICES` and kie.ai from `KIE_PRICES` ([KIE.md](KIE.md)) for the endpoint or model the inputs
+    pick, all for the duration, resolution and audio sent. Prices within half a cent are a tie: the
+    preferred provider if it is among the cheapest, else the first of them.
+  - **Images go to the preferred one** among them (`quoteImage` in `src/client/lib/image-cost.ts`), else
+    the first (OpenRouter, fal, kie.ai).
+  - The preference (`higgsfree.preferredProvider`, OpenRouter by default, any of the three) also decides a
+    video whose price is not known yet (an edit before its video's length is).
 - The provider is chosen when the job is submitted and saved on the record (`Generation.provider`).
   Polling, resume and the download use that provider and its key, re-read every tick, whatever the
   preference says later. A record made before fal support has no `provider` and counts as OpenRouter.
   Retry chooses again from the keys, the prices and the preference at that moment.
 - No usable key: the submit is a 401 and nothing is created. The message is the composer notice
-  (`providerNotice`), e.g. "Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it."
-  or "Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.". With no key at
+  (`providerNotice`), e.g. "Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it.",
+  "Vidu Q4 needs a fal or kie.ai key. Add one in Settings to use it." or "Krea 2 Large runs on OpenRouter.
+  Add an OpenRouter key in Settings to use it.". With no key at
   all, a model OpenRouter serves gets "No OpenRouter key configured. Add one in Settings."
 
 ## Hosts and auth
@@ -235,9 +241,9 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 
 ## Catalog
 
-- fal-only models are curated in `src/shared/models.ts` (`falOnly: true`, ids `fal/<name>`) and never
+- fal-only models are curated in `src/shared/models.ts` (`offOpenRouter: true`, ids `fal/<name>`) and never
   looked up in OpenRouter's catalogs: `src/client/lib/catalog.ts` keeps them whatever OpenRouter lists.
-- A curated video model with a `fal` route that OpenRouter stops listing stays, marked `falOnly`. One
+- A curated video model with a `fal` route that OpenRouter stops listing stays, marked `offOpenRouter`. One
   without a fal route leaves the picker, as before.
 - Image models are not re-marked: a curated image model OpenRouter stops listing stays as it is.
 - The app reads no catalog from fal. fal-only models use their curated options; a model both offer takes

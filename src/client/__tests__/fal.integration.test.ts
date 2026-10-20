@@ -58,7 +58,7 @@ const falCalls = (): string[] => mock.seen.filter((s) => s.host !== "openrouter.
 describe("who runs a model", () => {
   it("only an OpenRouter key: a fal-only model is refused with the reason, nothing is created", async () => {
     setStoredKey("test-key");
-    await expect(image({ model: "fal/z-image-turbo" })).rejects.toMatchObject({ status: 401, error: "Z-Image Turbo runs on fal. Add a fal key in Settings to use it." });
+    await expect(image({ model: "fal/z-image-turbo" })).rejects.toMatchObject({ status: 401, error: "Z-Image Turbo needs a fal or kie.ai key. Add one in Settings to use it." });
     expect((await api.listGenerations()).items).toHaveLength(0);
   });
 
@@ -271,14 +271,15 @@ describe("fal videos", () => {
 
 describe("fal key and video uploads", () => {
   it("tests the fal key with an authenticated pricing lookup", async () => {
-    await expect(api.testFalKey()).rejects.toMatchObject({ status: 400 });
-    expect(await api.testFalKey(FAL_KEY)).toEqual({ ok: true });
-    await expect(api.testFalKey("wrong")).rejects.toMatchObject({ status: 401, error: "Invalid fal key" });
-    const saved = await api.updateSettings({ falKey: "abcdef12-3456-7890:secretsecretsecret" });
-    expect(saved).toMatchObject({ hasFalKey: true, falKeyMasked: "abcdef12-…cret" });
+    await expect(api.testProviderKey("fal")).rejects.toMatchObject({ status: 400 });
+    expect(await api.testProviderKey("fal", FAL_KEY)).toEqual({ ok: true });
+    await expect(api.testProviderKey("fal", "wrong")).rejects.toMatchObject({ status: 401, error: "Invalid fal key" });
+    const saved = await api.updateSettings({ keys: { fal: "abcdef12-3456-7890:secretsecretsecret" } });
+    expect(saved.keys).toEqual({ fal: "abcdef12-…cret" });
     expect(JSON.stringify(saved)).not.toContain("secretsecret");
-    expect((await api.updateSettings({ falKey: "" })).hasFalKey).toBe(false);
+    expect((await api.updateSettings({ keys: { fal: "" } })).keys.fal).toBeUndefined();
     await expect(api.updateSettings({ preferredProvider: "nope" as never })).rejects.toMatchObject({ status: 400 });
+    await expect(api.updateSettings({ keys: { nope: "x" } as never })).rejects.toMatchObject({ status: 400 });
   });
 
   it("stores MP4, MOV and WebM reference videos and refuses anything else", async () => {

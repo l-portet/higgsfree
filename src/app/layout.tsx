@@ -37,11 +37,12 @@ const GA_CONNECT = "https://*.google-analytics.com https://*.analytics.google.co
 
 /**
  * Production only (Next dev needs eval and websockets). The keys live in this browser, so the one
- * thing worth locking down is where a script on this origin may send data: OpenRouter, fal (its API
- * hosts, upload targets and the CDN its results come from), plus the Google Analytics endpoints,
- * and nothing else.
+ * thing worth locking down is where a script on this origin may send data: OpenRouter, fal and kie.ai
+ * (their API hosts, upload targets and the CDNs their results come from), plus the Google Analytics
+ * endpoints, and nothing else.
  */
 const FAL_ORIGINS = "https://fal.run https://queue.fal.run https://rest.fal.ai https://api.fal.ai https://fal.media https://*.fal.media https://storage.googleapis.com";
+const KIE_ORIGINS = "https://api.kie.ai https://kieai.redpandaai.co https://*.aiquickdraw.com";
 const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
 const CSP = [
   "default-src 'self'",
@@ -50,7 +51,7 @@ const CSP = [
   `img-src 'self' blob: data: ${GA_CONNECT}`,
   "media-src 'self' blob:",
   "font-src 'self'",
-  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${GA_CONNECT}`,
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${GA_CONNECT}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
