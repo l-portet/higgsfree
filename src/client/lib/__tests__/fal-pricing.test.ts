@@ -53,6 +53,7 @@ describe("estimateFalVideoCost", () => {
     expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "720p", audio: true })).toBeCloseTo(2.365);
     expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "480p", audio: false, firstFrame: true })).toBeCloseTo(1.1025);
     expect(estimateFalVideoCost(video("fal/gemini-omni-flash-1.1"), { duration: 8, resolution: "4K" })).toBeCloseTo(2.4);
+    expect(estimateFalVideoCost(video("fal/kling-v4"), { duration: 10, resolution: "1080p", firstFrame: true })).toBeCloseTo(2.35);
   });
 
   it("charges the audio rate unless audio is off, and a flat rate when the model has no resolution", () => {

@@ -67,6 +67,17 @@ describe("quoteVideo", () => {
     expect(quoteVideo(pricier, { prompt: "a fox", duration: 5, audio: false }, ALL, "fal", NOW)).toMatchObject({ provider: "openrouter", reason: "tie" });
   });
 
+  it("Kling 4.0, off OpenRouter: the cheapest of fal, kie.ai and APIMart; style references skip fal", () => {
+    const kling = video("fal/kling-v4");
+    // 10 s at 1080p: $2.35 on fal and APIMart, $2.125 on kie.
+    const q = quoteVideo(kling, { prompt: "a fox", duration: 10, resolution: "1080p", aspectRatio: "21:9" }, { fal: true, kie: true, apimart: true }, "fal", NOW);
+    expect(q).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(usd(q)).toEqual({ fal: expect.closeTo(2.35), kie: expect.closeTo(2.125), apimart: expect.closeTo(2.35) });
+    const refs = quoteVideo(kling, { prompt: "a fox", duration: 5, resolution: "720p", references: true }, { fal: true, apimart: true }, "fal", NOW);
+    expect(refs).toMatchObject({ provider: "apimart", reason: "one-ready" });
+    expect(refs.quotes[0]).toMatchObject({ provider: "fal", refusal: "Takes no style references" });
+  });
+
   it("prices motion control and editing by the input video, once its length is known", () => {
     const motion = quoteVideo(video("fal/kling-v3-pro-motion-control"), { duration: 5, videoSec: 7.5 }, BOTH, "openrouter", NOW);
     expect(motion).toMatchObject({ provider: "fal", reason: "only" });

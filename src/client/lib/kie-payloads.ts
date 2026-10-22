@@ -47,6 +47,7 @@ const range = (min: number, max: number): number[] => Array.from({ length: max -
 const VIDEO_LIMITS: Record<KieVideoRoute["family"], { durations?: number[]; aspects?: VideoAspectRatio[]; resolutions?: Partial<Record<VideoResolution, string>> }> = {
   veo: { durations: [4, 6, 8], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   kling3: { durations: range(3, 15), aspects: ["16:9", "9:16", "1:1"] },
+  kling4: { durations: range(3, 30), aspects: ["16:9", "9:16", "1:1", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   seedance: { durations: range(4, 30), aspects: ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], resolutions: { "480p": "480p", "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   "minimax-h3": { durations: range(4, 15), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "768p": "768P", "2K": "2K" } },
   wan3: { durations: range(2, 30), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "480p": "480P", "720p": "720P", "1080p": "1080P" } },
@@ -70,6 +71,8 @@ function durationsLabel(list: number[]): string {
 
 /** Families whose clips always have sound: a run with the sound off goes elsewhere. */
 const ALWAYS_SOUND = new Set<KieVideoRoute["family"]>(["veo", "minimax-h3"]);
+/** Families that take style references. */
+const TAKES_REFERENCES = new Set<KieVideoRoute["family"]>(["seedance", "wan3", "kling4"]);
 
 export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, media: KieVideoMedia): KieVideoPayload {
   const route = model.kie;
@@ -84,7 +87,7 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
 
   if (Boolean(model.caps.videoEdit) !== (route.family === "wan27-edit")) throw badRequest(`${on} has no route for this kind of run`);
   if (last && !first) throw badRequest(`${on} needs a first frame with the last frame`);
-  if (refs.length && (route.family !== "seedance" && route.family !== "wan3")) throw badRequest("Takes no style references");
+  if (refs.length && !TAKES_REFERENCES.has(route.family)) throw badRequest("Takes no style references");
   if (refs.length && frames) throw badRequest("Takes frames or style references, not both");
   if (req.audio === false && ALWAYS_SOUND.has(route.family)) throw badRequest("Always adds sound");
 
@@ -123,6 +126,20 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
       if (frames) input.image_urls = [first, last].filter(Boolean);
       if (aspect) input.aspect_ratio = aspect;
       priceKey = `${route.model}#${route.tier}`;
+      break;
+    case "kling4":
+      // Always with sound; frames go to the keyframe model, a text-only run and references to the other.
+      if (!prompt) throw badRequest("Needs a prompt");
+      Object.assign(input, { prompt, duration: params.duration, resolution: kieResolution });
+      if (frames) {
+        id = route.imageModel ?? route.model;
+        if (first) input.first_frame_url = first;
+        if (last) input.last_frame_url = last;
+      } else {
+        if (aspect) input.aspect_ratio = aspect;
+        if (refs.length) input.image_urls = refs;
+      }
+      priceKey = "kling-4.0";
       break;
     case "seedance":
       if (prompt.length < 3) throw badRequest("Needs a prompt of 3 characters or more");

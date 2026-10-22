@@ -240,6 +240,10 @@ describe("fal videos", () => {
     const character = await uploadImage();
     await expect(api.generateVideo({ prompt: "", model: "fal/kling-v3-pro-motion-control", duration: 5, firstFrame: character })).rejects.toMatchObject({ status: 400, error: "Kling 3.0 Motion Control needs a reference video" });
     await expect(api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, references: [character] })).rejects.toMatchObject({ status: 400, error: expect.stringContaining("does not take style references") });
+    await expect(api.generateVideo({ prompt: "p", model: "fal/kling-v4", duration: 5, references: [character] })).rejects.toMatchObject({
+      status: 400,
+      error: "Kling 4.0 on fal does not take style references. Remove them, or add a kie.ai or APIMart key in Settings.",
+    });
     await expect(api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, motionVideo: await uploadVideo() })).rejects.toMatchObject({ status: 400, error: "Kling 3.0 Pro does not take a reference video" });
   });
 

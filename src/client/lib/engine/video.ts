@@ -18,6 +18,7 @@ import * as fal from "../fal";
 import { buildFalVideoPayload } from "../fal-payloads";
 import { isTaskProvider, TASK_PROVIDERS, type TaskProvider } from "../task-providers";
 import { publish } from "../live";
+import { keyPhrase, modelProviders } from "../providers";
 import { errorMessage, log } from "../log";
 import { newGenerationId, outputMediaId } from "../media-ids";
 import { parseMp4MetaFromRanges } from "../mp4-meta";
@@ -162,7 +163,9 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
 
   if (provider === "fal") {
     if (inputs.referenceImages?.length) {
-      throw badRequest(`${model.name} on fal does not take style references. Remove them, or add an OpenRouter key in Settings.`);
+      // Off OpenRouter, the model's other providers take them (Kling 4.0 on kie.ai and APIMart).
+      const others: ProviderId[] = model.offOpenRouter ? modelProviders(model).filter((p) => p !== "fal") : ["openrouter"];
+      throw badRequest(`${model.name} on fal does not take style references. Remove them${others.length ? `, or add ${keyPhrase(others)} in Settings` : ""}.`);
     }
     const { motionVideo, sourceVideo } = inputs;
     const payload = buildFalVideoPayload(

@@ -41,6 +41,22 @@ describe("buildKieVideoPayload", () => {
     expect(buildKieVideoPayload(video("kwaivgi/kling-v3.0-std"), { prompt: "p", duration: 5 }, { firstFrame: "https://a" }).input).toMatchObject({ mode: "std", image_urls: ["https://a"] });
   });
 
+  it("Kling 4.0: text-to-video and references on reference-to-video, frames on keyframe-to-video, no sound field", () => {
+    const m = video("fal/kling-v4");
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 30, aspectRatio: "21:9", resolution: "1080p" }, {})).toEqual({
+      model: "kling-4.0/reference-to-video",
+      input: { prompt: "p", duration: 30, resolution: "1080p", aspect_ratio: "21:9" },
+      priceKey: "kling-4.0",
+      params: { duration: 30, resolution: "1080p", aspectRatio: "21:9" },
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { references: ["https://r"] })).toMatchObject({ model: "kling-4.0/reference-to-video", input: { resolution: "720p", image_urls: ["https://r"] } });
+    const frames = buildKieVideoPayload(m, { prompt: "p", duration: 5, aspectRatio: "9:16" }, { firstFrame: "https://a", lastFrame: "https://b" });
+    expect(frames).toMatchObject({ model: "kling-4.0/keyframe-to-video", input: { prompt: "p", duration: 5, resolution: "720p", first_frame_url: "https://a", last_frame_url: "https://b" } });
+    expect(frames.input).not.toHaveProperty("aspect_ratio");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", references: ["https://r"] })).toThrow("not both");
+    expect(() => buildKieVideoPayload(m, { prompt: "", duration: 5 }, { firstFrame: "https://a" })).toThrow("Needs a prompt");
+  });
+
   it("Seedance: frames or references (not both), `adaptive` when no ratio is sent, and a 3-character prompt", () => {
     const m = video("bytedance/seedance-2.5");
     expect(buildKieVideoPayload(m, { prompt: "slow push in", duration: 12, resolution: "480p", audio: false }, { firstFrame: "https://a" })).toEqual({
@@ -129,6 +145,7 @@ describe("kie prices", () => {
     expect(estimateKieVideoCost(video("kwaivgi/kling-v3.0-pro"), { prompt: "p", duration: 5, audio: true })).toBeCloseTo(0.675);
     expect(estimateKieVideoCost(video("google/veo-3.1"), { prompt: "p", duration: 8, resolution: "1080p" })).toBeCloseTo(1.275);
     expect(estimateKieVideoCost(video("fal/gemini-omni-flash-1.1"), { prompt: "p", duration: 6, resolution: "4K" })).toBeCloseTo(0.84);
+    expect(estimateKieVideoCost(video("fal/kling-v4"), { prompt: "p", duration: 10, resolution: "1080p", references: true })).toBeCloseTo(2.125);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5, resolution: "1080p", videoSec: 8 })).toBeCloseTo(0.96);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5 })).toBeUndefined(); // the source's length is not known yet
     expect(estimateKieVideoCost(video("x-ai/grok-imagine-video-1.5"), { prompt: "p", duration: 5, resolution: "1080p" })).toBeUndefined(); // no price listed

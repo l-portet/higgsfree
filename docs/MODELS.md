@@ -16,8 +16,8 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 19 image models (8 of them fal-only) and 46 video models, of which 44 are offered
-(16 fal-only, 7 of the 44 are [video editors](#video-editing)) and 2 are hidden.
+Curated today: 19 image models (8 of them fal-only) and 47 video models, of which 45 are offered
+(17 fal-only, 7 of the 45 are [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
 
@@ -109,7 +109,7 @@ text-to-video again in Oct 2026, so it is offered; a rejection shows the provide
 
 Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced above Wan 3.0.
 
-Not on OpenRouter: Gemini Omni Flash, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
+Not on OpenRouter: Gemini Omni Flash, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
 [fal models](#fal-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
@@ -147,6 +147,7 @@ brackets are the values fal receives when they differ from the app's.
 | Model | Id | fal endpoints | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
 | **Gemini Omni Flash 1.1** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1` | `google/gemini-omni-flash/v1.1/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | 3–10 (default 8) | 16:9, 9:16 |
+| **Kling 4.0** <sub>NEW</sub> | `fal/kling-v4` | `kling/v4/text-to-video` · `…/image-to-video` ⁴ | ✓ | ✓ | ✓ | – ⁴ | 720p / 1080p (default 720p) | 3–30 (default 5) | 21:9, 16:9, 1:1, 9:16 † |
 | **FLUX.3 Max** <sub>NEW</sub> | `fal/flux-3-max` | `blackforestlabs/flux-3-max/text-to-video` · `…/image-to-video` ³ | ✓ | ✓ | ✓ | ✓ | 720p / 1080p (default 720p) | 5–20 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † |
 | **FLUX.3 Video Draft** <sub>NEW</sub> <sub>FAST</sub> | `fal/flux-3-video-draft` | `blackforestlabs/flux-3/text-to-video/draft` · `…/image-to-video/draft` · `…/first-last-frame-to-video/draft` ² | ✓ | ✓ | ✓ | ✓ | 720p (not sent) | 5–20 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † |
 | **Kling O3 Pro** <sub>NEW</sub> | `fal/kling-o3-pro` | `fal-ai/kling-video/o3/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
@@ -164,9 +165,15 @@ A first frame alone goes to `image-to-video/draft`; a first and a last frame go 
 goes with the first to `image-to-video` as `end_image_url`. $0.17/s at 720p, $0.29/s at 1080p; fal
 takes 75% off through 7 Nov 2026 ($0.0425 / $0.0725), and the estimate follows. `reasoning_level` is
 left at fal's default (`high`: the model expands the prompt). The keyframes endpoint is not used.
+⁴ Kuaishou's Kling 4.0 (15 Oct 2026), also on kie.ai and APIMart (below). It always has sound and no
+provider can turn it off, so there is no Sound toggle (`caps.audio: false`). The frames go as
+`start_image_url` and `end_image_url`; per-shot prompts (`multi_prompt`) are not used. $0.157/s at
+720p, $0.235/s at 1080p (read 22 Oct 2026). fal's catalog lists both endpoints as active with a
+published schema, but still says "API access is coming soon": a run on fal may be refused until it opens.
 
-Durations go out as numbers (Gemini Omni Flash, FLUX.3 Max, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
-seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`).
+Durations go out as numbers (Gemini Omni Flash, Kling 4.0, FLUX.3 Max, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
+seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`), except Kling 4.0,
+which takes them on kie.ai and APIMart (never on fal).
 
 **Motion control** (`caps.motionControl`): a character image plus a reference video, and an optional
 prompt. The clip copies the video's movement and is as long as the video. There is no duration,
@@ -214,6 +221,7 @@ what each run cost.
 | Wan 2.7 | `wan/2-7-text-to-video` / `image-to-video` | FLUX.1 Kontext Pro | `flux1-kontext` (`flux-kontext-pro`) |
 | Grok Imagine Video, Grok Imagine 1.5 | `grok-imagine/…`, `grok-imagine-video-1-5-preview` | Z-Image Turbo | `z-image` |
 | Gemini Omni Flash 1.1 | `google/gemini-omni-flash-1-1` | | |
+| Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | | |
 | PixVerse 6, Vidu Q4 | `pixverse-v6/…`, `vidu-q4/image-to-video` | | |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | | |
 
@@ -229,7 +237,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
 | MiniMax H3, H3 Max, Hailuo 2.3 | `MiniMax-H3`, `MiniMax-H3-Max`, `MiniMax-Hailuo-2.3` | Nano Banana 2 Lite | `gemini-3.1-flash-lite-image-ext` |
 | Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
-| Kling 3.0 Pro / Standard, Kling O1 | `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2 | `gpt-image-2` |
+| Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2 | `gpt-image-2` |
 | PixVerse 6, Vidu Q4 | `pixverse-v6`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
 

@@ -51,6 +51,7 @@ const VIDEO_LIMITS: Record<ApimartVideoRoute["family"], { durations: number[]; a
   wan27: { durations: range(2, 15), aspects: ["16:9", "9:16", "1:1", "4:3", "3:4"], resolutions: { "720p": "720P", "1080p": "1080P" } },
   wan26: { durations: [5, 10, 15], aspects: ["16:9", "9:16", "1:1", "4:3", "3:4"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   kling: { durations: range(3, 15), aspects: ["16:9", "9:16", "1:1"] },
+  kling4: { durations: range(3, 30), aspects: ["16:9", "9:16", "1:1", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   "gemini-omni": { durations: [4, 6, 8, 10], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   flux3: { durations: range(5, 20), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "720p": "hd", "1080p": "fhd" } },
@@ -70,9 +71,9 @@ function durationsLabel(list: number[]): string {
 /** Families whose clips always have sound: a run with the sound off goes elsewhere. */
 const ALWAYS_SOUND = new Set<ApimartVideoRoute["family"]>(["veo", "minimax-h3"]);
 /** Families that take style references (as `reference_image` roles). */
-const TAKES_REFERENCES = new Set<ApimartVideoRoute["family"]>(["seedance", "wan3"]);
+const TAKES_REFERENCES = new Set<ApimartVideoRoute["family"]>(["seedance", "wan3", "kling4"]);
 /** Families that take a last frame with the first. */
-const TAKES_LAST = new Set<ApimartVideoRoute["family"]>(["veo", "seedance", "seedance15", "minimax-h3", "wan3", "wan27", "kling", "pixverse"]);
+const TAKES_LAST = new Set<ApimartVideoRoute["family"]>(["veo", "seedance", "seedance15", "minimax-h3", "wan3", "wan27", "kling", "kling4", "pixverse"]);
 
 const roles = (first?: string, last?: string, refs: string[] = []): { url: string; role: string }[] => [
   ...(first ? [{ url: first, role: "first_frame" }] : []),
@@ -180,6 +181,14 @@ export function buildApimartVideoPayload(model: VideoModel, req: ApimartVideoPar
         if (frames) body.image_urls = [first, last].filter(Boolean);
       }
       priceKey = `${route.model}#${route.tier}`;
+      break;
+    case "kling4":
+      // Always with sound (`audio: false` is refused, so it is never sent); no `mode`, the resolution says it.
+      if (!frames) needsPrompt();
+      Object.assign(body, { duration: params.duration, resolution: res });
+      if (aspect) body.aspect_ratio = aspect;
+      if (frames) body.image_urls = [first, last].filter(Boolean);
+      else if (refs.length) body.image_with_roles = roles(undefined, undefined, refs);
       break;
     case "pixverse":
       needsPrompt();

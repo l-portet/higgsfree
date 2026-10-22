@@ -116,6 +116,20 @@ describe("buildFalVideoPayload", () => {
     });
   });
 
+  it("Kling 4.0: whole seconds, 720p or 1080p, no sound field; aspect ratio only without a frame", () => {
+    const kling = video("fal/kling-v4");
+    expect(buildFalVideoPayload(kling, { prompt: "p", duration: 30, aspectRatio: "21:9", resolution: "1080p", audio: true }, {})).toEqual({
+      endpoint: "kling/v4/text-to-video",
+      input: { prompt: "p", duration: 30, aspect_ratio: "21:9", resolution: "1080p" },
+      params: { duration: 30, aspectRatio: "21:9", resolution: "1080p" },
+    });
+    expect(buildFalVideoPayload(kling, { prompt: "p", duration: 2, aspectRatio: "9:16" }, { firstFrame: "data:f", lastFrame: "data:l" })).toEqual({
+      endpoint: "kling/v4/image-to-video",
+      input: { prompt: "p", duration: 3, start_image_url: "data:f", end_image_url: "data:l", resolution: "720p" },
+      params: { duration: 3, resolution: "720p" },
+    });
+  });
+
   it("FLUX.3 Video Draft: one endpoint per job, both frames to the first-last-frame one", () => {
     const draft = video("fal/flux-3-video-draft");
     expect(buildFalVideoPayload(draft, { prompt: "p", duration: 12, aspectRatio: "21:9", resolution: "720p", audio: true }, {})).toEqual({

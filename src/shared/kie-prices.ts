@@ -13,6 +13,8 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   // std renders 720p, pro 1080p.
   "kling-3.0/video#std": { unit: "second", amount: 14, audioAmount: 20 },
   "kling-3.0/video#pro": { unit: "second", amount: 18, audioAmount: 27 },
+  // keyframe-to-video, and reference-to-video without a reference video (read 22 Oct 2026).
+  "kling-4.0": { unit: "second", amount: { "720p": 28.5, "1080p": 42.5 } },
   "bytedance/seedance-2-5": { unit: "second", amount: { "480p": 28, "720p": 63, "1080p": 158 } },
   "bytedance/seedance-2": { unit: "second", amount: { "480p": 19, "720p": 41, "1080p": 102, "4K": 208 } },
   "bytedance/seedance-2-fast": { unit: "second", amount: { "480p": 11.7, "720p": 24.8 } },
