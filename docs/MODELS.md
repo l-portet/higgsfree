@@ -135,8 +135,8 @@ verified yet.
 
 Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint (`FAL_PRICES` in
 `src/shared/fal-prices.ts`, read from each endpoint's page on 15 Oct 2026), not the catalog's
-OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about twice
-OpenRouter's rate on fal). fal reports no cost with a result, so runs on fal record none.
+OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
+times OpenRouter's rate on fal). fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -236,7 +236,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 ### Models on both
 
 These are in the OpenRouter tables above and also have a fal route. With both keys, a video runs on
-whichever is cheaper for that request (Seedance 2.5 is about half the price on OpenRouter; Kling 3.0,
+whichever is cheaper for that request (Seedance 2.5 is about 40% of fal's price on OpenRouter; Kling 3.0,
 MiniMax H3 and FLUX Video Edit cost the same on both, so Settings decides), and Settings decides the
 images (OpenRouter by default); with one key, that provider does. The price next to Generate shows who
 runs it, and hovering it compares the two ([FAL.md](FAL.md#which-provider-runs-a-model)). The options are the same
@@ -249,9 +249,11 @@ fal's fields. Style references are never sent to fal.
   `aspect_ratio`, `resolution` 1K / 2K.
 - **GPT Image 2**: `openai/gpt-image-2` · `openai/gpt-image-2/edit`; `image_urls`, `image_size`
   (1:1 `square_hd`, 2:3 832×1216, 3:2 1216×832).
-- **Seedance 2.5**: `bytedance/seedance-2.5/text-to-video` · `…/image-to-video`; `duration` as a
+- **Seedance 2.5**: `bytedance/seedance-2.5/us/text-to-video` · `…/image-to-video`; `duration` as a
   string, `aspect_ratio` (not with a frame), `resolution` 480p / 720p, `end_image_url`,
-  `generate_audio`.
+  `generate_audio`. These are fal's US-hosted endpoints, the only ones it lists since Oct 2026
+  ($0.2646 / $0.5676 per second at 480p / 720p, 20% above the old ones); `…/us/reference-to-video`
+  is not used, since fal never gets style references.
 - **MiniMax H3**: `minimax/h3/text-to-video` · `…/image-to-video`; `duration` as a number,
   `aspect_ratio` for text-to-video, `resolution: "2K"`, `end_image_url`. The audio toggle is not sent.
 - **MiniMax H3 Max**: `minimax/h3-max/text-to-video` · `…/image-to-video`; as H3, with `resolution`

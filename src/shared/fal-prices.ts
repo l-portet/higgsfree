@@ -44,7 +44,8 @@ const GPT_IMAGE_2: FalPrice = {
 const GPT_IMAGE_1_5: FalPrice = { unit: "image", usd: 0.2, byAspect: { auto: 0.133, "1:1": 0.133 } };
 const KLING_V3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.168 };
 const KLING_V3_STANDARD: FalPrice = { unit: "second", usd: 0.084, audioUsd: 0.126 };
-const SEEDANCE_2_5: FalPrice = { unit: "second", usd: { "480p": 0.2205, "720p": 0.473, "1080p": 1.164 } };
+// The US-hosted endpoints (read 22 Oct 2026), 20% above the ones fal stopped listing.
+const SEEDANCE_2_5: FalPrice = { unit: "second", usd: { "480p": 0.2646, "720p": 0.5676, "1080p": 1.396278 } };
 const MINIMAX_H3: FalPrice = { unit: "second", usd: { "480p": 0.05, "768p": 0.06, "2K": 0.13, "4K": 0.16 } };
 const MINIMAX_H3_MAX: FalPrice = {
   unit: "second",
@@ -86,8 +87,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/flux/schnell": { unit: "megapixel", usd: 0.003 },
 
   // ---------- video ----------
-  "bytedance/seedance-2.5/text-to-video": SEEDANCE_2_5,
-  "bytedance/seedance-2.5/image-to-video": SEEDANCE_2_5,
+  "bytedance/seedance-2.5/us/text-to-video": SEEDANCE_2_5,
+  "bytedance/seedance-2.5/us/image-to-video": SEEDANCE_2_5,
   "minimax/h3/text-to-video": MINIMAX_H3,
   "minimax/h3/image-to-video": MINIMAX_H3,
   "minimax/h3-max/text-to-video": MINIMAX_H3_MAX,

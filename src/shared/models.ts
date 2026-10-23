@@ -376,7 +376,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: { "480p": 0.1028, "720p": 0.2311 },
     verified: true,
-    fal: { textToVideo: "bytedance/seedance-2.5/text-to-video", imageToVideo: "bytedance/seedance-2.5/image-to-video", endImage: true, duration: "string", aspect: "always", resolutions: { "480p": "480p", "720p": "720p" }, audio: "generate_audio" },
+    fal: { textToVideo: "bytedance/seedance-2.5/us/text-to-video", imageToVideo: "bytedance/seedance-2.5/us/image-to-video", endImage: true, duration: "string", aspect: "always", resolutions: { "480p": "480p", "720p": "720p" }, audio: "generate_audio" },
     kie: { family: "seedance", model: "bytedance/seedance-2-5" },
     apimart: { family: "seedance", model: "seedance-2.5" },
   },
