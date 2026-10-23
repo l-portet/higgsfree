@@ -19,7 +19,7 @@ describe("quoteVideo", () => {
     expect(q).toMatchObject({ provider: "openrouter", reason: "cheaper" });
     expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(usd(q).openrouter).toBeCloseTo(1.1555);
-    expect(usd(q).fal).toBeCloseTo(2.365);
+    expect(usd(q).fal).toBeCloseTo(2.838);
     const pricier = { ...video("bytedance/seedance-2.5"), estCostPerSecUsd: { "720p": 1 } };
     expect(quoteVideo(pricier, { duration: 5, resolution: "720p" }, BOTH, "openrouter", NOW)).toMatchObject({ provider: "fal", reason: "cheaper" });
   });

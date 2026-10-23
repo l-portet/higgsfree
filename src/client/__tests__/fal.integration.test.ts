@@ -109,7 +109,7 @@ describe("who runs a model", () => {
       if (!g) throw new Error("no generation");
       return g;
     };
-    // Seedance 2.5 at 720p: about $0.23/s on OpenRouter, $0.47/s on fal.
+    // Seedance 2.5 at 720p: about $0.23/s on OpenRouter, $0.57/s on fal.
     expect((await video({ model: "bytedance/seedance-2.5", resolution: "720p", aspectRatio: "16:9" })).provider).toBe("openrouter");
     expect(mock.calls("/api/v1/videos")).toHaveLength(1);
     // Kling 3.0 Pro without sound: $0.112/s on both, so the preference.

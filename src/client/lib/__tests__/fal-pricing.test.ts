@@ -50,8 +50,8 @@ describe("fal prices", () => {
 describe("estimateFalVideoCost", () => {
   it("prices by the second at the resolution sent, with fal's own rate for shared models", () => {
     const seedance = video("bytedance/seedance-2.5");
-    expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "720p", audio: true })).toBeCloseTo(2.365);
-    expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "480p", audio: false, firstFrame: true })).toBeCloseTo(1.1025);
+    expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "720p", audio: true })).toBeCloseTo(2.838);
+    expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "480p", audio: false, firstFrame: true })).toBeCloseTo(1.323);
     expect(estimateFalVideoCost(video("fal/gemini-omni-flash-1.1"), { duration: 8, resolution: "4K" })).toBeCloseTo(2.4);
   });
 

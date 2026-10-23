@@ -89,6 +89,20 @@ describe("buildFalVideoPayload", () => {
     });
   });
 
+  it("Seedance 2.5: the /us endpoints, string durations, aspect ratio only without a frame", () => {
+    const seedance = video("bytedance/seedance-2.5");
+    expect(buildFalVideoPayload(seedance, { prompt: "p", duration: 12, aspectRatio: "21:9", resolution: "480p", audio: false }, {})).toEqual({
+      endpoint: "bytedance/seedance-2.5/us/text-to-video",
+      input: { prompt: "p", duration: "12", aspect_ratio: "21:9", resolution: "480p", generate_audio: false },
+      params: { duration: 12, aspectRatio: "21:9", resolution: "480p", audio: false },
+    });
+    expect(buildFalVideoPayload(seedance, { prompt: "p", duration: 5, aspectRatio: "9:16" }, { firstFrame: "data:f", lastFrame: "data:l" })).toEqual({
+      endpoint: "bytedance/seedance-2.5/us/image-to-video",
+      input: { prompt: "p", duration: "5", image_url: "data:f", end_image_url: "data:l", resolution: "720p" },
+      params: { duration: 5, resolution: "720p" },
+    });
+  });
+
   it("maps resolutions and fixed fields (H3 Max), seconds suffixes (Luma) and 4K spellings (Gemini)", () => {
     expect(buildFalVideoPayload(video("minimax/hailuo-3-max"), { prompt: "p", duration: 6, resolution: "480p", aspectRatio: "21:9" }, {}).input).toEqual({
       prompt: "p", prompt_expansion_mode: "balanced", duration: 6, aspect_ratio: "21:9", resolution: "480P",
