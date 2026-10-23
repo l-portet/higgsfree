@@ -62,7 +62,7 @@ export function keyToAsk(m: Routed, keys: ProviderKeys, preferred: ProviderId): 
 }
 
 /** "fal, kie.ai" → "a fal or kie.ai key": the article follows the first name. */
-function keyPhrase(providers: ProviderId[]): string {
+export function keyPhrase(providers: ProviderId[]): string {
   const names = providers.map((p) => PROVIDER_NAME[p]);
   const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : (names[0] ?? "");
   return `${/^[aeiou]/i.test(list) ? "an" : "a"} ${list} key`;

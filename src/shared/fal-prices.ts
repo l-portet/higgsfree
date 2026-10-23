@@ -61,6 +61,8 @@ const FLUX_3_MAX: FalPrice = {
   promo: { until: "2026-11-07", usd: { "720p": 0.0425, "1080p": 0.0725 } },
 };
 const KLING_O3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.14 };
+// Read 22 Oct 2026, while fal still says API access is "coming soon".
+const KLING_V4: FalPrice = { unit: "second", usd: { "720p": 0.157, "1080p": 0.235 } };
 const PIXVERSE_6: FalPrice = { unit: "second", usd: { "720p": 0.045, "1080p": 0.09 }, audioUsd: { "720p": 0.06, "1080p": 0.115 } };
 // 2K and 4K are fal's 1440p and 2160p.
 const LTX_2_3: FalPrice = { unit: "second", usd: { "1080p": 0.08, "2K": 0.16, "4K": 0.32 } };
@@ -107,6 +109,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "blackforestlabs/flux-3/text-to-video/draft": FLUX_3_DRAFT,
   "blackforestlabs/flux-3/image-to-video/draft": FLUX_3_DRAFT,
   "blackforestlabs/flux-3/first-last-frame-to-video/draft": FLUX_3_DRAFT,
+  "kling/v4/text-to-video": KLING_V4,
+  "kling/v4/image-to-video": KLING_V4,
   "fal-ai/kling-video/o3/pro/text-to-video": KLING_O3_PRO,
   "fal-ai/kling-video/o3/pro/image-to-video": KLING_O3_PRO,
   "fal-ai/kling-video/v3/turbo/pro/text-to-video": { unit: "second", usd: 0.14 },

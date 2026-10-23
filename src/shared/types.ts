@@ -301,7 +301,7 @@ export interface KieVideoRoute {
 }
 
 export type KieVideoFamily =
-  | "veo" | "kling3" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "pixverse" | "vidu" | "wan27-edit";
+  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "pixverse" | "vidu" | "wan27-edit";
 
 export interface KieImageRoute {
   family: KieImageFamily;
@@ -327,7 +327,7 @@ export interface ApimartVideoRoute {
 }
 
 export type ApimartVideoFamily =
-  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "pixverse" | "gemini-omni" | "flux3" | "vidu";
+  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "kling4" | "pixverse" | "gemini-omni" | "flux3" | "vidu";
 
 export interface ApimartImageRoute {
   family: ApimartImageFamily;
