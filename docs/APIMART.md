@@ -58,13 +58,14 @@ returns a task id, the task url polled until the result urls are there.
 | `wan27` | Wan 2.7 → `wan2.7` | `image_urls` [first, last], `resolution` `720P` / `1080P`, `duration`, `size` (text-to-video) | |
 | `wan26` | Wan 2.6 → `wan2.6` | `image_urls` [first], `aspect_ratio` (text-to-video), `resolution`, `duration` 5 / 10 / 15, `audio` | a last frame |
 | `kling` | Kling 3.0 Pro / Standard → `kling-v3` (`mode` `pro` / `std`), Kling O1 → `kling-video-o1` (`std`) | `mode`, `duration`, `aspect_ratio`, `audio` (v3), `image_urls` [first, last] (v3) or `image_with_roles` (O1) | references |
+| `kling4` | Kling 4.0 → `kling-v4` | `duration` 3–30, `resolution` 720p / 1080p, `aspect_ratio` (not with frames), `image_urls` [first, last], references as `image_with_roles` (`reference_image`); no `mode` and no sound field (always on; `audio: false` is a 400) | an empty prompt without frames, frames and references together |
 | `pixverse` | PixVerse 6 → `pixverse-v6` | `resolution`, `duration`, `audio`, `size` (text-to-video), `image_urls` [first] or `first_frame_image` + `last_frame_image` (5 or 8 s) | |
 | `gemini-omni` | Gemini Omni Flash 1.1 → `gemini-omni-1.1-flash-ext` | `duration` 4 / 6 / 8 / 10, `resolution` (`4k`), `aspect_ratio`, `generation_type: "frame"` + `image_urls` [first] | a last frame, other durations |
 | `flux3` | FLUX.3 Video → `flux-3-video` | `duration` 5–20, `resolution` `hd` / `fhd`, `aspect_ratio` (`auto`), `image_urls` [first], `audio` | a last frame |
 | `vidu` | Vidu Q4 → `viduq4-preview` | `first_frame_image`, `duration` 3–16, `resolution` (`2K`, `4K`), `audio` | no first frame |
 
 Most families need a prompt. Every family refuses a last frame without a first one, and style references
-unless it takes them (Seedance, Wan 3.0).
+unless it takes them (Seedance, Wan 3.0, Kling 4.0).
 
 ## Image fields (`buildApimartImagePayload`)
 
@@ -81,7 +82,7 @@ upload page's example shows `{ url }` objects).
 ## Cost estimates
 
 `APIMART_PRICES` (`src/shared/apimart-prices.ts`) has APIMart's price in USD for every model a route sends to,
-from its public catalog on 20 Oct 2026; a test checks every route is priced and every price is used. They are
+from its public catalog on 20 Oct 2026 (Kling 4.0 on 22 Oct); a test checks every route is priced and every price is used. They are
 the **Gold tier**, the "current price" APIMart shows (80% of its list price): a Platinum or Diamond account
 pays 5–10% less. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0 and
 PixVerse), per clip (Veo, 8 s; Gemini Omni Flash by length), or per image (by size). The shared estimator

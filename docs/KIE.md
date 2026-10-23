@@ -55,6 +55,7 @@ family cannot take throws a 400 whose message is what the price tooltip shows ("
 |---|---|---|---|
 | `veo` | Veo 3.1, Fast, Lite → `veo-3-1`, tier in `model` (`veo3`, `veo3_fast`, `veo3_lite`) | `generation_type` TEXT_2_VIDEO / FIRST_AND_LAST_FRAMES_2_VIDEO, `image_urls` [first, last], `aspect_ratio` (`Auto` with frames), `resolution` 720p / 1080p / `4k`, `duration` | sound off (always on), durations other than 4 / 6 / 8 |
 | `kling3` | Kling 3.0 Pro / Standard → `kling-3.0/video`, `mode` `pro` (1080p) / `std` (720p) | `sound`, `duration` as a string, `image_urls` [first, last], `aspect_ratio` (text-to-video), `multi_shots: false` | references |
+| `kling4` | Kling 4.0 → `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | `duration` 3–30, `resolution` 720p / 1080p, `aspect_ratio` (not with frames), `image_urls` (references), `first_frame_url`, `last_frame_url`; no sound field (always on) | an empty prompt, frames and references together |
 | `seedance` | Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini → `bytedance/seedance-2-5`, `-2`, `-2-fast`, `-2-mini` | `first_frame_url`, `last_frame_url`, `reference_image_urls`, `generate_audio`, `resolution`, `duration`, `aspect_ratio` (`adaptive` when none is sent) | frames and references together, a prompt under 3 characters, 9:21 |
 | `minimax-h3` | MiniMax H3 → `minimax-h3/text-to-video` / `image-to-video` | `aspect_ratio` (text-to-video), `first_frame_url`, `last_frame_url`, `resolution` `768P` / `2K`, `duration` 4–15 | sound off, an empty prompt |
 | `wan3` | Wan 3.0, Prime → `wan/3-0-video`, `wan/3-0-video-prime` | `first_frame_url`, `last_frame_url`, `reference_image_urls`, `resolution` `480P`–`1080P`, `aspect_ratio` (`adaptive`), `audio`, `duration` 2–30 | frames and references together |
@@ -66,7 +67,7 @@ family cannot take throws a 400 whose message is what the price tooltip shows ("
 | `vidu` | Vidu Q4 → `vidu-q4/image-to-video` | `image_url`, `duration` 3–16, `resolution` (`2k`, `4k`), `audio` | no first frame, a last frame |
 | `wan27-edit` | Wan 2.7 Edit → `wan/2-7-videoedit` | `video_url` (stream upload), `resolution` | |
 
-Every family also refuses style references unless it takes them (Seedance, Wan 3.0), and a last frame without a
+Every family also refuses style references unless it takes them (Seedance, Wan 3.0, Kling 4.0), and a last frame without a
 first one.
 
 ## Image fields (`buildKieImagePayload`)
@@ -87,7 +88,7 @@ with kie preferred, a FLUX.1 Kontext run at 3:2 still goes to fal.
 
 `KIE_PRICES` (`src/shared/kie-prices.ts`) has kie's list price in credits ($0.005 each) for every model a
 route sends to, read from kie's pricing page (`kie.ai/pricing`, backed by the public
-`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026; a test checks every route is priced and
+`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct); a test checks every route is priced and
 every price is used. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0
 and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash, by length),
 or per image (by size). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send

@@ -165,7 +165,8 @@ is stored in the record's `params`.
   `generate_audio` or `generate_audio_switch` (PixVerse). MiniMax H3 has audio but no field on fal, so
   the toggle is not sent there.
 - Style references are not sent to fal. A run that has them is a 400 before anything is created ("… on
-  fal does not take style references. Remove them, or prefer OpenRouter in Settings.").
+  fal does not take style references. Remove them, or add an OpenRouter key in Settings."; off OpenRouter,
+  the model's other providers instead: "a kie.ai or APIMart key" for Kling 4.0).
 
 ### Motion control
 

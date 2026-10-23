@@ -65,6 +65,20 @@ describe("kie.ai videos", () => {
     expect(mock.kie("/r/out.mp4")[0]?.auth).toBeUndefined(); // the CDN never sees the key
   });
 
+  it("Kling 4.0 with a style reference: fal takes none, so kie runs it on reference-to-video", async () => {
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const ref = await uploadImage();
+    const g = await video({ model: "fal/kling-v4", resolution: "1080p", aspectRatio: "21:9", references: [ref] });
+    expect(g).toMatchObject({ provider: "kie", inputs: { referenceImages: [ref] }, params: { duration: 5, resolution: "1080p", aspectRatio: "21:9" } });
+    expect(mock.kie("/api/v1/jobs/createTask")[0]?.body).toEqual({
+      model: "kling-4.0/reference-to-video",
+      input: { prompt: "slow push in", duration: 5, resolution: "1080p", aspect_ratio: "21:9", image_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] },
+    });
+    expect(mock.fal("/kling/v4/text-to-video")).toHaveLength(0);
+    await waitFor(completed(g.id));
+  });
+
   it("with every key: kie runs what it makes cheapest, the others what they do, and refusals go elsewhere", async () => {
     setStoredKey("test-key");
     setStoredFalKey(FAL_KEY);

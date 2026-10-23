@@ -29,6 +29,8 @@ export const APIMART_PRICES: Record<string, ListPrice> = {
   "kling-v3#std": { unit: "second", amount: 0.0672, audioAmount: 0.1008 },
   "kling-v3#pro": { unit: "second", amount: 0.0896, audioAmount: 0.1344 },
   "kling-video-o1#std": { unit: "second", amount: 0.0672 },
+  // Without a video input (read 22 Oct 2026).
+  "kling-v4": { unit: "second", amount: { "720p": 0.157, "1080p": 0.235 } },
   "pixverse-v6": { unit: "second", amount: { "720p": 0.032, "1080p": 0.064 }, audioAmount: { "720p": 0.04, "1080p": 0.08 } },
   "gemini-omni-1.1-flash-ext": {
     unit: "video",

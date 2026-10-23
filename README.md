@@ -40,7 +40,7 @@ Open http://localhost:3000 and paste your key behind **Add key** (top right). Th
 
 ## fal (optional)
 
-[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 Edit, Grok Imagine Edit, Wan 2.7 Edit), Gemini Omni Flash 1.1, FLUX.3 Max, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6, LTX 2.3, Luma Ray 3.2, FLUX.1 Kontext, Ideogram 4.5 and more.
+[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 Edit, Grok Imagine Edit, Wan 2.7 Edit), Kling 4.0, Gemini Omni Flash 1.1, FLUX.3 Max, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6, LTX 2.3, Luma Ray 3.2, FLUX.1 Kontext, Ideogram 4.5 and more.
 
 - **Add a key** when you need it: pick a fal model and press Generate, and a small dialog asks for the fal key ("Save and generate" finishes the job). It is also in Settings › Keys, next to **Test connection** and **Remove key**. Get one at [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys).
 - **Every model is listed, whatever keys you have.** Pick one whose provider has no key and a small notice above the prompt says which provider it runs on; Generate opens the key dialog for that provider. That goes both ways: a fal-only model with only an OpenRouter key, an OpenRouter-only model with only a fal key.
@@ -52,11 +52,11 @@ The rules are in [docs/FAL.md](docs/FAL.md).
 
 ## kie.ai (optional)
 
-[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash, PixVerse, Vidu, Nano Banana Pro, GPT Image 2 and more. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares every provider. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
+[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0 and 4.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash, PixVerse, Vidu, Nano Banana Pro, GPT Image 2 and more. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares every provider. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
 
 ## APIMart (optional)
 
-[APIMart](https://apimart.ai) is another provider with its own prices: Veo 3.1 (8 s clips), Seedance, MiniMax H3, Wan, Kling 3.0, PixVerse, Vidu, Gemini Omni Flash, FLUX.3 Video, and images like Nano Banana Pro and GPT Image 2 for a few cents. Add a key in Settings › Keys (get one at [apimart.ai/keys](https://apimart.ai/keys)) and a video goes there whenever it is the cheapest. Estimates use APIMart's Gold-tier prices; the real cost of each run is recorded. Images you send are uploaded to APIMart's file host (public urls, kept 72 hours). The rules are in [docs/APIMART.md](docs/APIMART.md).
+[APIMart](https://apimart.ai) is another provider with its own prices: Veo 3.1 (8 s clips), Seedance, MiniMax H3, Wan, Kling 3.0 and 4.0, PixVerse, Vidu, Gemini Omni Flash, FLUX.3 Video, and images like Nano Banana Pro and GPT Image 2 for a few cents. Add a key in Settings › Keys (get one at [apimart.ai/keys](https://apimart.ai/keys)) and a video goes there whenever it is the cheapest. Estimates use APIMart's Gold-tier prices; the real cost of each run is recorded. Images you send are uploaded to APIMart's file host (public urls, kept 72 hours). The rules are in [docs/APIMART.md](docs/APIMART.md).
 
 ## Deploy anywhere
 
@@ -96,7 +96,7 @@ What follows from that:
 
 ## Models
 
-Curated: 19 image models and 44 video models (7 of them video editors) with their real limits (sizes, durations, resolutions, audio); 8 of the image models and 16 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 19 image models and 45 video models (7 of them video editors) with their real limits (sizes, durations, resolutions, audio); 8 of the image models and 17 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
 
