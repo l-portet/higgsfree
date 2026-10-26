@@ -53,6 +53,7 @@ const VIDEO_LIMITS: Record<ApimartVideoRoute["family"], { durations: number[]; a
   kling: { durations: range(3, 15), aspects: ["16:9", "9:16", "1:1"] },
   kling4: { durations: range(3, 30), aspects: ["16:9", "9:16", "1:1", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
+  "pixverse-max": { durations: range(1, 15), aspects: ["16:9", "9:16", "4:3", "3:4", "1:1", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   "gemini-omni": { durations: [4, 6, 8, 10], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   flux3: { durations: range(5, 20), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "720p": "hd", "1080p": "fhd" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2K", "4K": "4K" } },
@@ -197,6 +198,13 @@ export function buildApimartVideoPayload(model: VideoModel, req: ApimartVideoPar
       if (last) Object.assign(body, { first_frame_image: first, last_frame_image: last });
       else if (first) body.image_urls = [first];
       else body.size = aspect ?? "16:9";
+      break;
+    case "pixverse-max":
+      // Unlike PixVerse 6: `aspect_ratio` (not `size`), one frame only, and no prompt needed with it.
+      if (!first) needsPrompt();
+      Object.assign(body, { resolution: res, duration: params.duration, audio: sound(false) });
+      if (first) body.image_urls = [first];
+      else body.aspect_ratio = aspect ?? "16:9";
       break;
     case "gemini-omni":
       needsPrompt();

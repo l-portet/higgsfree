@@ -57,6 +57,26 @@ describe("buildKieVideoPayload", () => {
     expect(() => buildKieVideoPayload(m, { prompt: "", duration: 5 }, { firstFrame: "https://a" })).toThrow("Needs a prompt");
   });
 
+  it("PixVerse 6 Max: PixVerse 6's fields on its own models and prices, any prompt, a first frame only", () => {
+    const m = video("pixverse/pixverse-v6-max");
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 15, aspectRatio: "2:3", resolution: "1080p", audio: true }, {})).toEqual({
+      model: "pixverse-v6-max/text-to-video",
+      input: { prompt: "p", quality: "1080p", duration: 15, generate_audio_switch: true, aspect_ratio: "2:3" },
+      priceKey: "pixverse-v6-max",
+      params: { duration: 15, resolution: "1080p", aspectRatio: "2:3", audio: true },
+    });
+    const i2v = buildKieVideoPayload(m, { prompt: "a cat", duration: 5, aspectRatio: "16:9" }, { firstFrame: "https://a" });
+    expect(i2v).toEqual({
+      model: "pixverse-v6-max/image-to-video",
+      input: { prompt: "a cat", quality: "720p", duration: 5, generate_audio_switch: false, image_urls: ["https://a"] },
+      priceKey: "pixverse-v6-max",
+      params: { duration: 5, resolution: "720p", audio: false },
+    });
+    expect(() => buildKieVideoPayload(m, { prompt: " ", duration: 5 }, { firstFrame: "https://a" })).toThrow("Needs a prompt");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", lastFrame: "https://b" })).toThrow("Takes no last frame");
+    expect(buildKieVideoPayload(video("fal/pixverse-v6"), { prompt: "a cat", duration: 5 }, {}).priceKey).toBe("pixverse-v6");
+  });
+
   it("Seedance: frames or references (not both), `adaptive` when no ratio is sent, and a 3-character prompt", () => {
     const m = video("bytedance/seedance-2.5");
     expect(buildKieVideoPayload(m, { prompt: "slow push in", duration: 12, resolution: "480p", audio: false }, { firstFrame: "https://a" })).toEqual({
@@ -146,6 +166,8 @@ describe("kie prices", () => {
     expect(estimateKieVideoCost(video("google/veo-3.1"), { prompt: "p", duration: 8, resolution: "1080p" })).toBeCloseTo(1.275);
     expect(estimateKieVideoCost(video("fal/gemini-omni-flash-1.1"), { prompt: "p", duration: 6, resolution: "4K" })).toBeCloseTo(0.84);
     expect(estimateKieVideoCost(video("fal/kling-v4"), { prompt: "p", duration: 10, resolution: "1080p", references: true })).toBeCloseTo(2.125);
+    expect(estimateKieVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(1.12);
+    expect(estimateKieVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.22);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5, resolution: "1080p", videoSec: 8 })).toBeCloseTo(0.96);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5 })).toBeUndefined(); // the source's length is not known yet
     expect(estimateKieVideoCost(video("x-ai/grok-imagine-video-1.5"), { prompt: "p", duration: 5, resolution: "1080p" })).toBeUndefined(); // no price listed
