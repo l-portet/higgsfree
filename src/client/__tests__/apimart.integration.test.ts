@@ -86,6 +86,27 @@ describe("APIMart videos", () => {
     expect((await video({ model: "kwaivgi/kling-v3.0-pro", audio: false })).provider).toBe("apimart");
   });
 
+  it("PixVerse 6 Max, on kie.ai and APIMart only: a frame without a prompt runs on APIMart, and other keys do not help", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    await expect(video({ model: "pixverse/pixverse-v6-max", prompt: "p" })).rejects.toMatchObject({ status: 401, error: expect.stringContaining("APIMart") });
+    setProviderKey("kie", KIE_KEY);
+    setProviderKey("apimart", APIMART_KEY);
+    const frame = await uploadImage();
+    const g = await video({ model: "pixverse/pixverse-v6-max", prompt: "", resolution: "1080p", aspectRatio: "16:9", audio: true, firstFrame: frame });
+    expect(g).toMatchObject({ provider: "apimart", params: { duration: 5, resolution: "1080p", audio: true } });
+    expect(mock.apimart("/v1/videos/generations")[0]?.body).toEqual({
+      model: "pixverse-v6-max",
+      prompt: "",
+      resolution: "1080p",
+      duration: 5,
+      audio: true,
+      image_urls: ["https://upload.apimart.ai/f/image/up-1.png"],
+    });
+    expect(mock.kie("/api/v1/jobs/createTask")).toHaveLength(0);
+    await waitFor(completed(g.id));
+  });
+
   it("a task APIMart fails ends with its message; a refused submit is a 400", async () => {
     setProviderKey("apimart", APIMART_KEY);
     const g = await video({ prompt: "APIMART_FAIL" });

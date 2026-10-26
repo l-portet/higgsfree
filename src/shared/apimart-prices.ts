@@ -32,6 +32,8 @@ export const APIMART_PRICES: Record<string, ListPrice> = {
   // Without a video input (read 22 Oct 2026).
   "kling-v4": { unit: "second", amount: { "720p": 0.157, "1080p": 0.235 } },
   "pixverse-v6": { unit: "second", amount: { "720p": 0.032, "1080p": 0.064 }, audioAmount: { "720p": 0.04, "1080p": 0.08 } },
+  // Read 26 Oct 2026.
+  "pixverse-v6-max": { unit: "second", amount: { "720p": 0.0391112, "1080p": 0.0782224 }, audioAmount: { "720p": 0.0533336, "1080p": 0.0995552 } },
   "gemini-omni-1.1-flash-ext": {
     unit: "video",
     byDuration: {

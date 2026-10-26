@@ -78,6 +78,19 @@ describe("quoteVideo", () => {
     expect(refs.quotes[0]).toMatchObject({ provider: "fal", refusal: "Takes no style references" });
   });
 
+  it("PixVerse 6 Max, on kie.ai and APIMart only: APIMart is cheaper, and takes a frame without a prompt", () => {
+    const max = video("pixverse/pixverse-v6-max");
+    // 10 s at 1080p with sound: $1.12 on kie, $0.996 on APIMart.
+    const q = quoteVideo(max, { prompt: "a fox", duration: 10, resolution: "1080p", audio: true }, { kie: true, apimart: true }, "kie", NOW);
+    expect(q).toMatchObject({ provider: "apimart", reason: "cheaper" });
+    expect(usd(q)).toEqual({ kie: expect.closeTo(1.12), apimart: expect.closeTo(0.9956) });
+    const noPrompt = quoteVideo(max, { prompt: "", duration: 5, firstFrame: true }, { kie: true, apimart: true }, "kie", NOW);
+    expect(noPrompt).toMatchObject({ provider: "apimart", reason: "one-ready" });
+    expect(noPrompt.quotes[0]).toMatchObject({ provider: "kie", refusal: "Needs a prompt" });
+    // OpenRouter and fal keys do not help.
+    expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, "openrouter", NOW)).toMatchObject({ reason: "none" });
+  });
+
   it("prices motion control and editing by the input video, once its length is known", () => {
     const motion = quoteVideo(video("fal/kling-v3-pro-motion-control"), { duration: 5, videoSec: 7.5 }, BOTH, "openrouter", NOW);
     expect(motion).toMatchObject({ provider: "fal", reason: "only" });
