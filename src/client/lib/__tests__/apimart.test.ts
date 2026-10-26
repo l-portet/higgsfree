@@ -75,6 +75,26 @@ describe("buildApimartVideoPayload", () => {
     expect(() => buildApimartVideoPayload(m, { prompt: "", duration: 5 }, {})).toThrow("Needs a prompt");
   });
 
+  it("PixVerse 6 Max: `aspect_ratio` (PixVerse 6 sends `size`), a first frame only, no prompt needed with it", () => {
+    const m = video("pixverse/pixverse-v6-max");
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 15, aspectRatio: "2:3", resolution: "1080p", audio: true }, {})).toEqual({
+      kind: "videos",
+      body: { model: "pixverse-v6-max", prompt: "p", resolution: "1080p", duration: 15, audio: true, aspect_ratio: "2:3" },
+      priceKey: "pixverse-v6-max",
+      params: { duration: 15, resolution: "1080p", aspectRatio: "2:3", audio: true },
+    });
+    expect(buildApimartVideoPayload(m, { prompt: "", duration: 5, aspectRatio: "16:9" }, { firstFrame: "https://a" }).body).toEqual({
+      model: "pixverse-v6-max",
+      prompt: "",
+      resolution: "720p",
+      duration: 5,
+      audio: false,
+      image_urls: ["https://a"],
+    });
+    expect(() => buildApimartVideoPayload(m, { prompt: "", duration: 5 }, {})).toThrow("Needs a prompt");
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", lastFrame: "https://b" })).toThrow("Takes no last frame");
+  });
+
   it("maps the other families' own field names", () => {
     expect(buildApimartVideoPayload(video("minimax/hailuo-3"), { prompt: "p", duration: 6 }, { firstFrame: "https://a" }).body).toEqual({
       model: "MiniMax-H3",
@@ -156,6 +176,8 @@ describe("APIMart prices", () => {
     expect(estimateApimartVideoCost(video("google/veo-3.1"), { prompt: "p", duration: 8, resolution: "1080p" })).toBeCloseTo(1);
     expect(estimateApimartVideoCost(video("fal/gemini-omni-flash-1.1"), { prompt: "p", duration: 10, resolution: "4K" })).toBeCloseTo(0.9);
     expect(estimateApimartVideoCost(video("fal/kling-v4"), { prompt: "p", duration: 10, resolution: "1080p" })).toBeCloseTo(2.35);
+    expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(0.9956);
+    expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.1956);
     expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, false)).toBeCloseTo(0.12);
   });
 });

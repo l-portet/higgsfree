@@ -200,15 +200,19 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
       if (first) input.first_frame_url = first;
       if (last) input.last_frame_url = last;
       break;
-    case "pixverse":
-      if (prompt.length < 3) throw badRequest("Needs a prompt of 3 characters or more");
+    case "pixverse": {
+      // PixVerse 6 and 6 Max take the same fields; Max takes any prompt, 6 one of 3 characters or more.
+      const max = route.model.startsWith("pixverse-v6-max/");
+      if (max && !prompt) throw badRequest("Needs a prompt");
+      if (!max && prompt.length < 3) throw badRequest("Needs a prompt of 3 characters or more");
       Object.assign(input, { prompt, quality: kieResolution, duration: params.duration, generate_audio_switch: sound(false) });
       if (frames) {
         id = route.imageModel ?? route.model;
         input.image_urls = [first];
       } else input.aspect_ratio = aspect ?? "16:9";
-      priceKey = "pixverse-v6";
+      priceKey = max ? "pixverse-v6-max" : "pixverse-v6";
       break;
+    }
     case "vidu":
       if (!first) throw badRequest("Needs a first frame");
       Object.assign(input, { image_url: first, duration: params.duration, resolution: kieResolution, audio: sound(true) });

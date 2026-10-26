@@ -37,6 +37,8 @@ export const KIE_PRICES: Record<string, ListPrice> = {
     },
   },
   "pixverse-v6": { unit: "second", amount: { "720p": 7.2, "1080p": 14.4 }, audioAmount: { "720p": 9.6, "1080p": 18.4 } },
+  // Read 26 Oct 2026.
+  "pixverse-v6-max": { unit: "second", amount: { "720p": 8.8, "1080p": 17.6 }, audioAmount: { "720p": 12, "1080p": 22.4 } },
   "vidu-q4/image-to-video": { unit: "second", amount: { "720p": 15.2, "1080p": 19.2, "2K": 30.4, "4K": 62.4 } },
 
   // ---------- image ----------
