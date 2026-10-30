@@ -16,8 +16,8 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 19 image models (8 of them fal-only) and 48 video models, of which 46 are offered
-(17 fal-only, 1 [on kie.ai and APIMart only](#kieai-and-apimart-only), 7 of the 46 are
+Curated today: 19 image models (8 of them fal-only) and 49 video models, of which 47 are offered
+(17 fal-only, 2 [on kie.ai or APIMart only](#kieai-and-apimart-only), 7 of the 47 are
 [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
@@ -110,8 +110,8 @@ text-to-video again in Oct 2026, so it is offered; a rejection shows the provide
 
 Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced above Wan 3.0.
 
-Not on OpenRouter: Gemini Omni Flash, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
-[fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only (see
+Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
+[fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only, Gemini Omni Flash 1.2 on APIMart only (see
 [kie.ai and APIMart only](#kieai-and-apimart-only)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
@@ -210,11 +210,13 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 ### kie.ai and APIMart only
 
 Not on OpenRouter nor fal: these run only with a kie.ai or APIMart key (fields and rules in
-[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The id is the app's
-own (`<maker>/<name>`). None is verified yet. `†` = the aspect ratio is sent for text-to-video only.
+[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run (Gemini Omni Flash 1.2
+is on APIMart only). The id is the app's own (`<maker>/<name>`). None is verified yet. `†` = the aspect
+ratio is sent for text-to-video only.
 
 | Model | Id | kie models · APIMart model | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
+| **Gemini Omni Flash 1.2** <sub>NEW</sub> | `google/gemini-omni-flash-1.2` | – · `gemini-omni-1.2-flash` ² | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | not sent: the prompt sets it, about 3–10 ² | 16:9, 9:16 |
 | **PixVerse 6 Max** <sub>NEW</sub> | `pixverse/pixverse-v6-max` | `pixverse-v6-max/text-to-video` · `…/image-to-video` · `pixverse-v6-max` ¹ | ✓ | ✓ | – | ✓ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
 
 ¹ The top quality tier of PixVerse 6 (24 Oct 2026): text-to-video and a first frame only (no last
@@ -223,6 +225,14 @@ providers also offer 360p and 540p, which the app does not list (nor for PixVers
 per second without / with sound: kie 8.8 / 12 credits at 720p, 17.6 / 22.4 at 1080p ($0.044 / $0.06,
 $0.088 / $0.112); APIMart $0.0391 / $0.0533 at 720p, $0.0782 / $0.0996 at 1080p (Gold tier), so
 APIMart is the cheaper. APIMart takes a frame without a prompt, kie does not.
+² Google's Gemini Omni 1.2 Flash, read from APIMart's model page on 30 Oct 2026; not on fal, kie.ai or
+OpenRouter yet. There is no duration field: the prompt sets the length (about 3–10 s, not guaranteed),
+so the app offers a single 8 s placeholder and sends nothing. A first frame, a first and a last frame
+(`first_frame_image`, `last_frame_image`), or style references (`image_urls`; APIMart takes 10 images
+in all, frames included, the app sends frames or references, not both); the ratio is sent with frames
+too. APIMart also offers 360p (not listed; 1080p and 4K are upscaled) and reference clips, edit and
+extend through `video_urls` and `metadata.task`, which the app does not use (no video input on
+APIMart). APIMart lists no price for it yet, so there is no estimate; the cost of each run is recorded.
 
 ### kie.ai
 
@@ -258,7 +268,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2 | `gpt-image-2` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
-| Gemini Omni Flash 1.1, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
+| Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
 
 ### Models on both
 
