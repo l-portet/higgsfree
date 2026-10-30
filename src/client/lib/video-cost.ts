@@ -23,6 +23,11 @@ export interface VideoQuoteRequest {
   lastFrame?: boolean;
   /** Style references are attached: fal takes none. */
   references?: boolean;
+  /** Reference videos / audio are attached: only kie.ai takes them (as uploaded files). */
+  referenceVideos?: boolean;
+  referenceAudios?: boolean;
+  /** How long the reference videos run together, when known: they are billed too. */
+  referenceVideoSec?: number;
   /** Motion control and video editing: the input video's length, which sets the clip's. Unknown: no price. */
   videoSec?: number;
 }
@@ -75,8 +80,10 @@ function quoted(check: () => unknown, price: () => number | undefined): Pick<Pro
 function priceOn(provider: ProviderId, model: VideoModel, req: VideoQuoteRequest, now: Date): Pick<ProviderQuote, "usd" | "refusal"> {
   switch (provider) {
     case "openrouter":
+      if (req.referenceVideos || req.referenceAudios) return { refusal: "Takes no reference video or audio" };
       return { usd: openRouterUsd(model, req) };
     case "fal":
+      if (req.referenceVideos || req.referenceAudios) return { refusal: "Takes no reference video or audio" };
       if (req.references) return { refusal: "Takes no style references" };
       return quoted(() => falVideoPayloadFor(model, req), () => estimateFalVideoCost(model, req, now));
     case "kie":

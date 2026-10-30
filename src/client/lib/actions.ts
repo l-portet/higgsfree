@@ -105,6 +105,8 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
       model: g.model,
       params: g.params,
       referenceImages: g.inputs?.referenceImages,
+      referenceVideos: g.inputs?.referenceVideos,
+      referenceAudios: g.inputs?.referenceAudios,
       firstFrame: g.inputs?.firstFrame,
       lastFrame: g.inputs?.lastFrame,
       motionVideo: g.inputs?.motionVideo,

@@ -6,6 +6,9 @@ const IMAGE_ACCEPT = IMAGE_MIME_TYPES.join(",");
 /** Motion-control reference videos (the store sniffs the bytes; this only narrows the picker). */
 export const VIDEO_MIME_TYPES = ["video/mp4", "video/quicktime", "video/webm"] as const;
 const VIDEO_ACCEPT = VIDEO_MIME_TYPES.join(",");
+/** Reference audio (sniffed on the way in too). */
+export const AUDIO_MIME_TYPES = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave"] as const;
+const AUDIO_ACCEPT = [...AUDIO_MIME_TYPES, ".mp3", ".wav"].join(",");
 
 function isAcceptedImage(file: File): boolean {
   return (IMAGE_MIME_TYPES as readonly string[]).includes(file.type);
@@ -44,21 +47,30 @@ export function imageFilesFromDataTransfer(dt: DataTransfer | null | undefined):
   return out;
 }
 
-/** Video files dragged/dropped. */
-export function videoFilesFromDataTransfer(dt: DataTransfer | null | undefined): File[] {
+function filesOfType(dt: DataTransfer | null | undefined, prefix: string): File[] {
   if (!dt) return [];
   const out: File[] = [];
   if (dt.items && dt.items.length) {
     for (const item of Array.from(dt.items)) {
       if (item.kind !== "file") continue;
       const f = item.getAsFile();
-      if (f && f.type.startsWith("video/")) out.push(f);
+      if (f && f.type.startsWith(prefix)) out.push(f);
     }
   }
   if (out.length === 0 && dt.files) {
-    for (const f of Array.from(dt.files)) if (f.type.startsWith("video/")) out.push(f);
+    for (const f of Array.from(dt.files)) if (f.type.startsWith(prefix)) out.push(f);
   }
   return out;
+}
+
+/** Video files dragged/dropped. */
+export function videoFilesFromDataTransfer(dt: DataTransfer | null | undefined): File[] {
+  return filesOfType(dt, "video/");
+}
+
+/** Audio files dragged/dropped. */
+export function audioFilesFromDataTransfer(dt: DataTransfer | null | undefined): File[] {
+  return filesOfType(dt, "audio/");
 }
 
 /** True when a drag carries files (used to light up dropzones). */
@@ -119,9 +131,14 @@ export function pickImageFiles(opts: { multiple?: boolean } = {}): Promise<File[
   return pickFiles(IMAGE_ACCEPT, opts.multiple ?? true);
 }
 
-/** Pick one MP4 / MOV / WebM video (the motion-control reference). */
-export function pickVideoFiles(): Promise<File[]> {
-  return pickFiles(VIDEO_ACCEPT, false);
+/** Pick MP4 / MOV / WebM videos (one by default: the motion-control reference, the video to edit). */
+export function pickVideoFiles(opts: { multiple?: boolean } = {}): Promise<File[]> {
+  return pickFiles(VIDEO_ACCEPT, opts.multiple ?? false);
+}
+
+/** Pick MP3 / WAV clips (reference audio). */
+export function pickAudioFiles(opts: { multiple?: boolean } = {}): Promise<File[]> {
+  return pickFiles(AUDIO_ACCEPT, opts.multiple ?? true);
 }
 
 export function extensionForMime(mime: string | undefined): string {
@@ -140,6 +157,10 @@ export function extensionForMime(mime: string | undefined): string {
       return "webm";
     case "video/quicktime":
       return "mov";
+    case "audio/mpeg":
+      return "mp3";
+    case "audio/wav":
+      return "wav";
     default:
       return mime?.split("/")[1] ?? "bin";
   }

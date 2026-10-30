@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { CircleAlert, X } from "lucide-react";
+import { AudioLines, CircleAlert, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMac } from "@/lib/format";
 import { useMediaUrl } from "@/lib/media-urls";
@@ -14,17 +14,19 @@ export interface Attachment {
   mediaId: string;
   /** Small caption on the thumbnail: "1st", "Last", … */
   tag?: string;
-  /** `video`: a wider (16:9) thumbnail showing the clip's first frame. Default `image`. */
-  kind?: "image" | "video";
+  /** `video`: a wider (16:9) thumbnail showing the clip's first frame. `audio`: a wave icon. Default `image`. */
+  kind?: "image" | "video" | "audio";
 }
 
 /** 33 px thumbnail (16:9 for a video): a quiet surface until the library hands back the object url. */
 function AttachmentThumb({ a }: { a: Attachment }) {
-  const src = useMediaUrl(a.mediaId);
+  const src = useMediaUrl(a.kind === "audio" ? undefined : a.mediaId);
   const video = a.kind === "video";
   return (
-    <div className={cn("overflow-hidden rounded-thumb border border-border-strong bg-surface-2", video ? "h-[33px] w-[58px]" : "size-[33px]")}>
-      {src ? (
+    <div className={cn("overflow-hidden rounded-thumb border border-border-strong bg-surface-2", video ? "h-[33px] w-[58px]" : "size-[33px]")} title={a.kind === "audio" ? a.name : undefined}>
+      {a.kind === "audio" ? (
+        <AudioLines size={16} className="mx-auto mt-[4px] text-fg-muted" aria-label={a.name} />
+      ) : src ? (
         video ? (
           // `#t=0.1` makes Safari paint a frame without playing.
           <video src={`${src}#t=0.1`} muted playsInline preload="metadata" aria-label={a.name} className="size-full object-cover" />

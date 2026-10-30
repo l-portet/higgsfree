@@ -57,8 +57,13 @@ function inputs(v: unknown): GenerationInputs | undefined {
   if (typeof v !== "object" || v === null) return undefined;
   const o = v as Record<string, unknown>;
   const out: GenerationInputs = {};
-  const refs = Array.isArray(o.referenceImages) ? o.referenceImages.filter(isMediaId) : [];
+  const ids = (x: unknown): string[] => (Array.isArray(x) ? x.filter(isMediaId) : []);
+  const refs = ids(o.referenceImages);
   if (refs.length > 0) out.referenceImages = refs;
+  const videos = ids(o.referenceVideos);
+  if (videos.length > 0) out.referenceVideos = videos;
+  const audios = ids(o.referenceAudios);
+  if (audios.length > 0) out.referenceAudios = audios;
   if (isMediaId(o.firstFrame)) out.firstFrame = o.firstFrame;
   if (isMediaId(o.lastFrame)) out.lastFrame = o.lastFrame;
   if (isMediaId(o.motionVideo)) out.motionVideo = o.motionVideo;

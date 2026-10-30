@@ -110,6 +110,12 @@ text-to-video again in Oct 2026, so it is offered; a rejection shows the provide
 
 Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced above Wan 3.0.
 
+**Reference videos and audio** (`caps.mediaReferences`): Wan 3.0 and Wan 3.0 Prime (5 videos and 5 audio clips,
+15 s of each), Seedance 2.0, 2.0 Fast and 2.0 Mini (3 and 3, 15 s), Seedance 2.5 (10 and 10, 30 s) and Kling 4.0
+(5 videos, 30 s, no audio) take MP4 / MOV / WebM clips and MP3 / WAV audio besides reference images, never with
+frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` lists `video_url` and `audio_url`
+parts but documents no inline data, and APIMart uploads images only.
+
 Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
 [fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only, Gemini Omni Flash 1.2 on APIMart only (see
 [kie.ai and APIMart only](#kieai-and-apimart-only)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.

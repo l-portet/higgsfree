@@ -10,15 +10,24 @@ const at = (amount: Amount | undefined, res: VideoResolution | undefined): numbe
 
 /**
  * USD for one clip. `params` is what the payload sends; `resolution` the requested one, for a payload that sends none
- * (the model's own); `seconds` the clip's length (the source's, for an edit). Undefined when no amount applies.
+ * (the model's own); `seconds` the clip's length (the source's, for an edit). `inputVideoSec`: reference videos are
+ * attached and run this long together (`null` while their length is not known). Undefined when no amount applies.
  */
-export function videoListUsd(price: ListPrice | undefined, model: VideoModel, params: VideoParams, resolution: VideoResolution | undefined, seconds: number | undefined, unitUsd: number): number | undefined {
+export function videoListUsd(
+  price: ListPrice | undefined, model: VideoModel, params: VideoParams, resolution: VideoResolution | undefined, seconds: number | undefined, unitUsd: number,
+  inputVideoSec?: number | null,
+): number | undefined {
   const res = params.resolution ?? (resolution && model.resolutions.includes(resolution) ? resolution : model.defaultResolution);
   if (price?.unit === "video") {
+    if (inputVideoSec !== undefined) return undefined;
     const amount = at(price.byDuration?.[params.duration] ?? price.amount, res);
     return amount === undefined ? undefined : amount * unitUsd;
   }
   if (price?.unit !== "second" || !seconds) return undefined;
+  if (inputVideoSec !== undefined) {
+    const rate = at(price.videoInputAmount ?? price.amount, res);
+    return rate === undefined || inputVideoSec === null ? undefined : rate * (seconds + inputVideoSec) * unitUsd;
+  }
   const base = at(price.amount, res);
   const perSecond = params.audio === false ? base : (at(price.audioAmount, res) ?? base);
   return perSecond === undefined ? undefined : perSecond * seconds * unitUsd;

@@ -13,6 +13,8 @@ export interface ApimartVideoEstimate extends Omit<ApimartVideoParams, "prompt">
   firstFrame?: boolean;
   lastFrame?: boolean;
   references?: boolean;
+  referenceVideos?: boolean;
+  referenceAudios?: boolean;
 }
 
 /** The payload APIMart would get for `req` (placeholder urls); throws when APIMart would refuse it. */
@@ -20,7 +22,13 @@ export function apimartVideoPayloadFor(model: VideoModel, req: ApimartVideoEstim
   return buildApimartVideoPayload(
     model,
     { ...req, prompt: req.prompt ?? "" },
-    { firstFrame: req.firstFrame ? "https://frame" : undefined, lastFrame: req.lastFrame ? "https://frame" : undefined, references: req.references ? ["https://ref"] : [] },
+    {
+      firstFrame: req.firstFrame ? "https://frame" : undefined,
+      lastFrame: req.lastFrame ? "https://frame" : undefined,
+      references: req.references ? ["https://ref"] : [],
+      referenceVideos: req.referenceVideos ? ["https://video"] : [],
+      referenceAudios: req.referenceAudios ? ["https://audio"] : [],
+    },
   );
 }
 

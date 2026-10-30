@@ -1,13 +1,13 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
+import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, Music, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Generation, MotionOrientation, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
 import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
+import { audioFilesFromDataTransfer, dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickAudioFiles, pickImageFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
 import { formatSeconds, formatUsd, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { ownerGenerationId } from "@/lib/media-ids";
@@ -17,6 +17,7 @@ import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
 import { PROVIDER_IDS } from "@/lib/providers";
 import { quoteVideo, shownQuote, type VideoQuote } from "@/lib/video-cost";
+import { readAudioDuration } from "@/lib/audio-meta";
 import { readVideoDuration } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
@@ -116,6 +117,21 @@ function clipFromMedia(mediaId: string, name = "video"): VideoClip {
   return { id: uid(), name, mediaId, durationSec: out?.durationSec, bytes: out?.bytes };
 }
 
+/** Reference videos and audio (models with `caps.mediaReferences`): library media, kept across model switches like frames. */
+interface RefMedia {
+  videos: VideoClip[];
+  audios: VideoClip[];
+}
+const NO_REF_MEDIA: RefMedia = { videos: [], audios: [] };
+
+/** A library audio clip as an input; its length is read again at submit. */
+function audioFromMedia(mediaId: string): VideoClip {
+  return { id: uid(), name: "audio", mediaId };
+}
+
+const totalSec = (clips: VideoClip[]): number | undefined =>
+  clips.every((c) => c.durationSec !== undefined) ? clips.reduce((sum, c) => sum + (c.durationSec ?? 0), 0) : undefined;
+
 /** Views that show video runs as they come in; from anywhere else a submit navigates to the Video view. */
 const SHOWS_VIDEOS = /^\/(video|assets)(\/|$)/;
 
@@ -143,6 +159,7 @@ export function VideoComposer() {
   const [frames, setFrames] = useState<Frames>(NO_FRAMES);
   // Kept while another model is selected, so switching back to a motion or edit model restores it.
   const [clip, setClip] = useState<VideoClip | null>(null);
+  const [refMedia, setRefMedia] = useState<RefMedia>(NO_REF_MEDIA);
   const [orientation, setOrientation] = useState<MotionOrientation>(initial.orientation);
   const [editModelId, setEditModelId] = useState<string>(initial.editModel);
   const [submitting, setSubmitting] = useState(false);
@@ -236,6 +253,9 @@ export function VideoComposer() {
       last: draft.lastFrame ? frameFromMedia(draft.lastFrame) : f.last,
       refs: draft.referenceImages?.length ? draft.referenceImages.slice(0, MAX_REFS).map((id) => frameFromMedia(id)) : f.refs,
     }));
+    if (draft.referenceVideos?.length || draft.referenceAudios?.length) {
+      setRefMedia({ videos: (draft.referenceVideos ?? []).map((id) => clipFromMedia(id)), audios: (draft.referenceAudios ?? []).map(audioFromMedia) });
+    }
     if (draft.motionVideo) setClip(clipFromMedia(draft.motionVideo));
     else if (draft.sourceVideo) setClip(clipFromMedia(draft.sourceVideo, "video to edit"));
     requestAnimationFrame(() => textareaRef.current?.focus());
@@ -246,6 +266,10 @@ export function VideoComposer() {
   const showLast = !motionMode && !editMode && Boolean(model?.caps.lastFrame);
   // Style references are sent unless the model is known to reject `input_references`.
   const showRefs = !motionMode && !editMode && model?.caps.references !== false;
+  // Reference videos and audio, for the models that take them.
+  const mediaRefs = !motionMode && !editMode ? model?.caps.mediaReferences : undefined;
+  const refVideos = mediaRefs ? refMedia.videos.slice(0, mediaRefs.videos) : [];
+  const refAudios = mediaRefs ? refMedia.audios.slice(0, mediaRefs.audios) : [];
 
   const addTo = useCallback(
     async (slot: Slot, files: File[]) => {
@@ -277,12 +301,34 @@ export function VideoComposer() {
     }
   }, []);
 
+  /** Store reference videos or audio clips, up to what the model takes. */
+  const addRefMedia = useCallback(
+    async (kind: "videos" | "audios", files: File[]) => {
+      if (!mediaRefs) return;
+      const max = mediaRefs[kind];
+      const room = Math.max(0, max - refMedia[kind].length);
+      if (files.length > room) toast.error(kind === "videos" ? `Up to ${max} reference videos` : `Up to ${max} reference audio clips`);
+      for (const file of files.slice(0, room)) {
+        try {
+          const [res, durationSec] =
+            kind === "videos" ? await Promise.all([api.uploadVideo(file), readVideoDuration(file)]) : await Promise.all([api.uploadAudio(file), readAudioDuration(file)]);
+          const added: VideoClip = { id: uid(), name: file.name, mediaId: res.media.id, durationSec, bytes: res.media.bytes };
+          setRefMedia((m) => (m[kind].length >= max ? m : { ...m, [kind]: [...m[kind], added] }));
+        } catch (err) {
+          toast.error(kind === "videos" ? "Couldn't add the video" : "Couldn't add the audio", { description: describeApiError(err) });
+        }
+      }
+    },
+    [mediaRefs, refMedia],
+  );
+
   /**
    * Dropped / pasted files. Video editing: one video. Motion control: an image is the character, a video the motion.
-   * Otherwise images fill the first frame, then the last frame (if the model takes one), then references.
+   * Otherwise images fill the first frame, then the last frame (if the model takes one), then references; videos and
+   * audio are references, for the models that take them.
    */
   const addSmart = useCallback(
-    async (files: File[], videos: File[] = []) => {
+    async (files: File[], videos: File[] = [], audios: File[] = []) => {
       if (editMode) {
         const [video, ...moreVideos] = videos;
         if (files.length || moreVideos.length) toast.error(`${model?.name ?? "Video editing"} takes one video to edit`);
@@ -297,9 +343,17 @@ export function VideoComposer() {
         if (video) await addClip(video);
         return;
       }
-      if (videos.length) toast.error("Only motion control and video editing models take a video");
+      if (mediaRefs) {
+        if (videos.length) await addRefMedia("videos", videos);
+        if (audios.length) await addRefMedia("audios", audios);
+      } else if (videos.length || audios.length) toast.error(`${model?.name ?? "This model"} takes no reference video or audio`);
       if (!files.length) return;
       const queue = [...files];
+      // With reference media attached, images are references too: frames and references do not mix.
+      if (mediaRefs && (refMedia.videos.length || refMedia.audios.length)) {
+        if (showRefs) await addTo("ref", queue);
+        return;
+      }
       if (!firstFrame) {
         const f = queue.shift();
         if (f) await addTo("first", [f]);
@@ -313,7 +367,7 @@ export function VideoComposer() {
         else toast.error(`${model?.name ?? "This model"} takes a first frame${showLast ? " and a last frame" : ""} only`);
       }
     },
-    [addClip, addTo, editMode, firstFrame, lastFrame, model?.name, motionMode, showLast, showRefs],
+    [addClip, addRefMedia, addTo, editMode, firstFrame, lastFrame, mediaRefs, model?.name, motionMode, refMedia, showLast, showRefs],
   );
 
   const pickFor = async (slot: Slot) => {
@@ -328,8 +382,15 @@ export function VideoComposer() {
     if (file) await addClip(file);
   };
 
+  const pickRefMedia = async (kind: "videos" | "audios") => {
+    setAddOpen(false);
+    const files = kind === "videos" ? await pickVideoFiles({ multiple: true }) : await pickAudioFiles();
+    await addRefMedia(kind, files);
+  };
+
   const removeAttachment = (id: string) => {
     setClip((c) => (c?.id === id ? null : c));
+    setRefMedia((m) => ({ videos: m.videos.filter((x) => x.id !== id), audios: m.audios.filter((x) => x.id !== id) }));
     setFrames((f) => ({
       first: f.first?.id === id ? null : f.first,
       last: f.last?.id === id ? null : f.last,
@@ -350,12 +411,26 @@ export function VideoComposer() {
         ...(firstFrame ? [{ id: firstFrame.id, mediaId: firstFrame.mediaId, name: firstFrame.name, tag: "1st" }] : []),
         ...(lastFrame && showLast ? [{ id: lastFrame.id, mediaId: lastFrame.mediaId, name: lastFrame.name, tag: "Last" }] : []),
         ...(showRefs ? refs.map((r) => ({ id: r.id, mediaId: r.mediaId, name: r.name, tag: "Ref" })) : []),
+        ...refVideos.map((v) => ({ id: v.id, mediaId: v.mediaId, name: v.name, tag: "Ref", kind: "video" as const })),
+        ...refAudios.map((a) => ({ id: a.id, mediaId: a.mediaId, name: a.name, tag: "Audio", kind: "audio" as const })),
       ];
 
   // ---------- validation ----------
 
   // Video editing: the attached video's length or size is outside the model's limits (when known).
   const editProblem = editMode && model && clip ? sourceVideoProblem(model, clip.durationSec, clip.bytes) : undefined;
+  // Reference videos / audio: their lengths together, against the model's cap (when known).
+  const refVideoSec = totalSec(refVideos);
+  const refAudioSec = totalSec(refAudios);
+  const refMediaProblem = ((): string | undefined => {
+    if (!mediaRefs || !(refVideos.length || refAudios.length)) return undefined;
+    const name = model?.name ?? "This model";
+    if (firstFrame || (showLast && lastFrame)) return "Reference videos and audio do not go with frames. Remove the frames, or add those images as style references.";
+    if (!keyed.split(",").includes("kie")) return `Reference videos and audio run on kie.ai. Add a kie.ai key in Settings to use them with ${name}.`;
+    if (refVideoSec !== undefined && refVideoSec > mediaRefs.maxSec + 0.05) return `The reference videos run ${formatSeconds(refVideoSec)}. ${name} takes up to ${mediaRefs.maxSec} s in all.`;
+    if (refAudioSec !== undefined && refAudioSec > mediaRefs.maxSec + 0.05) return `The reference audio runs ${formatSeconds(refAudioSec)}. ${name} takes up to ${mediaRefs.maxSec} s in all.`;
+    return undefined;
+  })();
 
   // Image-to-video exactly when a frame is attached (a last frame counts only for models that take one).
   const frameAttached = Boolean(firstFrame || (showLast && lastFrame));
@@ -390,7 +465,7 @@ export function VideoComposer() {
             : !clip
               ? "Add a reference video"
               : null
-          : (modelReason(model) ?? (!i2v && !trimmed ? "Enter a prompt" : null));
+          : (modelReason(model) ?? refMediaProblem ?? (!i2v && !trimmed ? "Enter a prompt" : null));
 
   // Each provider's price for this request (OpenRouter's from the catalog, fal's list prices for the endpoint the
   // inputs pick), and who runs it: the cheaper one that can, as the engine decides. Motion control and editing
@@ -398,18 +473,21 @@ export function VideoComposer() {
   const hasFirst = Boolean(firstFrame);
   const hasLast = showLast && Boolean(lastFrame);
   const hasRefs = showRefs && refs.length > 0;
+  const hasRefVideos = refVideos.length > 0;
+  const hasRefAudios = refAudios.length > 0;
+  const hasMediaRefs = hasRefVideos || hasRefAudios;
   const clipSec = clip?.durationSec;
   const quoteAt = useCallback(
     (d: number, r: VideoResolution | undefined): VideoQuote | undefined =>
       model
         ? quoteVideo(
             model,
-            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, videoSec: clipSec },
+            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: clipSec },
             Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
             preferred,
           )
         : undefined,
-    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, clipSec, keyed, preferred],
+    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, clipSec, keyed, preferred],
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);
@@ -441,6 +519,8 @@ export function VideoComposer() {
       if (firstFrame) req.firstFrame = frameInput(firstFrame);
       if (lastFrame && showLast) req.lastFrame = frameInput(lastFrame);
       if (refs.length && showRefs) req.references = refs.map(frameInput);
+      if (refVideos.length) req.referenceVideos = refVideos.map((v) => v.mediaId);
+      if (refAudios.length) req.referenceAudios = refAudios.map((a) => a.mediaId);
     }
     setSubmitting(true);
     try {
@@ -499,7 +579,7 @@ export function VideoComposer() {
     if (!dragHasFiles(e.dataTransfer)) return;
     e.preventDefault();
     setDragging(false);
-    void addSmart(imageFilesFromDataTransfer(e.dataTransfer), videoFilesFromDataTransfer(e.dataTransfer));
+    void addSmart(imageFilesFromDataTransfer(e.dataTransfer), videoFilesFromDataTransfer(e.dataTransfer), audioFilesFromDataTransfer(e.dataTransfer));
   };
 
   if (!model) return null;
@@ -562,11 +642,11 @@ export function VideoComposer() {
       addControl={
         <Popover open={addOpen} onOpenChange={setAddOpen}>
           <Tooltip
-            content={editMode ? "Add the video to edit" : motionMode ? "Add a character image or a reference video" : "Add a first frame, last frame or style reference"}
+            content={editMode ? "Add the video to edit" : motionMode ? "Add a character image or a reference video" : mediaRefs ? "Add a frame, or a reference image, video or audio" : "Add a first frame, last frame or style reference"}
             side="top"
           >
             <PopoverTrigger asChild>
-              <AddButton aria-label={editMode ? "Add video" : motionMode ? "Add image or video" : "Add image"}>
+              <AddButton aria-label={editMode ? "Add video" : motionMode ? "Add image or video" : mediaRefs ? "Add image, video or audio" : "Add image"}>
                 <Plus size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
               </AddButton>
             </PopoverTrigger>
@@ -595,7 +675,7 @@ export function VideoComposer() {
             </PopoverContent>
           ) : (
             <PopoverContent side="top" align="start" className="w-[232px]">
-              <PopoverLabel>Add image</PopoverLabel>
+              <PopoverLabel>{mediaRefs ? "Add input" : "Add image"}</PopoverLabel>
               <PopoverItem onClick={() => void pickFor("first")}>
                 <ImagePlus size={15} className="text-fg-muted" aria-hidden="true" />
                 <span className="flex-1">{firstFrame ? "Replace first frame" : "First frame"}</span>
@@ -613,13 +693,31 @@ export function VideoComposer() {
                   <span className="text-caption tabular-nums">{refs.length}/{MAX_REFS}</span>
                 </PopoverItem>
               ) : null}
-              <p className="px-2 pb-1 pt-1.5 text-caption">Or drop / paste images anywhere on the bar.</p>
+              {mediaRefs ? (
+                <>
+                  <PopoverItem onClick={() => void pickRefMedia("videos")} disabled={refVideos.length >= mediaRefs.videos}>
+                    <Film size={15} className="text-fg-muted" aria-hidden="true" />
+                    <span className="flex-1">Reference video</span>
+                    <span className="text-caption tabular-nums">{refVideos.length}/{mediaRefs.videos}</span>
+                  </PopoverItem>
+                  <PopoverItem onClick={() => void pickRefMedia("audios")} disabled={refAudios.length >= mediaRefs.audios}>
+                    <Music size={15} className="text-fg-muted" aria-hidden="true" />
+                    <span className="flex-1">Reference audio</span>
+                    <span className="text-caption tabular-nums">{refAudios.length}/{mediaRefs.audios}</span>
+                  </PopoverItem>
+                </>
+              ) : null}
+              <p className="px-2 pb-1 pt-1.5 text-caption">
+                {mediaRefs
+                  ? `Or drop images, videos or audio anywhere on the bar. References: up to ${mediaRefs.maxSec} s of video and of audio, not with frames.`
+                  : "Or drop / paste images anywhere on the bar."}
+              </p>
             </PopoverContent>
           )}
         </Popover>
       }
       attachments={
-        <AttachmentStrip items={attachments} onRemove={removeAttachment} label={editMode ? "Attached video" : motionMode ? "Attached inputs" : "Attached images"} />
+        <AttachmentStrip items={attachments} onRemove={removeAttachment} label={editMode ? "Attached video" : motionMode || hasMediaRefs ? "Attached inputs" : "Attached images"} />
       }
       textarea={
         <Textarea
@@ -655,7 +753,12 @@ export function VideoComposer() {
         </Tooltip>
       }
       note={
-        editProblem ? (
+        refMediaProblem ? (
+          <p className="flex items-center gap-1.5 text-caption" role="note">
+            <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
+            {refMediaProblem}
+          </p>
+        ) : editProblem ? (
           <p className="flex items-center gap-1.5 text-caption" role="note">
             <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
             {editProblem}

@@ -11,6 +11,7 @@
 import type { Generation, GenerationInputs, MotionOrientation, ProviderId, VideoGenerateRequest, VideoModel, VideoParams } from "@shared/types";
 import { lookupVideoModel } from "../catalog";
 import { completeGeneration, getGeneration, insertGenerations, toPublic, toStored, type GenerationPatch, type StoredGeneration } from "../db/generations";
+import { readAudioDuration } from "../audio-meta";
 import { getMediaBlob } from "../db/media";
 import type { MediaRow } from "../db/schema";
 import { ApiClientError, badRequest, conflict } from "../errors";
@@ -124,6 +125,29 @@ async function assertSourceVideo(model: VideoModel, mediaId: string): Promise<nu
   return durationSec;
 }
 
+/**
+ * Check the reference videos' and audio's lengths against the model's caps before anything is uploaded (a length
+ * that cannot be read is left to the provider). Returns how long the videos run together, when known: it is billed.
+ */
+async function assertReferenceMedia(model: VideoModel, videos: string[], audios: string[]): Promise<number | undefined> {
+  const caps = model.caps.mediaReferences;
+  if (!caps) return undefined;
+  const lengths = async (ids: string[], kind: "video" | "audio"): Promise<(number | undefined)[]> =>
+    Promise.all(
+      ids.map(async (id, i) => {
+        const blob = await getMediaBlob(id);
+        if (!blob) throw badRequest(`Reference ${kind} ${i + 1} is no longer in the library (${id})`);
+        return kind === "video" ? storedVideoLength(blob) : readAudioDuration(blob);
+      }),
+    );
+  const total = (list: (number | undefined)[]): number | undefined => (list.every((s) => s !== undefined) ? list.reduce<number>((a, s) => a + (s ?? 0), 0) : undefined);
+  const videoSec = total(await lengths(videos, "video"));
+  const audioSec = total(await lengths(audios, "audio"));
+  if (videoSec !== undefined && videoSec > caps.maxSec + 0.05) throw badRequest(`The reference videos run ${Math.round(videoSec)} s. ${model.name} takes up to ${caps.maxSec} s in all.`);
+  if (audioSec !== undefined && audioSec > caps.maxSec + 0.05) throw badRequest(`The reference audio runs ${Math.round(audioSec)} s. ${model.name} takes up to ${caps.maxSec} s in all.`);
+  return videos.length ? videoSec : undefined;
+}
+
 async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   const model = await lookupVideoModel(req.model, getStoredKey());
   if (!model || model.hidden) throw badRequest(`Unknown video model: ${req.model}`);
@@ -135,15 +159,21 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   if (req.firstFrame) inputs.firstFrame = req.firstFrame;
   if (req.lastFrame) inputs.lastFrame = req.lastFrame;
   if (req.references?.length) inputs.referenceImages = req.references;
+  if (req.referenceVideos?.length) inputs.referenceVideos = req.referenceVideos;
+  if (req.referenceAudios?.length) inputs.referenceAudios = req.referenceAudios;
   if (req.motionVideo) inputs.motionVideo = req.motionVideo;
   if (req.sourceVideo) inputs.sourceVideo = req.sourceVideo;
   await assertInputsExist(inputs);
   if (inputs.motionVideo) await assertMotionVideo(model, inputs.motionVideo, req.orientation ?? "video");
   const sourceSec = inputs.sourceVideo ? await assertSourceVideo(model, inputs.sourceVideo) : undefined;
+  const refVideos = inputs.referenceVideos ?? [];
+  const refAudios = inputs.referenceAudios ?? [];
+  const refVideoSec = await assertReferenceMedia(model, refVideos, refAudios);
+  const mediaRefs = refVideos.length > 0 || refAudios.length > 0;
 
   // The cheaper provider that takes the request runs it; when none with a key does, the key-based choice
   // stands and its refusal below says why.
-  const { provider, key } =
+  let { provider, key } =
     videoRun(model, {
       prompt,
       duration: req.duration,
@@ -153,8 +183,19 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
       firstFrame: Boolean(req.firstFrame),
       lastFrame: Boolean(req.lastFrame),
       references: Boolean(inputs.referenceImages?.length),
+      referenceVideos: refVideos.length > 0,
+      referenceAudios: refAudios.length > 0,
+      referenceVideoSec: refVideoSec,
       videoSec: sourceSec,
     }) ?? keyed;
+  // Only kie.ai takes reference videos and audio: it is the one provider here with an upload for them. When it has a
+  // key but refuses the request, it runs anyway, so its check below says why.
+  const kieKey = keyFor("kie");
+  if (mediaRefs && provider !== "kie") {
+    if (!model.kie || !kieKey) throw badRequest(`${model.name} takes reference videos and audio on kie.ai only. Add a kie.ai key in Settings, or remove them.`);
+    provider = "kie";
+    key = kieKey;
+  }
 
   const frames: { firstFrame?: string; lastFrame?: string } = {};
   if (inputs.firstFrame) frames.firstFrame = await inputDataUrl(inputs.firstFrame);
@@ -202,6 +243,9 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
       firstFrame: frames.firstFrame && placeholder,
       lastFrame: frames.lastFrame && placeholder,
       references: refDataUrls.map(() => placeholder),
+      referenceVideos: refVideos.map(() => placeholder),
+      referenceAudios: refAudios.map(() => placeholder),
+      referenceVideoSec: refVideoSec,
       sourceVideo: sourceVideo && placeholder,
     });
     return {
@@ -218,7 +262,20 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
           if (!tp.uploadVideo) throw badRequest(`${tp.name} cannot take a video`);
           sourceUrl = await tp.uploadVideo(key, blob, sourceVideo, signal);
         }
-        const request = tp.video(model, params, { firstFrame, lastFrame, references: references.filter((u): u is string => Boolean(u)), sourceVideo: sourceUrl });
+        // Reference videos and audio go up as files, like the video to edit.
+        const uploadFile = async (id: string, label: string): Promise<string> => {
+          const blob = await getMediaBlob(id);
+          if (!blob) throw badRequest(`${label} is no longer in the library (${id})`);
+          if (!tp.uploadVideo) throw badRequest(`${tp.name} cannot take a ${label.toLowerCase()}`);
+          return tp.uploadVideo(key, blob, id, signal);
+        };
+        const [referenceVideos, referenceAudios] = await Promise.all([
+          Promise.all(refVideos.map((id) => uploadFile(id, "Reference video"))),
+          Promise.all(refAudios.map((id) => uploadFile(id, "Reference audio"))),
+        ]);
+        const request = tp.video(model, params, {
+          firstFrame, lastFrame, references: references.filter((u): u is string => Boolean(u)), referenceVideos, referenceAudios, referenceVideoSec: refVideoSec, sourceVideo: sourceUrl,
+        });
         const taskId = await request.submit(key, signal);
         return { jobId: taskId, pollingUrl: tp.taskUrl(taskId) };
       },

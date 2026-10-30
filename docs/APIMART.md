@@ -67,7 +67,9 @@ returns a task id, the task url polled until the result urls are there.
 | `vidu` | Vidu Q4 → `viduq4-preview` | `first_frame_image`, `duration` 3–16, `resolution` (`2K`, `4K`), `audio` | no first frame |
 
 Most families need a prompt. Every family refuses a last frame without a first one, and style references
-unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2).
+unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2). Reference videos and audio are
+refused too: APIMart's models take them as public urls (`video_urls`, `audio_urls`), but it only uploads images
+(`/v1/uploads/videos` and `/audios` are 404s, Oct 2026), so they run on kie.ai (docs/KIE.md).
 
 ## Image fields (`buildApimartImagePayload`)
 

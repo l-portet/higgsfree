@@ -13,12 +13,13 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   // std renders 720p, pro 1080p.
   "kling-3.0/video#std": { unit: "second", amount: 14, audioAmount: 20 },
   "kling-3.0/video#pro": { unit: "second", amount: 18, audioAmount: 27 },
-  // keyframe-to-video, and reference-to-video without a reference video (read 22 Oct 2026).
-  "kling-4.0": { unit: "second", amount: { "720p": 28.5, "1080p": 42.5 } },
-  "bytedance/seedance-2-5": { unit: "second", amount: { "480p": 28, "720p": 63, "1080p": 158 } },
-  "bytedance/seedance-2": { unit: "second", amount: { "480p": 19, "720p": 41, "1080p": 102, "4K": 208 } },
-  "bytedance/seedance-2-fast": { unit: "second", amount: { "480p": 11.7, "720p": 24.8 } },
-  "bytedance/seedance-2-mini": { unit: "second", amount: { "480p": 3.8, "720p": 8.2 } },
+  // keyframe-to-video, and reference-to-video without a reference video (read 22 Oct 2026). With reference videos (read
+  // 31 Oct 2026, like the Seedance and Wan 3.0 rates below), output plus input seconds are billed.
+  "kling-4.0": { unit: "second", amount: { "720p": 28.5, "1080p": 42.5 }, videoInputAmount: { "720p": 17, "1080p": 25.5 } },
+  "bytedance/seedance-2-5": { unit: "second", amount: { "480p": 28, "720p": 63, "1080p": 158 }, videoInputAmount: { "480p": 17, "720p": 38, "1080p": 95 } },
+  "bytedance/seedance-2": { unit: "second", amount: { "480p": 19, "720p": 41, "1080p": 102, "4K": 208 }, videoInputAmount: { "480p": 11.5, "720p": 25, "1080p": 62, "4K": 128 } },
+  "bytedance/seedance-2-fast": { unit: "second", amount: { "480p": 11.7, "720p": 24.8 }, videoInputAmount: { "480p": 6.8, "720p": 15 } },
+  "bytedance/seedance-2-mini": { unit: "second", amount: { "480p": 3.8, "720p": 8.2 }, videoInputAmount: { "480p": 2.4, "720p": 5 } },
   "minimax-h3": { unit: "second", amount: { "768p": 8, "2K": 13 } },
   "wan/3-0-video": { unit: "second", amount: { "480p": 8, "720p": 16, "1080p": 32 } },
   "wan/3-0-video-prime": { unit: "second", amount: { "480p": 12.2, "720p": 25.2, "1080p": 50.4 } },

@@ -31,6 +31,9 @@ export interface ApimartVideoMedia {
   firstFrame?: string;
   lastFrame?: string;
   references?: string[];
+  /** Refused: APIMart uploads images only, and a library file has no public url to give it. */
+  referenceVideos?: string[];
+  referenceAudios?: string[];
 }
 
 export interface ApimartVideoPayload extends ApimartPayload {
@@ -98,6 +101,7 @@ export function buildApimartVideoPayload(model: VideoModel, req: ApimartVideoPar
   if (last && !TAKES_LAST.has(route.family)) throw badRequest("Takes no last frame");
   if (refs.length && !TAKES_REFERENCES.has(route.family)) throw badRequest("Takes no style references");
   if (refs.length && frames) throw badRequest("Takes frames or style references, not both");
+  if (media.referenceVideos?.length || media.referenceAudios?.length) throw badRequest("Takes no uploaded video or audio");
   if (req.audio === false && ALWAYS_SOUND.has(route.family) && model.caps.audio) throw badRequest("Always adds sound");
 
   const params: VideoParams = { duration: snapDuration(model, req.duration) };
