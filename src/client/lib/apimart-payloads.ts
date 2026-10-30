@@ -55,6 +55,8 @@ const VIDEO_LIMITS: Record<ApimartVideoRoute["family"], { durations: number[]; a
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   "pixverse-max": { durations: range(1, 15), aspects: ["16:9", "9:16", "4:3", "3:4", "1:1", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   "gemini-omni": { durations: [4, 6, 8, 10], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
+  // No duration field (the prompt sets the length, about 3–10 s): 8 s is only the catalog's placeholder.
+  "gemini-omni12": { durations: [8], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   flux3: { durations: range(5, 20), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "720p": "hd", "1080p": "fhd" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2K", "4K": "4K" } },
 };
@@ -71,10 +73,10 @@ function durationsLabel(list: number[]): string {
 
 /** Families whose clips always have sound: a run with the sound off goes elsewhere. */
 const ALWAYS_SOUND = new Set<ApimartVideoRoute["family"]>(["veo", "minimax-h3"]);
-/** Families that take style references (as `reference_image` roles). */
-const TAKES_REFERENCES = new Set<ApimartVideoRoute["family"]>(["seedance", "wan3", "kling4"]);
+/** Families that take style references (as `reference_image` roles; Gemini Omni Flash 1.2 as `image_urls`). */
+const TAKES_REFERENCES = new Set<ApimartVideoRoute["family"]>(["seedance", "wan3", "kling4", "gemini-omni12"]);
 /** Families that take a last frame with the first. */
-const TAKES_LAST = new Set<ApimartVideoRoute["family"]>(["veo", "seedance", "seedance15", "minimax-h3", "wan3", "wan27", "kling", "kling4", "pixverse"]);
+const TAKES_LAST = new Set<ApimartVideoRoute["family"]>(["veo", "seedance", "seedance15", "minimax-h3", "wan3", "wan27", "kling", "kling4", "pixverse", "gemini-omni12"]);
 
 const roles = (first?: string, last?: string, refs: string[] = []): { url: string; role: string }[] => [
   ...(first ? [{ url: first, role: "first_frame" }] : []),
@@ -211,6 +213,21 @@ export function buildApimartVideoPayload(model: VideoModel, req: ApimartVideoPar
       Object.assign(body, { duration: params.duration, resolution: res, aspect_ratio: aspect ?? "16:9" });
       if (first) Object.assign(body, { generation_type: "frame", image_urls: [first] });
       break;
+    case "gemini-omni12": {
+      // Unlike 1.1: no `duration`, frames in their own fields, references as `image_urls`; `metadata.task` is left
+      // out so APIMart picks the task. The ratio goes with a frame too: APIMart defaults it to 16:9 otherwise.
+      needsPrompt();
+      const ratio = aspect ?? (req.aspectRatio && limits.aspects?.includes(req.aspectRatio) ? req.aspectRatio : undefined);
+      body.resolution = res;
+      if (ratio) {
+        body.aspect_ratio = ratio;
+        params.aspectRatio = ratio;
+      }
+      if (first) body.first_frame_image = first;
+      if (last) body.last_frame_image = last;
+      if (refs.length) body.image_urls = refs;
+      break;
+    }
     case "flux3":
       needsPrompt();
       Object.assign(body, { duration: params.duration, resolution: res, aspect_ratio: aspect ?? "auto", audio: sound(true) });
