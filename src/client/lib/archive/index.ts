@@ -334,13 +334,21 @@ export async function importLibrary(file: Blob, opts: ImportOptions = {}): Promi
       }
       if (record.inputs) {
         const keep = async (id: string | undefined): Promise<string | undefined> => (id && (await resolve(id)) ? id : undefined);
-        const refs: string[] = [];
-        for (const id of record.inputs.referenceImages ?? []) {
-          const kept = await keep(id);
-          if (kept) refs.push(kept);
-        }
+        const keepAll = async (list: string[] | undefined): Promise<string[]> => {
+          const kept: string[] = [];
+          for (const id of list ?? []) {
+            const k = await keep(id);
+            if (k) kept.push(k);
+          }
+          return kept;
+        };
         const inputs: Generation["inputs"] = {};
+        const refs = await keepAll(record.inputs.referenceImages);
         if (refs.length > 0) inputs.referenceImages = refs;
+        const refVideos = await keepAll(record.inputs.referenceVideos);
+        if (refVideos.length > 0) inputs.referenceVideos = refVideos;
+        const refAudios = await keepAll(record.inputs.referenceAudios);
+        if (refAudios.length > 0) inputs.referenceAudios = refAudios;
         const first = await keep(record.inputs.firstFrame);
         if (first) inputs.firstFrame = first;
         const last = await keep(record.inputs.lastFrame);

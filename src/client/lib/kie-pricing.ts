@@ -15,6 +15,10 @@ export interface KieVideoEstimate extends Omit<KieVideoParams, "prompt"> {
   firstFrame?: boolean;
   lastFrame?: boolean;
   references?: boolean;
+  referenceVideos?: boolean;
+  referenceAudios?: boolean;
+  /** How long the reference videos run together; they are billed too. Unknown: no estimate. */
+  referenceVideoSec?: number;
   /** Video editing: the source's length, which is the clip's. Unknown: no estimate. */
   videoSec?: number;
 }
@@ -26,7 +30,14 @@ export function kieVideoPayloadFor(model: VideoModel, req: KieVideoEstimate): Ki
     { ...req, prompt: req.prompt ?? "" },
     model.caps.videoEdit
       ? { sourceVideo: "https://video" }
-      : { firstFrame: req.firstFrame ? "https://frame" : undefined, lastFrame: req.lastFrame ? "https://frame" : undefined, references: req.references ? ["https://ref"] : [] },
+      : {
+          firstFrame: req.firstFrame ? "https://frame" : undefined,
+          lastFrame: req.lastFrame ? "https://frame" : undefined,
+          references: req.references ? ["https://ref"] : [],
+          referenceVideos: req.referenceVideos ? ["https://video"] : [],
+          referenceAudios: req.referenceAudios ? ["https://audio"] : [],
+          referenceVideoSec: req.referenceVideoSec,
+        },
   );
 }
 
@@ -39,7 +50,8 @@ export function estimateKieVideoCost(model: VideoModel, req: KieVideoEstimate): 
     return undefined;
   }
   const seconds = model.caps.videoEdit ? req.videoSec && editedLength(model, req.videoSec) : payload.params.duration;
-  return videoListUsd(KIE_PRICES[payload.priceKey], model, payload.params, req.resolution, seconds, KIE_CREDIT_USD);
+  const inputVideoSec = req.referenceVideos ? (req.referenceVideoSec ?? null) : undefined;
+  return videoListUsd(KIE_PRICES[payload.priceKey], model, payload.params, req.resolution, seconds, KIE_CREDIT_USD, inputVideoSec);
 }
 
 /** Estimated USD for `count` images of `req` on kie.ai, with or without reference images. */

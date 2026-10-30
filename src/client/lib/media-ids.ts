@@ -6,11 +6,13 @@
 import type { GenerationInputs } from "@shared/types";
 import { shortId } from "./uid";
 
-export const MEDIA_ID = /^(gen|up)_[A-Za-z0-9_-]{8,32}\.(png|jpg|webp|mp4|mov|webm)$/;
+export const MEDIA_ID = /^(gen|up)_[A-Za-z0-9_-]{8,32}\.(png|jpg|webp|mp4|mov|webm|mp3|wav)$/;
 export const GENERATION_ID = /^gen_[A-Za-z0-9_-]{8,32}$/;
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 /** Motion-control reference videos (fal's single-part upload limit). */
 export const MAX_VIDEO_UPLOAD_BYTES = 90 * 1024 * 1024;
+/** Reference audio (the providers that take it cap a clip at 15 MB). */
+export const MAX_AUDIO_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 export const MIME_BY_EXT: Record<string, string> = {
   png: "image/png",
@@ -19,6 +21,8 @@ export const MIME_BY_EXT: Record<string, string> = {
   mp4: "video/mp4",
   mov: "video/quicktime",
   webm: "video/webm",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
 };
 
 export type MediaKind = "output" | "upload";
@@ -54,6 +58,6 @@ export function mimeForId(id: string): string {
 export function inputMediaIds(inputs: GenerationInputs | undefined): string[] {
   if (!inputs) return [];
   const ids = new Set<string>();
-  for (const id of [...(inputs.referenceImages ?? []), inputs.firstFrame, inputs.lastFrame, inputs.motionVideo, inputs.sourceVideo]) if (id && isMediaId(id)) ids.add(id);
+  for (const id of [...(inputs.referenceImages ?? []), ...(inputs.referenceVideos ?? []), ...(inputs.referenceAudios ?? []), inputs.firstFrame, inputs.lastFrame, inputs.motionVideo, inputs.sourceVideo]) if (id && isMediaId(id)) ids.add(id);
   return [...ids];
 }

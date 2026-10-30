@@ -111,4 +111,14 @@ describe("quoteVideo", () => {
     expect(known).toMatchObject({ provider: "openrouter", reason: "tie" });
     expect(usd(known)).toEqual({ openrouter: expect.closeTo(0.3), fal: expect.closeTo(0.3) });
   });
+
+  it("sends reference videos and audio to kie.ai only", () => {
+    const wan = video("alibaba/wan-3.0");
+    const all = { openrouter: true, kie: true, apimart: true };
+    const q = quoteVideo(wan, { prompt: "p", duration: 5, resolution: "720p", referenceAudios: true }, all, "openrouter", NOW);
+    expect(q.provider).toBe("kie");
+    expect(q.quotes.find((x) => x.provider === "openrouter")?.refusal).toBe("Takes no reference video or audio");
+    expect(q.quotes.find((x) => x.provider === "apimart")?.refusal).toBe("Takes no uploaded video or audio");
+    expect(quoteVideo(wan, { prompt: "p", duration: 5, referenceVideos: true }, { openrouter: true, apimart: true }, "openrouter", NOW).reason).toBe("none");
+  });
 });

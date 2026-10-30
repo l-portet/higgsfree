@@ -111,6 +111,44 @@ describe("buildKieVideoPayload", () => {
     expect(() => buildKieVideoPayload(video("fal/vidu-q4"), { prompt: "p", duration: 5 }, {})).toThrow("Needs a first frame");
   });
 
+  it("reference videos and audio: Wan 3.0 and Seedance take both, Kling 4.0 videos only, never with frames", () => {
+    const wan = video("alibaba/wan-3.0-prime");
+    const media = { references: ["https://i"], referenceVideos: ["https://v"], referenceAudios: ["https://a"] };
+    expect(buildKieVideoPayload(wan, { prompt: "Video1 sings Audio1", duration: 5 }, media)).toMatchObject({
+      model: "wan/3-0-video-prime",
+      input: { reference_image_urls: ["https://i"], reference_video_urls: ["https://v"], reference_audio_urls: ["https://a"] },
+    });
+    // Audio alone is fine on Wan 3.0; the reference videos and the clip run 30 s at most.
+    expect(buildKieVideoPayload(wan, { prompt: "p", duration: 5 }, { referenceAudios: ["https://a"] }).input).toMatchObject({ reference_audio_urls: ["https://a"] });
+    expect(() => buildKieVideoPayload(wan, { prompt: "p", duration: 20 }, { referenceVideos: ["https://v"], referenceVideoSec: 12 })).toThrow("18 s or shorter");
+    expect(() => buildKieVideoPayload(wan, { prompt: "p", duration: 5 }, { firstFrame: "https://f", referenceAudios: ["https://a"] })).toThrow("not both");
+    expect(() => buildKieVideoPayload(wan, { prompt: "p", duration: 5 }, { referenceVideos: Array(6).fill("https://v") })).toThrow("up to 5 reference videos");
+
+    const seedance = video("bytedance/seedance-2.0");
+    expect(buildKieVideoPayload(seedance, { prompt: "a fox", duration: 5 }, { referenceVideos: ["https://v"], referenceAudios: ["https://a"] }).input).toMatchObject({
+      reference_video_urls: ["https://v"],
+      reference_audio_urls: ["https://a"],
+    });
+    expect(() => buildKieVideoPayload(seedance, { prompt: "a fox", duration: 5 }, { referenceAudios: ["https://a"] })).toThrow("with a reference image or video");
+    expect(() => buildKieVideoPayload(seedance, { prompt: "a fox", duration: 5 }, { referenceVideos: Array(4).fill("https://v") })).toThrow("up to 3");
+    expect(buildKieVideoPayload(video("bytedance/seedance-2.5"), { prompt: "a fox", duration: 5 }, { referenceAudios: ["https://a"] }).input).toMatchObject({ reference_audio_urls: ["https://a"] });
+
+    const kling = video("fal/kling-v4");
+    expect(buildKieVideoPayload(kling, { prompt: "p", duration: 5 }, { referenceVideos: ["https://v"] })).toMatchObject({ model: "kling-4.0/reference-to-video", input: { video_urls: ["https://v"] } });
+    expect(() => buildKieVideoPayload(kling, { prompt: "p", duration: 5 }, { referenceAudios: ["https://a"] })).toThrow("Takes no reference audio");
+    expect(() => buildKieVideoPayload(video("alibaba/wan-2.7"), { prompt: "p", duration: 5 }, { referenceVideos: ["https://v"] })).toThrow("Takes no reference video");
+  });
+
+  it("prices a run with reference videos on the output plus their length, at the video-input rate", () => {
+    // Seedance 2.0 720p: 25 credits a second with a video input, on 5 + 10 s.
+    expect(estimateKieVideoCost(video("bytedance/seedance-2.0"), { prompt: "a fox", duration: 5, resolution: "720p", referenceVideos: true, referenceVideoSec: 10 })).toBeCloseTo(25 * 15 * 0.005);
+    // Wan 3.0 keeps its rate: 16 credits a second at 720p.
+    expect(estimateKieVideoCost(video("alibaba/wan-3.0"), { duration: 5, resolution: "720p", referenceVideos: true, referenceVideoSec: 4 })).toBeCloseTo(16 * 9 * 0.005);
+    // Audio alone costs nothing extra; a reference video of unknown length leaves the run unpriced.
+    expect(estimateKieVideoCost(video("alibaba/wan-3.0"), { duration: 5, resolution: "720p", referenceAudios: true })).toBeCloseTo(16 * 5 * 0.005);
+    expect(estimateKieVideoCost(video("alibaba/wan-3.0"), { duration: 5, resolution: "720p", referenceVideos: true })).toBeUndefined();
+  });
+
   it("video editing: the source video and the resolution, nothing else", () => {
     expect(buildKieVideoPayload(video("fal/wan-2.7-edit"), { prompt: "make it snow", duration: 5, resolution: "720p" }, { sourceVideo: "https://v" })).toEqual({
       model: "wan/2-7-videoedit",

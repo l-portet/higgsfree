@@ -54,7 +54,9 @@ export function validateVideoRequest(model: VideoModel, req: VideoGenerateReques
     assertMediaIds([req.sourceVideo], "The video to edit", "video");
     if (!req.sourceVideo) throw badRequest(`${model.name} needs a video to edit`);
     if (!prompt) throw badRequest("Say what to change in the video");
-    if (req.firstFrame || req.lastFrame || req.references?.length || req.motionVideo) throw badRequest(`${model.name} takes a video and a prompt only`);
+    if (req.firstFrame || req.lastFrame || req.references?.length || req.referenceVideos?.length || req.referenceAudios?.length || req.motionVideo) {
+      throw badRequest(`${model.name} takes a video and a prompt only`);
+    }
     if (req.resolution !== undefined && !model.resolutions.includes(req.resolution)) {
       if (model.resolutions.length === 0) throw badRequest(`${model.name} keeps the video's resolution. Leave it unset.`);
       throw new UnsupportedOptionError(model.name, "resolution", req.resolution, model.resolutions);
@@ -67,10 +69,22 @@ export function validateVideoRequest(model: VideoModel, req: VideoGenerateReques
     if (!req.firstFrame) throw badRequest(`${model.name} needs a character image`);
     if (!req.motionVideo) throw badRequest(`${model.name} needs a reference video`);
     if (req.orientation !== undefined && req.orientation !== "video" && req.orientation !== "image") throw badRequest("orientation must be video or image");
+    if (req.references?.length || req.referenceVideos?.length || req.referenceAudios?.length) throw badRequest(`${model.name} takes a character image and a reference video only`);
     return;
   }
-  if (req.motionVideo) throw badRequest(`${model.name} does not take a reference video`);
+  const refVideos = req.referenceVideos ?? [];
+  const refAudios = req.referenceAudios ?? [];
+  if (req.motionVideo || (refVideos.length && !model.caps.mediaReferences)) throw badRequest(`${model.name} does not take a reference video`);
+  if (refAudios.length && !model.caps.mediaReferences) throw badRequest(`${model.name} does not take reference audio`);
   if (!(req.duration > 0) || req.duration > 120) throw badRequest("duration must be between 1 and 120 seconds");
+  const media = model.caps.mediaReferences;
+  if (media) {
+    assertMediaIds(refVideos, "Reference videos", "video");
+    assertMediaIds(refAudios, "Reference audio", "audio clip");
+    if (refVideos.length > media.videos) throw badRequest(`${model.name} takes at most ${media.videos} reference videos`);
+    if (refAudios.length > media.audios) throw badRequest(`${model.name} takes at most ${media.audios} reference audio clips`);
+    if ((refVideos.length || refAudios.length) && (req.firstFrame || req.lastFrame)) throw badRequest("Reference videos and audio do not go with frames. Remove the frames, or add the images as references.");
+  }
   const refs = req.references ?? [];
   if (refs.length > MAX_REFERENCE_IMAGES) throw badRequest(`At most ${MAX_REFERENCE_IMAGES} references`);
   assertMediaIds([req.firstFrame, req.lastFrame, ...refs], "Frames and references");

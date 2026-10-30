@@ -13,6 +13,8 @@ export async function assertInputsExist(inputs: GenerationInputs): Promise<void>
     ["Last frame", inputs.lastFrame],
     ["Video to edit", inputs.sourceVideo],
     ...(inputs.referenceImages ?? []).map((id, i): [string, string] => [`Reference image ${i + 1}`, id]),
+    ...(inputs.referenceVideos ?? []).map((id, i): [string, string] => [`Reference video ${i + 1}`, id]),
+    ...(inputs.referenceAudios ?? []).map((id, i): [string, string] => [`Reference audio ${i + 1}`, id]),
   ];
   for (const [label, id] of checks) {
     if (id && !(await mediaExists(id))) throw badRequest(`${label} is no longer in the library (${id})`);
