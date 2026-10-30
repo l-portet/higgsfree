@@ -80,7 +80,8 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
   main thread. The app has to install and build anywhere Node 22 runs, including Vercel's build image.
 - **Cost honesty.** Estimates in the UI come from `estCostUsd` / `estCostPerSecUsd` in the
   catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. fal reports no
-  cost, and fal-only models carry no estimate rather than a guessed one. If you change an estimate,
+  cost; fal-only models, and models a provider lists no price for yet (GPT Image 2.6 on APIMart),
+  carry no estimate rather than a guessed one. If you change an estimate,
   say where the number came from.
 
 ## Adding or updating a model

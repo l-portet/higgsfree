@@ -6,6 +6,7 @@ import type { ImageModel, VideoModel } from "@shared/types";
 import { resultUrls } from "../apimart";
 import { buildApimartImagePayload, buildApimartVideoPayload } from "../apimart-payloads";
 import { apimartVideoPayloadFor, estimateApimartImageCost, estimateApimartVideoCost } from "../apimart-pricing";
+import { quoteImage } from "../image-cost";
 
 const video = (id: string): VideoModel => {
   const m = findVideoModel(id);
@@ -144,6 +145,21 @@ describe("buildApimartImagePayload", () => {
       prompt_extend: false,
     });
   });
+
+  it("GPT Image 2.6: GPT Image 2's fields under its own model", () => {
+    expect(buildApimartImagePayload(image("openai/gpt-image-2.6"), { prompt: "p", aspectRatio: "4:5", size: "4K" }, ["https://r", "https://s"])).toEqual({
+      kind: "images",
+      body: { model: "gpt-image-2.6", prompt: "p", n: 1, image_urls: ["https://r", "https://s"], size: "4:5", resolution: "4k" },
+      priceKey: "gpt-image-2.6",
+    });
+    expect(buildApimartImagePayload(image("openai/gpt-image-2.6"), { prompt: "p", aspectRatio: "auto", size: "1K" }, []).body).toEqual({
+      model: "gpt-image-2.6",
+      prompt: "p",
+      n: 1,
+      size: "auto",
+      resolution: "1k",
+    });
+  });
 });
 
 describe("resultUrls", () => {
@@ -156,6 +172,8 @@ describe("resultUrls", () => {
 
 describe("APIMart prices", () => {
   it("price every route at its defaults, and nothing else", () => {
+    // APIMart lists no price for these yet (read 30 Oct 2026): no estimate rather than a guessed one.
+    const unpriced = new Set(["gpt-image-2.6"]);
     const used = new Set<string>();
     for (const m of VIDEO_MODELS.filter((v) => v.apimart && !v.hidden)) {
       const durations: Partial<Record<string, number>> = { veo: 8, "gemini-omni": 8 };
@@ -164,8 +182,10 @@ describe("APIMart prices", () => {
       expect(estimateApimartVideoCost(m, req), `${m.id} on APIMart`).toBeGreaterThan(0);
     }
     for (const m of IMAGE_MODELS.filter((i) => i.apimart)) {
-      used.add(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []).priceKey);
-      expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on APIMart`).toBeGreaterThan(0);
+      const { priceKey } = buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []);
+      used.add(priceKey);
+      if (unpriced.has(priceKey)) expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on APIMart`).toBeUndefined();
+      else expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on APIMart`).toBeGreaterThan(0);
     }
     expect(Object.keys(APIMART_PRICES).filter((k) => !used.has(k))).toEqual([]);
   });
@@ -179,5 +199,13 @@ describe("APIMart prices", () => {
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(0.9956);
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.1956);
     expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, false)).toBeCloseTo(0.12);
+  });
+
+  it("GPT Image 2.6, on APIMart only: it runs there with no price known yet", () => {
+    const m = image("openai/gpt-image-2.6");
+    const req = { aspectRatio: "9:16" as const, size: "2K" as const, count: 4, references: 8 };
+    expect(quoteImage(m, req, { apimart: true }, "openrouter")).toEqual({ quotes: [{ provider: "apimart", noKey: false }], provider: "apimart" });
+    // No other key helps.
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true }, "kie")).toEqual({ quotes: [{ provider: "apimart", noKey: true }] });
   });
 });

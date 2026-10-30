@@ -161,6 +161,28 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "openai/gpt-image-2.6",
+    name: "GPT Image 2.6",
+    provider: "openai",
+    description: "Text to image and edits from up to 8 images, up to 4K",
+    endpoint: "fal",
+    featured: false,
+    badges: ["new"],
+    // APIMart takes 16 references; the app sends 8 at most.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    // GPT Image 2's APIMart ratios but 21:9.
+    aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16"],
+    sizes: ["1K", "2K", "4K"],
+    // APIMart lists no price for it yet (30 Oct 2026): no estimate rather than a guessed one.
+    estCostUsd: {},
+    supportsImageSize: true,
+    verified: false,
+    // Not on OpenRouter, fal nor kie.ai yet. GPT Image 2's APIMart fields: `size` (the ratio), `resolution`, `image_urls`.
+    offOpenRouter: true,
+    apimart: { family: "gpt-image-2", model: "gpt-image-2.6" },
+  },
+  {
+    kind: "image",
     id: "krea/krea-2-large",
     name: "Krea 2 Large",
     provider: "krea",

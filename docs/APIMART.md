@@ -76,9 +76,16 @@ upload page's example shows `{ url }` objects).
 | Family | Models | Fields |
 |---|---|---|
 | `gemini` | Nano Banana Pro, 2, 2 Lite, Nano Banana → `gemini-3-pro-image-preview`, `gemini-3.1-flash-image-preview`, `gemini-3.1-flash-lite-image-ext`, `gemini-2.5-flash-image-preview` | `size` (the ratio, `auto` allowed), `resolution` 1K / 2K / 4K, up to 14 references |
-| `gpt-image-2` | GPT Image 2 → `gpt-image-2` | `size`, `resolution` `1k` / `2k` / `4k`, up to 15 references |
+| `gpt-image-2` | GPT Image 2, 2.6 → `gpt-image-2`, `gpt-image-2.6` | `size`, `resolution` `1k` / `2k` / `4k`, up to 15 references (2.6 takes 16; the app sends 8 at most) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux-kontext-pro` | `size`, `output_format: "png"`, up to 4 references |
 | `z-image` | Z-Image Turbo → `z-image-turbo` | `size` (`auto` becomes 1:1), `resolution: "1K"`, `prompt_extend: false` (it doubles the price) |
+
+GPT Image 2.6 (`gpt-image-2.6`) runs on APIMart only. Its model page (read 30 Oct 2026) lists GPT Image 2's
+fields, with ratios `auto`, 1:1, 3:2, 2:3, 16:9, 9:16, 4:3, 3:4, 4:5, 5:4 (no 21:9, which its catalog entry
+leaves out) and text to image and edits in one model, so it shares the `gpt-image-2` builder. `quality`
+(`auto` by default), `output_format` and `background` are not sent: APIMart's defaults apply. Neither
+APIMart's price catalog nor the model page priced it on 30 Oct 2026: it has no estimate rather than a guessed
+one, and the price test lists it as unpriced.
 
 ## Cost estimates
 
@@ -98,3 +105,4 @@ PixVerse), per clip (Veo, 8 s; Gemini Omni Flash by length), or per image (by si
 - **No video inputs.** Video editing and motion control never go to APIMart.
 - **Veo is 8 s only** on the models used here (APIMart's per-second "official" Veo channels are not wired).
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
+- **GPT Image 2.6 has no price to show.** APIMart lists none yet; the recorded cost is still right.
