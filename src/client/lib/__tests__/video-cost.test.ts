@@ -91,6 +91,16 @@ describe("quoteVideo", () => {
     expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, "openrouter", NOW)).toMatchObject({ reason: "none" });
   });
 
+  it("Gemini Omni Flash 1.2, on APIMart only: it runs there with no price known yet", () => {
+    const omni = video("google/gemini-omni-flash-1.2");
+    const q = quoteVideo(omni, { prompt: "a fox", duration: 8, resolution: "1080p", aspectRatio: "9:16", references: true }, { apimart: true }, "openrouter", NOW);
+    expect(q).toMatchObject({ provider: "apimart", reason: "only" });
+    expect(q.quotes).toEqual([{ provider: "apimart", noKey: false }]);
+    expect(quoteVideo(omni, { prompt: "", duration: 8 }, { apimart: true }, "apimart", NOW).quotes[0]).toMatchObject({ refusal: "Needs a prompt" });
+    // No other key helps.
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 8 }, { openrouter: true, fal: true, kie: true }, "kie", NOW)).toMatchObject({ reason: "none" });
+  });
+
   it("prices motion control and editing by the input video, once its length is known", () => {
     const motion = quoteVideo(video("fal/kling-v3-pro-motion-control"), { duration: 5, videoSec: 7.5 }, BOTH, "openrouter", NOW);
     expect(motion).toMatchObject({ provider: "fal", reason: "only" });
