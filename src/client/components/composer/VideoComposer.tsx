@@ -30,7 +30,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
-import { DurationControl } from "@/components/video/DurationControl";
+import { DurationControl, matchedDuration, type DurationMatch } from "@/components/video/DurationControl";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS, type Attachment } from "./ComposerFrame";
 import { CostEstimate, VideoCostBreakdown } from "./CostEstimate";
 import { PromptEditorDialog } from "./PromptEditorDialog";
@@ -160,6 +160,8 @@ export function VideoComposer() {
   // Kept while another model is selected, so switching back to a motion or edit model restores it.
   const [clip, setClip] = useState<VideoClip | null>(null);
   const [refMedia, setRefMedia] = useState<RefMedia>(NO_REF_MEDIA);
+  /** The reference clip whose length the duration follows (its `VideoClip.id`), if any. */
+  const [matchId, setMatchId] = useState<string | null>(null);
   const [orientation, setOrientation] = useState<MotionOrientation>(initial.orientation);
   const [editModelId, setEditModelId] = useState<string>(initial.editModel);
   const [submitting, setSubmitting] = useState(false);
@@ -414,6 +416,21 @@ export function VideoComposer() {
         ...refVideos.map((v) => ({ id: v.id, mediaId: v.mediaId, name: v.name, tag: "Ref", kind: "video" as const })),
         ...refAudios.map((a) => ({ id: a.id, mediaId: a.mediaId, name: a.name, tag: "Audio", kind: "audio" as const })),
       ];
+
+  // ---------- duration matching a reference clip ----------
+
+  const durationMatches: DurationMatch[] = [
+    ...refVideos.map((v, i): DurationMatch => ({ id: v.id, label: `Video ${i + 1}`, kind: "video", sec: v.durationSec })),
+    ...refAudios.map((a, i): DurationMatch => ({ id: a.id, label: `Audio ${i + 1}`, kind: "audio", sec: a.durationSec })),
+  ];
+  const matchedClip = matchId ? [...refVideos, ...refAudios].find((c) => c.id === matchId) : undefined;
+  const matchedSec = matchedClip?.durationSec;
+  // Follow the clip: a new model (other durations) or a replaced clip re-matches; a removed clip ends it.
+  useEffect(() => {
+    if (!matchId) return;
+    if (!matchedClip) return setMatchId(null);
+    if (model && matchedSec !== undefined) setDuration(matchedDuration(model, matchedSec));
+  }, [matchId, matchedClip, matchedSec, model]);
 
   // ---------- validation ----------
 
@@ -863,7 +880,16 @@ export function VideoComposer() {
               </Popover>
             )}
 
-            <DurationControl model={model} value={duration} onChange={setDuration} estimateFor={estimateFor} chevron={false} />
+            <DurationControl
+              model={model}
+              value={duration}
+              onChange={setDuration}
+              estimateFor={estimateFor}
+              chevron={false}
+              matches={durationMatches}
+              matchedId={matchedClip ? matchId : null}
+              onMatch={setMatchId}
+            />
 
             {resolutionChip}
 
