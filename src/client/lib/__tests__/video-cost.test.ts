@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { findVideoModel } from "@shared/models";
 import type { VideoModel } from "@shared/types";
-import { quoteVideo, shownQuote } from "../video-cost";
+import { pinQuote, quoteVideo, shownQuote } from "../video-cost";
 
 const video = (id: string): VideoModel => {
   const m = findVideoModel(id);
@@ -120,5 +120,22 @@ describe("quoteVideo", () => {
     expect(q.quotes.find((x) => x.provider === "openrouter")?.refusal).toBe("Takes no reference video or audio");
     expect(q.quotes.find((x) => x.provider === "apimart")?.refusal).toBe("Takes no uploaded video or audio");
     expect(quoteVideo(wan, { prompt: "p", duration: 5, referenceVideos: true }, { openrouter: true, apimart: true }, "openrouter", NOW).reason).toBe("none");
+  });
+});
+
+describe("pinQuote", () => {
+  const ALL = { openrouter: true, fal: true, kie: true };
+  const veo = (audio: boolean) => quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio }, ALL, "openrouter", NOW);
+
+  it("runs it on the provider picked by hand, though another costs less", () => {
+    expect(veo(true).provider).toBe("kie");
+    expect(pinQuote(veo(true), "openrouter")).toMatchObject({ provider: "openrouter", picked: true });
+    expect(shownQuote(pinQuote(veo(true), "openrouter"))?.usd).toBeCloseTo(3.2);
+  });
+
+  it("keeps the automatic choice while the pick has no key, refuses the request or is unset", () => {
+    expect(pinQuote(veo(true), "apimart")).toEqual(veo(true)); // no APIMart key
+    expect(pinQuote(veo(false), "kie")).toEqual(veo(false)); // kie's Veo always adds sound
+    expect(pinQuote(veo(true), undefined)).toEqual(veo(true));
   });
 });

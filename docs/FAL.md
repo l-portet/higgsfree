@@ -32,6 +32,10 @@ turns out to behave differently, fix the code and this page in the same PR.
     the first (OpenRouter, fal, kie.ai, APIMart).
   - The preference (`higgsfree.preferredProvider`, OpenRouter by default, any of the four) also decides a
     video whose price is not known yet (an edit before its video's length is).
+  - **A pick overrides both.** The price next to Generate is a menu (`ProviderPicker`): Auto, or any provider
+    that offers the model. The pick goes out as `provider` on the request, and `pinQuote` applies it in the
+    composer and the engine alike, only while that provider has a key and takes the request; otherwise Auto.
+    It lasts until the page reloads.
 - The provider is chosen when the job is submitted and saved on the record (`Generation.provider`).
   Polling, resume and the download use that provider and its key, re-read every tick, whatever the
   preference says later. A record made before fal support has no `provider` and counts as OpenRouter.

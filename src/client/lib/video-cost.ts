@@ -56,6 +56,8 @@ export interface VideoQuote {
   /** Who runs it; undefined when no provider that takes the request has a key. */
   provider?: ProviderId;
   reason: QuoteReason;
+  /** Set by `pinQuote`: `provider` was picked by hand rather than by price. */
+  picked?: boolean;
 }
 
 /** Prices closer than half a cent are the same price (the providers round differently). */
@@ -109,8 +111,17 @@ export function quoteVideo(model: VideoModel, req: VideoQuoteRequest, keys: Prov
   return { quotes, provider: pick(cheapest), reason: cheapest.length > 1 ? "tie" : "cheaper" };
 }
 
+/**
+ * A provider picked by hand in the composer runs it when it has a key and takes the request; otherwise the
+ * automatic choice stands (`picked` stays unset). Images and videos alike: the composer and the engine both apply it.
+ */
+export function pinQuote<Q extends { quotes: ProviderQuote[]; provider?: ProviderId; picked?: boolean }>(q: Q, pinned: ProviderId | undefined): Q {
+  const ok = pinned !== undefined && q.quotes.some((x) => x.provider === pinned && !x.noKey && !x.refusal);
+  return ok ? { ...q, provider: pinned, picked: true } : q;
+}
+
 /** The quote shown next to Generate: the provider that runs it, or (no key yet) the cheapest one that takes the request. */
-export function shownQuote(q: VideoQuote): ProviderQuote | undefined {
+export function shownQuote(q: { quotes: ProviderQuote[]; provider?: ProviderId }): ProviderQuote | undefined {
   if (q.provider) return q.quotes.find((x) => x.provider === q.provider);
   const takers = q.quotes.filter((x) => !x.refusal);
   const priced = takers.filter((x) => x.usd !== undefined).sort((x, y) => (x.usd ?? 0) - (y.usd ?? 0));

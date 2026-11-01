@@ -27,6 +27,8 @@ export interface ImageQuote {
   quotes: ProviderQuote[];
   /** Who runs it; undefined when no provider that takes the request has a key. */
   provider?: ProviderId;
+  /** Set by `pinQuote`: `provider` was picked by hand rather than by the preference. */
+  picked?: boolean;
 }
 
 function refusal(build: () => unknown): string | undefined {

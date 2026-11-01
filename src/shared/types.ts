@@ -368,6 +368,8 @@ export interface ImageGenerateRequest {
   count: number;
   /** Media ids of stored uploads (see `upload`). */
   referenceImages?: string[];
+  /** Run on this provider (picked in the composer) when it has a key and takes the request; otherwise the usual choice. */
+  provider?: ProviderId;
 }
 
 export interface VideoGenerateRequest {
@@ -391,6 +393,8 @@ export interface VideoGenerateRequest {
   orientation?: MotionOrientation;
   /** Video editing: media id of the video to edit (an upload, or a video record's output). */
   sourceVideo?: string;
+  /** Run on this provider (picked in the composer) when it has a key and takes the request; otherwise the cheapest. */
+  provider?: ProviderId;
 }
 
 export interface GenerateResponse {

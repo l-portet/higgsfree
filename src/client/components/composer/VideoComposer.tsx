@@ -2,7 +2,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
 import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, Music, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import type { Generation, MotionOrientation, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
+import type { Generation, MotionOrientation, ProviderId, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
 import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
@@ -16,7 +16,7 @@ import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
 import { PROVIDER_IDS } from "@/lib/providers";
-import { quoteVideo, shownQuote, type VideoQuote } from "@/lib/video-cost";
+import { pinQuote, quoteVideo, shownQuote, type VideoQuote } from "@/lib/video-cost";
 import { readAudioDuration } from "@/lib/audio-meta";
 import { readVideoDuration } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
@@ -32,7 +32,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { DurationControl, matchedDuration, type DurationMatch } from "@/components/video/DurationControl";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS, type Attachment } from "./ComposerFrame";
-import { CostEstimate, VideoCostBreakdown } from "./CostEstimate";
+import { CostEstimate, ProviderPicker, videoAutoNote } from "./CostEstimate";
 import { PromptEditorDialog } from "./PromptEditorDialog";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
@@ -164,6 +164,8 @@ export function VideoComposer() {
   const [matchId, setMatchId] = useState<string | null>(null);
   const [orientation, setOrientation] = useState<MotionOrientation>(initial.orientation);
   const [editModelId, setEditModelId] = useState<string>(initial.editModel);
+  /** The provider picked by hand next to Generate; unset, the cheapest runs it. Ignored while it cannot take the request. */
+  const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -508,11 +510,11 @@ export function VideoComposer() {
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);
-    return q ? shownQuote(q)?.usd : undefined;
-  }, [quoteAt]);
+    return q ? shownQuote(pinQuote(q, pinned))?.usd : undefined;
+  }, [quoteAt, pinned]);
   const estimateFor = useCallback((d: number) => estimateAt(d, resolution), [estimateAt, resolution]);
   const quote = quoteAt(duration, resolution);
-  const shown = quote ? shownQuote(quote) : undefined;
+  const shown = quote ? shownQuote(pinQuote(quote, pinned)) : undefined;
   const estimate = shown?.usd !== undefined ? shown.usd * count : undefined;
 
   const submit = async () => {
@@ -539,6 +541,7 @@ export function VideoComposer() {
       if (refVideos.length) req.referenceVideos = refVideos.map((v) => v.mediaId);
       if (refAudios.length) req.referenceAudios = refAudios.map((a) => a.mediaId);
     }
+    if (pinned) req.provider = pinned;
     setSubmitting(true);
     try {
       // `count` clips are `count` independent jobs: one request each, in parallel.
@@ -912,8 +915,10 @@ export function VideoComposer() {
         </>
       }
       estimate={
-        estimate !== undefined ? (
-          <CostEstimate usd={estimate} provider={shown?.provider} breakdown={quote ? <VideoCostBreakdown quote={quote} count={count} preferred={preferred} /> : undefined} />
+        quote && quote.quotes.length > 1 ? (
+          <ProviderPicker auto={quote} pinned={pinned} onPin={setPinned} count={count} autoNote={videoAutoNote(quote, preferred)} />
+        ) : estimate !== undefined ? (
+          <CostEstimate usd={estimate} provider={shown?.provider} />
         ) : undefined
       }
       generate={{ disabledReason, submitting, reasonId }}

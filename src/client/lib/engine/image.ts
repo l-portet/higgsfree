@@ -13,6 +13,7 @@ import { publish } from "../live";
 import * as fal from "../fal";
 import { buildFalImagePayload } from "../fal-payloads";
 import { quoteImage } from "../image-cost";
+import { pinQuote } from "../video-cost";
 import { isTaskProvider, TASK_PROVIDERS, type TaskProvider } from "../task-providers";
 import { errorMessage, log } from "../log";
 import { newBatchId, newGenerationId, outputMediaId } from "../media-ids";
@@ -42,9 +43,10 @@ export async function submitImageBatch(req: ImageGenerateRequest): Promise<Gener
   validateImageRequest(model, { ...req, prompt });
   const refIds = req.referenceImages ?? [];
   await assertInputsExist({ referenceImages: refIds });
-  // The preferred provider that can take the request (`quoteImage`); when none with a key can, the key-based
-  // choice stands and its refusal says why.
-  const chosen = quoteImage(model, { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length }, storedKeys(), getPreferredProvider()).provider;
+  // The provider picked in the composer, else the preferred one, that can take the request (`quoteImage`); when none
+  // with a key can, the key-based choice stands and its refusal says why.
+  const quote = quoteImage(model, { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length }, storedKeys(), getPreferredProvider());
+  const chosen = pinQuote(quote, req.provider).provider;
   const chosenKey = chosen ? keyFor(chosen) : undefined;
   const { provider, key } = chosen && chosenKey ? { provider: chosen, key: chosenKey } : keyed;
 
