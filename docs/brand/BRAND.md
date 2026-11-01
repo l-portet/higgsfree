@@ -83,7 +83,7 @@ all-caps display headings (`text-display`), where it is set in caps with the res
 | `apple-touch-icon.png` (180) | `mark-square.svg` | iOS applies its own corner mask |
 | `icon-192.png`, `icon-512.png` | `mark.svg` | Rounded tile, transparent corners |
 | `icon-maskable-512.png` | `icon-maskable.svg` | Full bleed, glyph scaled 0.8x so its farthest point (the wave's tip) sits at 34.5 % of the side from the centre, inside the 40 % safe circle |
-| `og-image.png` | `og-image.svg` | Lockup on `#0a0a0a` with the one-line descriptor |
+| `og-image.png` | `og-image.svg` | Lockup, headline and pitch on `#0a0a0a`, beside a stack of `public/samples` cards with their info badges (images embedded, text outlined) |
 
 Regenerate by rasterising the vectors, never by resampling a PNG:
 
