@@ -1,8 +1,7 @@
 /**
  * What a video costs on each provider that offers its model, and who runs it: the cheapest of OpenRouter,
- * fal, kie.ai and APIMart that can take the request. The preference in Settings breaks a tie, and decides while no
- * price is known (an edit before its video's length is). The composer shows the comparison next to
- * Generate and the engine routes the run with the same rule, so the two always agree.
+ * fal, kie.ai and APIMart that can take the request (`routeQuotes`, the same rule as images). The composer shows the
+ * comparison next to Generate and the engine routes the run with the same rule, so the two always agree.
  */
 import type { ProviderId, VideoAspectRatio, VideoModel, VideoResolution } from "@shared/types";
 import { editedLength, estimateVideoCost, snapDuration } from "@shared/models";
@@ -49,8 +48,8 @@ export interface ProviderQuote {
 /**
  * Why the run goes where it goes. `only`: one provider offers the model. `cheaper`: several could run it,
  * this one costs least. `tie` / `unpriced`: several could, at the same lowest price or with no price
- * known, so the preference decides. `one-ready`: the others have no key or refuse the request. `none`: no
- * provider that takes the request has a key.
+ * known, so the first in the catalog's order (OpenRouter, fal, kie.ai, APIMart) runs it. `one-ready`: the
+ * others have no key or refuse the request. `none`: no provider that takes the request has a key.
  */
 export type QuoteReason = "only" | "cheaper" | "tie" | "unpriced" | "one-ready" | "none";
 
@@ -99,20 +98,28 @@ function priceOn(provider: ProviderId, model: VideoModel, req: VideoQuoteRequest
   }
 }
 
-/** Each provider's price for one clip of `req`, and who runs it. `now` picks fal's promotional rates. */
-export function quoteVideo(model: VideoModel, req: VideoQuoteRequest, keys: ProviderKeys, preferred: ProviderId, now = new Date()): VideoQuote {
-  const quotes = modelProviders(model).map((provider): ProviderQuote => ({ provider, noKey: !keys[provider], ...priceOn(provider, model, req, now) }));
+/**
+ * Who runs a request, from each provider's quote (images and videos alike): the cheapest that has a key and takes it.
+ * A tie, or no price known, goes to the first in the catalog's order. The composer's pick overrides it (`pinQuote`).
+ */
+export function routeQuotes(quotes: ProviderQuote[]): { provider?: ProviderId; reason: QuoteReason } {
   const ready = quotes.filter((q) => !q.noKey && !q.refusal);
-  const pick = (among: ProviderQuote[]): ProviderId | undefined => (among.some((q) => q.provider === preferred) ? preferred : among[0]?.provider);
   const first = ready[0];
-  if (!first) return { quotes, reason: "none" };
-  if (quotes.length === 1) return { quotes, provider: first.provider, reason: "only" };
-  if (ready.length === 1) return { quotes, provider: first.provider, reason: "one-ready" };
+  if (!first) return { reason: "none" };
+  if (quotes.length === 1) return { provider: first.provider, reason: "only" };
+  if (ready.length === 1) return { provider: first.provider, reason: "one-ready" };
   const priced = ready.filter((q) => q.usd !== undefined);
-  if (priced.length === 0) return { quotes, provider: pick(ready), reason: "unpriced" };
+  if (priced.length === 0) return { provider: first.provider, reason: "unpriced" };
   const low = Math.min(...priced.map((q) => q.usd ?? Infinity));
   const cheapest = priced.filter((q) => (q.usd ?? Infinity) - low < SAME_PRICE_USD);
-  return { quotes, provider: pick(cheapest), reason: cheapest.length > 1 ? "tie" : "cheaper" };
+  return { provider: cheapest[0]?.provider, reason: cheapest.length > 1 ? "tie" : "cheaper" };
+}
+
+/** Each provider's price for one clip of `req`, and who runs it. `now` picks fal's promotional rates. */
+export function quoteVideo(model: VideoModel, req: VideoQuoteRequest, keys: ProviderKeys, now = new Date()): VideoQuote {
+  const quotes = modelProviders(model).map((provider): ProviderQuote => ({ provider, noKey: !keys[provider], ...priceOn(provider, model, req, now) }));
+  const { provider, reason } = routeQuotes(quotes);
+  return provider ? { quotes, provider, reason } : { quotes, reason };
 }
 
 /**

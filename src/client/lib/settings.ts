@@ -1,7 +1,7 @@
-/** Each provider's key and the provider choice, in this browser's localStorage. */
+/** Each provider's key, in this browser's localStorage. */
 import type { ProviderId, SettingsResponse } from "@shared/types";
 import { ApiClientError } from "./errors";
-import { isProviderId, PROVIDER_IDS } from "./providers";
+import { PROVIDER_IDS } from "./providers";
 import { readJson, removeKey, writeJson } from "./storage";
 
 export const KEY_STORAGE = "higgsfree.apiKey";
@@ -13,9 +13,8 @@ export const KEY_STORAGE_BY_PROVIDER: Record<ProviderId, string> = {
   kie: "higgsfree.kieKey",
   apimart: "higgsfree.apimartKey",
 };
-export const PROVIDER_STORAGE = "higgsfree.preferredProvider";
-/** Survive "Reset local settings": losing a key or the provider choice is never what that button means. */
-export const PROTECTED_STORAGE_KEYS: readonly string[] = [...Object.values(KEY_STORAGE_BY_PROVIDER), PROVIDER_STORAGE];
+/** Survive "Reset local settings": losing a key is never what that button means. */
+export const PROTECTED_STORAGE_KEYS: readonly string[] = Object.values(KEY_STORAGE_BY_PROVIDER);
 
 export function getProviderKey(provider: ProviderId): string | undefined {
   const key = readJson<string>(KEY_STORAGE_BY_PROVIDER[provider], "").trim();
@@ -33,16 +32,6 @@ export const getStoredKey = (): string | undefined => getProviderKey("openrouter
 export const setStoredKey = (key: string): void => setProviderKey("openrouter", key);
 export const getStoredFalKey = (): string | undefined => getProviderKey("fal");
 export const setStoredFalKey = (key: string): void => setProviderKey("fal", key);
-
-/** Which provider runs a model several offer. OpenRouter unless the user picked another. */
-export function getPreferredProvider(): ProviderId {
-  const stored = readJson<string>(PROVIDER_STORAGE, "openrouter");
-  return isProviderId(stored) ? stored : "openrouter";
-}
-
-export function setPreferredProvider(provider: ProviderId): void {
-  writeJson(PROVIDER_STORAGE, provider);
-}
 
 export function requireApiKey(): string {
   const key = getStoredKey();
@@ -62,7 +51,7 @@ export function settingsResponse(): SettingsResponse {
     const key = getProviderKey(p);
     if (key) keys[p] = maskKey(key);
   }
-  const res: SettingsResponse = { hasKey: Boolean(keys.openrouter), keys, preferredProvider: getPreferredProvider() };
+  const res: SettingsResponse = { hasKey: Boolean(keys.openrouter), keys };
   if (keys.openrouter) res.keyMasked = keys.openrouter;
   return res;
 }

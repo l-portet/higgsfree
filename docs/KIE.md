@@ -93,8 +93,8 @@ The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@V
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux1-kontext`, `model: "flux-kontext-pro"` | `aspect_ratio` (not `auto`, no 3:2 / 2:3), `input_image` (one reference) |
 | `z-image` | Z-Image Turbo → `z-image` | `aspect_ratio` (required: `auto` becomes 1:1) |
 
-An image goes to the preferred provider among those with a key that can take the request (`quoteImage`):
-with kie preferred, a FLUX.1 Kontext run at 3:2 still goes to fal.
+An image goes to the cheapest provider with a key that can take the request (`quoteImage`), or to the one
+picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes to fal.
 
 ## Cost estimates
 

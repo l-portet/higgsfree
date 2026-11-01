@@ -82,28 +82,26 @@ describe("who runs a model", () => {
     await expect(image({ model: "krea/krea-2-large", aspectRatio: "1:1" })).rejects.toMatchObject({ status: 401, error: "Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it." });
   });
 
-  it("both keys: a model on both follows the preference (OpenRouter by default)", async () => {
+  it("both keys: an image on both goes to the cheaper one, or to the one picked", async () => {
     setStoredKey("test-key");
     setStoredFalKey(FAL_KEY);
-    expect((await api.getSettings()).preferredProvider).toBe("openrouter");
+    // Nano Banana Pro at 2K: $0.134 on OpenRouter, $0.15 on fal.
     const viaOpenRouter = await image({});
     await waitFor(completed(viaOpenRouter.id));
     expect(viaOpenRouter.provider).toBe("openrouter");
     expect(mock.calls("/api/v1/chat/completions")).toHaveLength(1);
 
-    await api.updateSettings({ preferredProvider: "fal" });
     const ref = await uploadImage();
-    const viaFal = await image({ referenceImages: [ref] });
+    const viaFal = await image({ referenceImages: [ref], provider: "fal" });
     await waitFor(completed(viaFal.id));
     expect(viaFal.provider).toBe("fal");
     expect(mock.fal("/fal-ai/nano-banana-pro/edit")[0]?.body).toEqual({ prompt: "p", image_urls: [PNG_DATA_URL], aspect_ratio: "16:9", resolution: "2K" });
     expect(mock.calls("/api/v1/chat/completions")).toHaveLength(1);
   });
 
-  it("both keys: a video goes to the cheaper provider, and the preference only breaks a tie", async () => {
+  it("both keys: a video goes to the cheaper provider, a tie to the first (OpenRouter)", async () => {
     setStoredKey("test-key");
     setStoredFalKey(FAL_KEY);
-    await api.updateSettings({ preferredProvider: "fal" });
     const video = async (extra: Record<string, unknown>): Promise<Generation> => {
       const g = (await api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, ...extra })).generations[0];
       if (!g) throw new Error("no generation");
@@ -112,12 +110,13 @@ describe("who runs a model", () => {
     // Seedance 2.5 at 720p: about $0.23/s on OpenRouter, $0.57/s on fal.
     expect((await video({ model: "bytedance/seedance-2.5", resolution: "720p", aspectRatio: "16:9" })).provider).toBe("openrouter");
     expect(mock.calls("/api/v1/videos")).toHaveLength(1);
-    // Kling 3.0 Pro without sound: $0.112/s on both, so the preference.
-    expect((await video({ audio: false })).provider).toBe("fal");
+    // Kling 3.0 Pro without sound: $0.112/s on both, so the first; picked, fal.
+    expect((await video({ audio: false })).provider).toBe("openrouter");
+    expect((await video({ audio: false, provider: "fal" })).provider).toBe("fal");
     expect(mock.fal("/fal-ai/kling-video/v3/pro/text-to-video")[0]?.body).toMatchObject({ generate_audio: false });
-    // fal takes no style references: OpenRouter runs it, whatever the preference.
-    expect((await video({ references: [await uploadImage()] })).provider).toBe("openrouter");
-    expect(mock.calls("/api/v1/videos")).toHaveLength(2);
+    // fal takes no style references: OpenRouter runs it, even picked onto fal.
+    expect((await video({ references: [await uploadImage()], provider: "fal" })).provider).toBe("openrouter");
+    expect(mock.calls("/api/v1/videos")).toHaveLength(3);
   });
 
   it("a provider picked in the composer runs it, while it has a key and takes the request", async () => {
@@ -302,7 +301,6 @@ describe("fal key and video uploads", () => {
     expect(saved.keys).toEqual({ fal: "abcdef12-…cret" });
     expect(JSON.stringify(saved)).not.toContain("secretsecret");
     expect((await api.updateSettings({ keys: { fal: "" } })).keys.fal).toBeUndefined();
-    await expect(api.updateSettings({ preferredProvider: "nope" as never })).rejects.toMatchObject({ status: 400 });
     await expect(api.updateSettings({ keys: { nope: "x" } as never })).rejects.toMatchObject({ status: 400 });
   });
 

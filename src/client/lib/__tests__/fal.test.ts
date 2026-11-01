@@ -28,23 +28,21 @@ describe("provider choice", () => {
     expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart"]);
   });
 
-  it("uses the preference only when both keys can run the model", () => {
+  it("before prices: the first provider of the model with a key", () => {
     const shared = video("kwaivgi/kling-v3.0-pro");
-    expect(chooseProvider(shared, both, "openrouter").provider).toBe("openrouter");
-    expect(chooseProvider(shared, both, "fal").provider).toBe("fal");
-    expect(chooseProvider(shared, { openrouter: false, fal: true }, "openrouter").provider).toBe("fal");
-    expect(chooseProvider(shared, { openrouter: true, fal: false }, "fal").provider).toBe("openrouter");
-    expect(chooseProvider(video("fal/vidu-q4"), both, "openrouter").provider).toBe("fal");
+    expect(chooseProvider(shared, both).provider).toBe("openrouter");
+    expect(chooseProvider(shared, { openrouter: false, fal: true }).provider).toBe("fal");
+    expect(chooseProvider(video("fal/vidu-q4"), both).provider).toBe("fal");
   });
 
   it("explains which key is missing", () => {
     const motion = video("fal/kling-v3-pro-motion-control");
-    expect(providerNotice(motion, { openrouter: true, fal: false }, "openrouter")).toBe("Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it.");
-    expect(providerNotice(image("krea/krea-2-large"), { openrouter: false, fal: true }, "fal")).toBe("Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.");
-    expect(providerNotice(video("kwaivgi/kling-v3.0-pro"), { openrouter: false, fal: false }, "openrouter")).toBe("Kling 3.0 Pro needs an OpenRouter, fal, kie.ai or APIMart key. Add one in Settings to use it.");
-    expect(providerNotice(video("fal/vidu-q4"), { openrouter: true }, "openrouter")).toBe("Vidu Q4 needs a fal, kie.ai or APIMart key. Add one in Settings to use it.");
-    expect(chooseProvider(video("fal/vidu-q4"), { kie: true }, "openrouter").provider).toBe("kie");
-    expect(providerNotice(motion, both, "openrouter")).toBeUndefined();
+    expect(providerNotice(motion, { openrouter: true, fal: false })).toBe("Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it.");
+    expect(providerNotice(image("krea/krea-2-large"), { openrouter: false, fal: true })).toBe("Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.");
+    expect(providerNotice(video("kwaivgi/kling-v3.0-pro"), { openrouter: false, fal: false })).toBe("Kling 3.0 Pro needs an OpenRouter, fal, kie.ai or APIMart key. Add one in Settings to use it.");
+    expect(providerNotice(video("fal/vidu-q4"), { openrouter: true })).toBe("Vidu Q4 needs a fal, kie.ai or APIMart key. Add one in Settings to use it.");
+    expect(chooseProvider(video("fal/vidu-q4"), { kie: true }).provider).toBe("kie");
+    expect(providerNotice(motion, both)).toBeUndefined();
   });
 });
 

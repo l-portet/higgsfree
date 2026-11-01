@@ -19,7 +19,7 @@ beforeEach(() => {
 
 describe("settings", () => {
   it("stores the key in localStorage and only ever shows it masked", async () => {
-    expect(await api.getSettings()).toEqual({ hasKey: false, keys: {}, preferredProvider: "openrouter" });
+    expect(await api.getSettings()).toEqual({ hasKey: false, keys: {} });
     const saved = await api.updateSettings({ apiKey: ` ${KEY} ` });
     expect(saved).toMatchObject({ hasKey: true, keyMasked: "sk-or-v1-…0123" });
     expect(JSON.stringify(saved)).not.toContain("abcdefgh");
@@ -29,21 +29,19 @@ describe("settings", () => {
     await expect(api.getCredits()).rejects.toMatchObject({ status: 401 });
   });
 
-  it("keeps each provider's key under its own name, and any of them can be preferred", async () => {
-    const saved = await api.updateSettings({ keys: { kie: "kie-0123456789abcdef" }, preferredProvider: "kie" });
-    expect(saved).toMatchObject({ hasKey: false, keys: { kie: "kie-01234…cdef" }, preferredProvider: "kie" });
+  it("keeps each provider's key under its own name", async () => {
+    const saved = await api.updateSettings({ keys: { kie: "kie-0123456789abcdef" } });
+    expect(saved).toEqual({ hasKey: false, keys: { kie: "kie-01234…cdef" } });
     expect(localStorage.getItem("higgsfree.kieKey")).toBe(JSON.stringify("kie-0123456789abcdef"));
     expect(PROTECTED_STORAGE_KEYS).toContain("higgsfree.kieKey");
-    localStorage.setItem("higgsfree.preferredProvider", JSON.stringify("nobody"));
-    expect((await api.getSettings()).preferredProvider).toBe("openrouter");
   });
 
   it("survives 'Reset local settings'", async () => {
-    await api.updateSettings({ apiKey: KEY, preferredProvider: "fal" });
+    await api.updateSettings({ apiKey: KEY });
     writeJson("higgsfree.composer", { mode: "video" });
     clearAppStorage(PROTECTED_STORAGE_KEYS);
     expect(localStorage.getItem("higgsfree.composer")).toBeNull();
-    expect(await api.getSettings()).toMatchObject({ hasKey: true, preferredProvider: "fal" });
+    expect(await api.getSettings()).toMatchObject({ hasKey: true });
   });
 });
 

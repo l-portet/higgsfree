@@ -21,25 +21,21 @@ turns out to behave differently, fix the code and this page in the same PR.
 - Only providers with a stored key that can take the request count (a provider refuses what its payload
   builder throws on: fal and style references, kie and a clip shorter than the model takes there…). None:
   the model cannot run. One: that one runs it. Several:
-  - **Videos go to the cheapest** (`quoteVideo` in `src/client/lib/video-cost.ts`, used by the composer for
-    the price it shows and by the engine to route the run, so the two agree). Each provider is priced for
-    the request as it stands: OpenRouter from the live catalog (its no-audio price when Sound is off), fal
-    from `FAL_PRICES`, kie.ai from `KIE_PRICES` ([KIE.md](KIE.md)) and APIMart from `APIMART_PRICES`
-    ([APIMART.md](APIMART.md)) for the endpoint or model the inputs pick, all for the duration, resolution
-    and audio sent. Prices within half a cent are a tie: the
-    preferred provider if it is among the cheapest, else the first of them.
-  - **Images go to the preferred one** among them (`quoteImage` in `src/client/lib/image-cost.ts`), else
-    the first (OpenRouter, fal, kie.ai, APIMart).
-  - The preference (`higgsfree.preferredProvider`, OpenRouter by default, any of the four) also decides a
-    video whose price is not known yet (an edit before its video's length is).
-  - **A pick overrides both.** The price next to Generate is a menu (`ProviderPicker`): Auto, or any provider
+  - **Auto: the cheapest runs it**, images and videos alike (`routeQuotes` in `src/client/lib/video-cost.ts`,
+    through `quoteVideo` and `quoteImage`, used by the composer for the price it shows and by the engine to
+    route the run, so the two agree). Each provider is priced for the request as it stands: OpenRouter from
+    the live catalog (its no-audio price when Sound is off), fal from `FAL_PRICES`, kie.ai from `KIE_PRICES`
+    ([KIE.md](KIE.md)) and APIMart from `APIMART_PRICES` ([APIMART.md](APIMART.md)) for the endpoint or model
+    the inputs pick. Prices within half a cent are a tie, and a tie, or no price known yet (an edit before its
+    video's length is), goes to the first in the catalog's order (OpenRouter, fal, kie.ai, APIMart).
+  - **A pick overrides it.** The price next to Generate is a menu (`ProviderPicker`): Auto, or any provider
     that offers the model. The pick goes out as `provider` on the request, and `pinQuote` applies it in the
     composer and the engine alike, only while that provider has a key and takes the request; otherwise Auto.
-    It lasts until the page reloads.
+    It lasts until the page reloads. There is no setting for it.
 - The provider is chosen when the job is submitted and saved on the record (`Generation.provider`).
   Polling, resume and the download use that provider and its key, re-read every tick, whatever the
-  preference says later. A record made before fal support has no `provider` and counts as OpenRouter.
-  Retry chooses again from the keys, the prices and the preference at that moment.
+  keys say later. A record made before fal support has no `provider` and counts as OpenRouter.
+  Retry chooses again from the keys and the prices at that moment.
 - No usable key: the submit is a 401 and nothing is created. The message is the composer notice
   (`providerNotice`), e.g. "Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it.",
   "Vidu Q4 needs a fal or kie.ai key. Add one in Settings to use it." or "Krea 2 Large runs on OpenRouter.
@@ -235,8 +231,7 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 
 ## Settings
 
-- The fal key is stored in localStorage under `higgsfree.falKey`, the preference under
-  `higgsfree.preferredProvider` (`"openrouter"` unless it is `"fal"`). Both survive "Reset local
+- The fal key is stored in localStorage under `higgsfree.falKey`. It survives "Reset local
   settings" (`PROTECTED_STORAGE_KEYS`). The key is only ever shown masked (first 9 and last 4
   characters).
 - Settings › Keys (the Settings dialog, `src/client/components/settings/ProvidersCard.tsx`): paste,

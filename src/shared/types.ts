@@ -460,8 +460,6 @@ export interface SettingsResponse {
   keyMasked?: string;
   /** Every provider with a stored key, masked (`sk-or-v1-…a1b2`). */
   keys: Partial<Record<ProviderId, string>>;
-  /** Which provider runs an image several offer, and a video at the same price on several. */
-  preferredProvider: ProviderId;
 }
 
 export interface UpdateSettingsRequest {
@@ -469,7 +467,6 @@ export interface UpdateSettingsRequest {
   apiKey?: string;
   /** A new key for each provider given, or `""` to clear it. */
   keys?: Partial<Record<ProviderId, string>>;
-  preferredProvider?: ProviderId;
 }
 
 export interface CreditsResponse {

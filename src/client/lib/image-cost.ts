@@ -1,7 +1,7 @@
 /**
- * What an image costs on each provider that offers its model, and who runs it: the preferred provider
- * (Settings) among those with a key that can take the request, otherwise the first of them. The composer
- * shows the price of the one that runs it; the engine routes the run with the same rule.
+ * What an image costs on each provider that offers its model, and who runs it: the cheapest with a key that can take
+ * the request (`routeQuotes`, the same rule as videos). The composer shows the price of the one that runs it; the
+ * engine routes the run with the same rule.
  */
 import type { ImageAspectRatio, ImageModel, ImageSize, ProviderId } from "@shared/types";
 import { estimateImageCost } from "@shared/models";
@@ -12,7 +12,7 @@ import { estimateFalImageCost } from "./fal-pricing";
 import { buildKieImagePayload } from "./kie-payloads";
 import { estimateKieImageCost } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
-import type { ProviderQuote } from "./video-cost";
+import { routeQuotes, type ProviderQuote, type QuoteReason } from "./video-cost";
 
 export interface ImageQuoteRequest {
   aspectRatio: ImageAspectRatio;
@@ -31,7 +31,8 @@ export interface ImageQuote {
   quotes: ProviderQuote[];
   /** Who runs it; undefined when no provider that takes the request has a key. */
   provider?: ProviderId;
-  /** Set by `pinQuote`: `provider` was picked by hand rather than by the preference. */
+  reason: QuoteReason;
+  /** Set by `pinQuote`: `provider` was picked by hand rather than by price. */
   picked?: boolean;
 }
 
@@ -66,9 +67,8 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
   }
 }
 
-export function quoteImage(model: ImageModel, req: ImageQuoteRequest, keys: ProviderKeys, preferred: ProviderId): ImageQuote {
+export function quoteImage(model: ImageModel, req: ImageQuoteRequest, keys: ProviderKeys): ImageQuote {
   const quotes = modelProviders(model).map((provider): ProviderQuote => ({ provider, noKey: !keys[provider], ...priceOn(provider, model, req) }));
-  const ready = quotes.filter((q) => !q.noKey && !q.refusal);
-  const provider = ready.some((q) => q.provider === preferred) ? preferred : ready[0]?.provider;
-  return provider ? { quotes, provider } : { quotes };
+  const { provider, reason } = routeQuotes(quotes);
+  return provider ? { quotes, provider, reason } : { quotes, reason };
 }

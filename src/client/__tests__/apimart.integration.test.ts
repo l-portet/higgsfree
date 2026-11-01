@@ -82,8 +82,8 @@ describe("APIMart videos", () => {
     expect((await video({ model: "bytedance/seedance-2.5", resolution: "720p", aspectRatio: "16:9" })).provider).toBe("apimart");
     // Kling 3.0 Pro without sound: $0.448 on APIMart and $0.45 on kie are the same price, so the first of them.
     expect((await video({ model: "kwaivgi/kling-v3.0-pro", audio: false })).provider).toBe("kie");
-    await api.updateSettings({ preferredProvider: "apimart" });
-    expect((await video({ model: "kwaivgi/kling-v3.0-pro", audio: false })).provider).toBe("apimart");
+    // Picked in the composer, APIMart runs it.
+    expect((await video({ model: "kwaivgi/kling-v3.0-pro", audio: false, provider: "apimart" })).provider).toBe("apimart");
   });
 
   it("PixVerse 6 Max, on kie.ai and APIMart only: a frame without a prompt runs on APIMart, and other keys do not help", async () => {
@@ -138,12 +138,11 @@ describe("APIMart videos", () => {
 });
 
 describe("APIMart images", () => {
-  it("runs on APIMart when preferred, with the reference uploaded first", async () => {
+  it("runs on APIMart when picked, with the reference uploaded first", async () => {
     setStoredKey("test-key");
     setProviderKey("apimart", APIMART_KEY);
-    await api.updateSettings({ preferredProvider: "apimart" });
     const ref = await uploadImage();
-    const g = (await api.generateImage({ prompt: "p", model: "google/gemini-3-pro-image", aspectRatio: "16:9", size: "2K", count: 1, referenceImages: [ref] })).generations[0];
+    const g = (await api.generateImage({ prompt: "p", model: "google/gemini-3-pro-image", aspectRatio: "16:9", size: "2K", count: 1, referenceImages: [ref], provider: "apimart" })).generations[0];
     if (!g) throw new Error("no generation");
     expect(g.provider).toBe("apimart");
     await waitFor(completed(g.id));

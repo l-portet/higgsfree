@@ -62,17 +62,17 @@ describe("quotes", () => {
   it("a Topaz video goes to the cheaper of fal and kie.ai, as for any video", () => {
     const keys = { fal: true, kie: true };
     // 640 x 360 at 2x on fal: $0.01/s; kie.ai: $0.04/s.
-    expect(quoteVideo(TOPAZ_VIDEO, { duration: 5, videoSec: 10, upscale: 2, videoWidth: 640, videoHeight: 360 }, keys, "openrouter").provider).toBe("fal");
+    expect(quoteVideo(TOPAZ_VIDEO, { duration: 5, videoSec: 10, upscale: 2, videoWidth: 640, videoHeight: 360 }, keys).provider).toBe("fal");
     // 1920 x 1080 at 4x on fal: $0.06/s; kie.ai: $0.07/s.
-    expect(quoteVideo(TOPAZ_VIDEO, { duration: 5, videoSec: 10, upscale: 4, videoWidth: 1920, videoHeight: 1080 }, keys, "openrouter").provider).toBe("fal");
+    expect(quoteVideo(TOPAZ_VIDEO, { duration: 5, videoSec: 10, upscale: 4, videoWidth: 1920, videoHeight: 1080 }, keys).provider).toBe("fal");
     // Size unknown: fal is not priced, kie.ai runs it.
-    expect(quoteVideo(TOPAZ_VIDEO, { duration: 5, videoSec: 10, upscale: 2 }, keys, "openrouter")).toMatchObject({ provider: "kie" });
+    expect(quoteVideo(TOPAZ_VIDEO, { duration: 5, videoSec: 10, upscale: 2 }, keys)).toMatchObject({ provider: "kie" });
   });
 
   it("an image upscaler is priced with one image attached and refused on a provider without it", () => {
-    const q = quoteImage(TOPAZ, { aspectRatio: "auto", size: "1K", count: 1, references: 1, upscale: 4, inputWidth: 1024, inputHeight: 1024 }, { fal: true, kie: true }, "openrouter");
+    const q = quoteImage(TOPAZ, { aspectRatio: "auto", size: "1K", count: 1, references: 1, upscale: 4, inputWidth: 1024, inputHeight: 1024 }, { fal: true, kie: true });
     expect(q.quotes.map((x) => [x.provider, x.usd])).toEqual([["fal", expect.closeTo(0.08)], ["kie", expect.closeTo(0.1)]]);
-    const none = quoteImage(TOPAZ, { aspectRatio: "auto", size: "1K", count: 1, references: 0 }, { fal: true }, "openrouter");
+    const none = quoteImage(TOPAZ, { aspectRatio: "auto", size: "1K", count: 1, references: 0 }, { fal: true });
     expect(none.quotes[0]?.refusal).toBe("Topaz Upscale needs an image to upscale");
   });
 });

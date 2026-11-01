@@ -8,7 +8,6 @@ import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { quoteImage } from "@/lib/image-cost";
-import { PROVIDER_NAME } from "@/lib/providers";
 import { factorLabel, upscaleFactor } from "@/lib/upscale";
 import { pinQuote } from "@/lib/video-cost";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles } from "@/lib/files";
@@ -91,7 +90,7 @@ export function ImageComposer() {
   const [count, setCount] = useState<number>(initial.count);
   const [prompt, setPrompt] = useState<string>(initial.prompt);
   const [refs, setRefs] = useState<Frame[]>([]);
-  /** The provider picked by hand next to Generate; unset, the preferred one runs it. Ignored while it cannot take the request. */
+  /** The provider picked by hand next to Generate; unset, the cheapest runs it. Ignored while it cannot take the request. */
   const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
   /** Upscalers: the image to upscale (kept apart from the references, which the other models use) and the scale. */
   const [source, setSource] = useState<Frame | null>(null);
@@ -220,7 +219,7 @@ export function ImageComposer() {
           ? "Enter a prompt"
           : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
 
-  // The price on the provider that runs it (the preferred one that can take the request): OpenRouter's from
+  // The price on the provider that runs it (the cheapest that can take the request): OpenRouter's from
   // the catalog, fal's and kie.ai's list prices. No key yet: the price where it would run once one is added.
   // A provider picked by hand runs it instead, while it can.
   // An upscaler is priced for one image (before one is attached too), at the scale and, once known, the image's size.
@@ -232,7 +231,6 @@ export function ImageComposer() {
             ? { aspectRatio: "auto", size: "1K", count: 1, references: 1, upscale: f, inputWidth: source?.width, inputHeight: source?.height }
             : { aspectRatio, size, count, references: refCount },
           keyGate.keys,
-          keyGate.preferred,
         )
       : undefined;
   const quote = quoteFor(sentFactor);
@@ -487,16 +485,7 @@ export function ImageComposer() {
       }
       estimate={
         quote && quote.quotes.length > 1 ? (
-          <ProviderPicker
-            auto={quote}
-            pinned={pinned}
-            onPin={setPinned}
-            autoNote={
-              quote.provider
-                ? `${PROVIDER_NAME[quote.provider]}${quote.provider === keyGate.preferred ? ", as set in Settings" : ""}`
-                : "Your preferred provider, as set in Settings"
-            }
-          />
+          <ProviderPicker auto={quote} pinned={pinned} onPin={setPinned} />
         ) : estimate !== undefined ? (
           <CostEstimate usd={estimate} provider={shown?.provider} />
         ) : undefined

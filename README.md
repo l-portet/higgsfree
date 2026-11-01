@@ -83,7 +83,7 @@ All optional, all read by `next build` only and inlined into the static site (se
 Everything lives in the browser profile you use the app in:
 
 - **The OpenRouter key** is in localStorage (`higgsfree.apiKey`) and is only ever sent to openrouter.ai. **Remove key** in Settings › Keys deletes it.
-- **The fal key**, if you add one, is in localStorage (`higgsfree.falKey`) and is only ever sent to fal's API hosts. **Remove key** in Settings › Keys deletes it. Which provider runs the models both offer is `higgsfree.preferredProvider`.
+- **The fal key**, if you add one, is in localStorage (`higgsfree.falKey`) and is only ever sent to fal's API hosts. **Remove key** in Settings › Keys deletes it.
 - **The library** (records, generated images and clips, reference images and videos) is in IndexedDB (database `higgsfree`). Media are displayed through object urls. Nothing is uploaded anywhere, except a video you run a fal model on (a motion-control reference, or a video to edit), which goes to fal's storage when you run it.
 
 What follows from that:
@@ -108,7 +108,7 @@ Next.js (App Router) with `output: "export"`: `next build` writes plain HTML, CS
 
 - **OpenRouter** is called straight from the browser with your key (`src/client/lib/openrouter.ts`, request bodies in `payloads.ts`). OpenRouter allows cross-origin requests on every endpoint the app uses. Provider errors are kept verbatim so the supported values show on the card. The rules are in [docs/OPENROUTER.md](docs/OPENROUTER.md).
 - **fal** is called straight from the browser too, with the fal key (`src/client/lib/fal.ts`, request bodies in `fal-payloads.ts`): images in one request to `fal.run`, videos through fal's queue, polled like OpenRouter's. Results come from fal's CDN without the key. With both keys, `providers.ts` picks who runs a model both offer. The rules are in [docs/FAL.md](docs/FAL.md).
-- **kie.ai** likewise (`src/client/lib/kie.ts`, request bodies in `kie-payloads.ts`): inputs uploaded to kie's file host, then `createTask` and `recordInfo` polled until the result url is there, for images and videos alike. `video-cost.ts` sends a video to the cheapest provider with a key that can take it, `image-cost.ts` an image to the preferred one. The rules are in [docs/KIE.md](docs/KIE.md).
+- **kie.ai** likewise (`src/client/lib/kie.ts`, request bodies in `kie-payloads.ts`): inputs uploaded to kie's file host, then `createTask` and `recordInfo` polled until the result url is there, for images and videos alike. A run goes to the cheapest provider with a key that can take it (`routeQuotes` in `video-cost.ts`), unless one is picked next to Generate. The rules are in [docs/KIE.md](docs/KIE.md).
 - **APIMart** the same way (`src/client/lib/apimart.ts`, request bodies in `apimart-payloads.ts`); kie and APIMart share one task flow in the engine (`task-providers.ts`). The rules are in [docs/APIMART.md](docs/APIMART.md).
 - **Storage** is IndexedDB: a `generations` store for the records and a `media` store for the Blobs (`gen_abc.png`, `gen_abc.mp4`, `up_xyz.jpg`), shown through object urls.
 - **Image jobs** are N parallel calls in the tab that submitted them. A call cannot be resumed: if that tab closes, the job is lost (OpenRouter still charges) and the next visit marks it failed as "Interrupted…" with a Retry button. The tab warns before unloading while images are in flight.
