@@ -20,6 +20,10 @@ export interface ImageQuoteRequest {
   count: number;
   /** How many reference images are attached. */
   references: number;
+  /** Upscalers: the scale, and the image's size when known (fal's Topaz bills by the output's). */
+  upscale?: number;
+  inputWidth?: number;
+  inputHeight?: number;
 }
 
 export interface ImageQuote {
@@ -49,7 +53,7 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
       return usd(estimateImageCost(model, req.size, req.count));
     case "fal": {
       const why = refusal(() => buildFalImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
-      return why ? { refusal: why } : usd(estimateFalImageCost(model, req, req.count, withRefs));
+      return why ? { refusal: why } : usd(estimateFalImageCost(model, req, req.count, withRefs, { width: req.inputWidth, height: req.inputHeight }));
     }
     case "kie": {
       const why = refusal(() => buildKieImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));

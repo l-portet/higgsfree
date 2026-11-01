@@ -1,9 +1,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, Music, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
+import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, ImageUpscale, Music, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Generation, MotionOrientation, ProviderId, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
-import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, editedLength, snapDuration } from "@shared/models";
+import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, DEFAULT_VIDEO_UPSCALE_MODEL, editedLength, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -16,9 +16,10 @@ import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
 import { PROVIDER_IDS } from "@/lib/providers";
+import { factorLabel, upscaleFactor } from "@/lib/upscale";
 import { pinQuote, quoteVideo, shownQuote, type VideoQuote } from "@/lib/video-cost";
 import { readAudioDuration } from "@/lib/audio-meta";
-import { readVideoDuration } from "@/lib/video-meta";
+import { readVideoDuration, readVideoMeta } from "@/lib/video-meta";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
 import { useSettings } from "@/store/settings";
@@ -34,6 +35,7 @@ import { DurationControl, matchedDuration, type DurationMatch } from "@/componen
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS, type Attachment } from "./ComposerFrame";
 import { CostEstimate, ProviderPicker, videoAutoNote } from "./CostEstimate";
 import { PromptEditorDialog } from "./PromptEditorDialog";
+import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
 
@@ -108,13 +110,16 @@ interface VideoClip {
   /** Its length in seconds, when known: the clip's length, which prices the run. */
   durationSec?: number;
   bytes?: number;
+  /** Its size, when known (an upscale's price can follow the output's). */
+  width?: number;
+  height?: number;
 }
 
 /** A library video as an input. Another record's output brings its length and size; an upload's are checked at submit. */
 function clipFromMedia(mediaId: string, name = "video"): VideoClip {
   const owner = ownerGenerationId(mediaId);
   const out = owner ? useGenerations.getState().byId[owner]?.output : undefined;
-  return { id: uid(), name, mediaId, durationSec: out?.durationSec, bytes: out?.bytes };
+  return { id: uid(), name, mediaId, durationSec: out?.durationSec, bytes: out?.bytes, width: out?.width, height: out?.height };
 }
 
 /** Reference videos and audio (models with `caps.mediaReferences`): library media, kept across model switches like frames. */
@@ -140,6 +145,7 @@ export function VideoComposer() {
   const draft = useUi((s) => s.draft);
   const pendingFirstFrame = useUi((s) => s.pendingFirstFrame);
   const pendingSourceVideo = useUi((s) => s.pendingSourceVideo);
+  const pendingUpscale = useUi((s) => s.pendingUpscale);
   // A string, so the selector's value only changes when a key is added or removed.
   const keyed = useSettings((s) => PROVIDER_IDS.filter((p) => s.settings?.keys[p]).join(","));
   const preferred = useSettings((s) => s.settings?.preferredProvider ?? "openrouter");
@@ -166,6 +172,9 @@ export function VideoComposer() {
   const [editModelId, setEditModelId] = useState<string>(initial.editModel);
   /** The provider picked by hand next to Generate; unset, the cheapest runs it. Ignored while it cannot take the request. */
   const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
+  /** Upscalers: the scale (for those that offer several). */
+  const [factor, setFactor] = useState<number>(2);
+  const [factorOpen, setFactorOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -186,6 +195,11 @@ export function VideoComposer() {
   const motionMode = Boolean(model?.caps.motionControl);
   /** Video editing: one video and a prompt saying what to change; nothing else is sent. */
   const editMode = Boolean(model?.caps.videoEdit);
+  /** Upscaling (an editor too: one video in, its length kept): no prompt, so the prompt becomes a drop zone for the video. */
+  const upscaleMode = Boolean(model?.caps.upscale);
+  const sentFactor = model?.caps.upscale ? upscaleFactor(model, factor) : undefined;
+  /** How many runs one Generate starts: an upscale is one. */
+  const runs = upscaleMode ? 1 : count;
 
   const pickModel = (id: string) => {
     setPickedModel(true);
@@ -199,7 +213,8 @@ export function VideoComposer() {
     if (!model || model.caps.motionControl) return;
     setResolution((r) => (r && model.resolutions.includes(r) ? r : (model.defaultResolution ?? model.resolutions[0])));
     if (model.caps.videoEdit) {
-      setEditModelId(model.id);
+      // "Edit video" comes back to the last editor picked, not to an upscaler.
+      if (!model.caps.upscale) setEditModelId(model.id);
       return;
     }
     setDuration((d) => snapDuration(model, Number.isFinite(d) ? d : model.defaultDuration));
@@ -230,10 +245,20 @@ export function VideoComposer() {
     const mediaId = useUi.getState().consumePendingSourceVideo();
     if (!mediaId) return;
     setClip(clipFromMedia(mediaId, "video to edit"));
-    if (!editMode) pickModel(models.some((m) => m.id === editModelId && m.caps.videoEdit) ? editModelId : DEFAULT_VIDEO_EDIT_MODEL);
+    if (!editMode || upscaleMode) pickModel(models.some((m) => m.id === editModelId && m.caps.videoEdit && !m.caps.upscale) ? editModelId : DEFAULT_VIDEO_EDIT_MODEL);
     toast.success("Video added", { description: "Say what to change, then Generate." });
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [pendingSourceVideo, editMode, editModelId, models]);
+  }, [pendingSourceVideo, editMode, upscaleMode, editModelId, models]);
+
+  // "Upscale" hand-off from a card / the lightbox: onto an upscaler, unless one is picked already.
+  useEffect(() => {
+    if (pendingUpscale?.type !== "video") return;
+    const mediaId = useUi.getState().consumePendingUpscale("video");
+    if (!mediaId) return;
+    setClip(clipFromMedia(mediaId));
+    if (!upscaleMode) pickModel(DEFAULT_VIDEO_UPSCALE_MODEL);
+    toast.success("Video added", { description: "Pick the scale, then Generate." });
+  }, [pendingUpscale, upscaleMode]);
 
   // "Reuse prompt" / example prompt hand-off.
   useEffect(() => {
@@ -250,6 +275,7 @@ export function VideoComposer() {
       if (params.resolution) setResolution(params.resolution);
       if (params.audio !== undefined) setSound(params.audio);
     } else if (params?.resolution) setResolution(params.resolution);
+    if (params?.upscale) setFactor(params.upscale);
     const orient = draft.orientation ?? params?.orientation;
     if (orient) setOrientation(orient);
     setFrames((f) => ({
@@ -298,8 +324,8 @@ export function VideoComposer() {
   /** Store an input video (MP4 / MOV / WebM, sniffed and size-checked by the library). */
   const addClip = useCallback(async (file: File) => {
     try {
-      const [res, durationSec] = await Promise.all([api.uploadVideo(file), readVideoDuration(file)]);
-      setClip({ id: uid(), name: file.name, mediaId: res.media.id, durationSec, bytes: res.media.bytes });
+      const [res, meta] = await Promise.all([api.uploadVideo(file), readVideoMeta(file)]);
+      setClip({ id: uid(), name: file.name, mediaId: res.media.id, bytes: res.media.bytes, ...meta });
     } catch (err) {
       toast.error("Couldn't add the video", { description: describeApiError(err) });
     }
@@ -335,7 +361,7 @@ export function VideoComposer() {
     async (files: File[], videos: File[] = [], audios: File[] = []) => {
       if (editMode) {
         const [video, ...moreVideos] = videos;
-        if (files.length || moreVideos.length) toast.error(`${model?.name ?? "Video editing"} takes one video to edit`);
+        if (files.length || moreVideos.length) toast.error(`${model?.name ?? "Video editing"} takes one video to ${upscaleMode ? "upscale" : "edit"}`);
         if (video) await addClip(video);
         return;
       }
@@ -371,7 +397,7 @@ export function VideoComposer() {
         else toast.error(`${model?.name ?? "This model"} takes a first frame${showLast ? " and a last frame" : ""} only`);
       }
     },
-    [addClip, addRefMedia, addTo, editMode, firstFrame, lastFrame, mediaRefs, model?.name, motionMode, refMedia, showLast, showRefs],
+    [addClip, addRefMedia, addTo, editMode, upscaleMode, firstFrame, lastFrame, mediaRefs, model?.name, motionMode, refMedia, showLast, showRefs],
   );
 
   const pickFor = async (slot: Slot) => {
@@ -474,8 +500,10 @@ export function VideoComposer() {
     ? "No video models available"
     : editMode
       ? !clip
-        ? "Add a video to edit"
-        : !trimmed
+        ? upscaleMode
+          ? "Add a video to upscale"
+          : "Add a video to edit"
+        : !trimmed && !upscaleMode
           ? "Say what to change"
           : (editProblem ?? null)
       : motionMode
@@ -501,12 +529,12 @@ export function VideoComposer() {
       model
         ? quoteVideo(
             model,
-            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: clipSec },
+            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: clipSec, upscale: sentFactor, videoWidth: clip?.width, videoHeight: clip?.height },
             Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
             preferred,
           )
         : undefined,
-    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, clipSec, keyed, preferred],
+    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, clipSec, sentFactor, clip?.width, clip?.height, keyed, preferred],
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);
@@ -515,7 +543,7 @@ export function VideoComposer() {
   const estimateFor = useCallback((d: number) => estimateAt(d, resolution), [estimateAt, resolution]);
   const quote = quoteAt(duration, resolution);
   const shown = quote ? shownQuote(pinQuote(quote, pinned)) : undefined;
-  const estimate = shown?.usd !== undefined ? shown.usd * count : undefined;
+  const estimate = shown?.usd !== undefined ? shown.usd * runs : undefined;
 
   const submit = async () => {
     if (!model || disabledReason || submitting) return;
@@ -523,9 +551,10 @@ export function VideoComposer() {
     let req: VideoGenerateRequest;
     if (editMode) {
       if (!clip) return;
-      // `duration` is required by the type and ignored: the clip keeps the source's length.
-      req = { prompt: trimmed, model: model.id, duration: 5, sourceVideo: clip.mediaId };
+      // `duration` is required by the type and ignored: the clip keeps the source's length. An upscaler takes no prompt.
+      req = { prompt: upscaleMode ? "" : trimmed, model: model.id, duration: 5, sourceVideo: clip.mediaId };
       if (resolution && model.resolutions.includes(resolution)) req.resolution = resolution;
+      if (sentFactor) req.upscale = sentFactor;
     } else if (motionMode) {
       if (!firstFrame || !clip) return;
       // `duration` is required by the type and ignored: the clip follows the reference video.
@@ -545,7 +574,7 @@ export function VideoComposer() {
     setSubmitting(true);
     try {
       // `count` clips are `count` independent jobs: one request each, in parallel.
-      const results = await Promise.allSettled(Array.from({ length: count }, () => api.generateVideo(req)));
+      const results = await Promise.allSettled(Array.from({ length: runs }, () => api.generateVideo(req)));
       const done: Generation[] = [];
       let failure: unknown;
       for (const r of results) {
@@ -554,8 +583,9 @@ export function VideoComposer() {
       }
       if (done.length) useGenerations.getState().upsert(done);
       if (done.length === 0) throw failure ?? new Error("Generation failed");
-      if (failure) toast.error(`Only ${done.length} of ${count} started`, { description: describeApiError(failure) });
-      else toast.success(count > 1 ? `Rendering ${count} clips with ${model.name}…` : `Rendering with ${model.name}…`, { description: "Usually 2–5 min. You can keep working in the app meanwhile." });
+      if (failure) toast.error(`Only ${done.length} of ${runs} started`, { description: describeApiError(failure) });
+      else if (upscaleMode) toast.success(`Upscaling with ${model.name}…`, { description: "You can keep working in the app meanwhile." });
+      else toast.success(runs > 1 ? `Rendering ${runs} clips with ${model.name}…` : `Rendering with ${model.name}…`, { description: "Usually 2–5 min. You can keep working in the app meanwhile." });
       if (SHOWS_VIDEOS.test(pathname)) window.scrollTo({ top: 0, behavior: "smooth" });
       else router.push("/video");
     } catch (err) {
@@ -615,6 +645,47 @@ export function VideoComposer() {
   const editSec = editMode && clipSec !== undefined ? editedLength(model, clipSec) : undefined;
   const editCut = editSec !== undefined && clipSec !== undefined && editSec < clipSec - 0.05;
   const editHint = editMode ? editSourceHint(model) : undefined;
+  const factors = model.caps.upscale?.factors ?? [];
+
+  // An upscaler's scales: the size each gives, and its price where it would run.
+  const scaleChip =
+    factors.length > 1 ? (
+      <Popover open={factorOpen} onOpenChange={setFactorOpen}>
+        <PopoverTrigger asChild>
+          <Chip icon={<ImageUpscale />} label={factorLabel(sentFactor)} aria-label={`Scale: ${factorLabel(sentFactor)}`} className="tabular-nums" />
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start" className="w-[240px]">
+          <PopoverLabel>Scale</PopoverLabel>
+          <div role="listbox" aria-label="Scale">
+            {factors.map((f) => {
+              const q = quoteVideo(
+                model,
+                { duration: 5, videoSec: clipSec, upscale: f, videoWidth: clip?.width, videoHeight: clip?.height },
+                Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
+                preferred,
+              );
+              const usd = shownQuote(pinQuote(q, pinned))?.usd;
+              const out = clip?.width && clip.height ? `${clip.width * f} × ${clip.height * f}` : "";
+              return (
+                <PopoverItem
+                  key={f}
+                  selected={f === sentFactor}
+                  onClick={() => {
+                    setFactor(f);
+                    setFactorOpen(false);
+                  }}
+                >
+                  <span className="w-7 font-medium tabular-nums">{factorLabel(f)}</span>
+                  <span className="flex-1 text-meta tabular-nums">{out}</span>
+                  <span className="text-meta tabular-nums">{usd !== undefined ? formatUsd(usd, { approx: true }) : ""}</span>
+                  {f === sentFactor ? <Check size={14} className="text-accent" aria-hidden="true" /> : null}
+                </PopoverItem>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    ) : null;
 
   const resolutionChip = noRes ? null : singleRes ? (
     <StaticChip icon={<Gem size={15} />} label={resolution ?? "Auto"} title={`${resolution ?? "Default"} is the only resolution for ${model.name}`} />
@@ -656,10 +727,17 @@ export function VideoComposer() {
       onDragEnter={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      aria-label="Video prompt"
+      aria-label={upscaleMode ? "Video upscale" : "Video prompt"}
       dragging={dragging}
       notice={notice ? <ComposerNotice message={notice.message} action={notice.action} onAction={notice.onAction} /> : null}
       addControl={
+        upscaleMode ? (
+          <Tooltip content="Choose the video to upscale" side="top">
+            <AddButton aria-label="Choose video" onClick={() => void pickClip()}>
+              <Plus size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+            </AddButton>
+          </Tooltip>
+        ) : (
         <Popover open={addOpen} onOpenChange={setAddOpen}>
           <Tooltip
             content={editMode ? "Add the video to edit" : motionMode ? "Add a character image or a reference video" : mediaRefs ? "Add a frame, or a reference image, video or audio" : "Add a first frame, last frame or style reference"}
@@ -735,11 +813,25 @@ export function VideoComposer() {
             </PopoverContent>
           )}
         </Popover>
+        )
       }
       attachments={
-        <AttachmentStrip items={attachments} onRemove={removeAttachment} label={editMode ? "Attached video" : motionMode || hasMediaRefs ? "Attached inputs" : "Attached images"} />
+        upscaleMode ? null : <AttachmentStrip items={attachments} onRemove={removeAttachment} label={editMode ? "Attached video" : motionMode || hasMediaRefs ? "Attached inputs" : "Attached images"} />
       }
       textarea={
+        upscaleMode ? (
+          <UpscaleDropZone
+            kind="video"
+            source={
+              clip
+                ? { mediaId: clip.mediaId, name: clip.name, meta: [clipSec !== undefined ? formatSeconds(clipSec) : "", sizeChange(clip.width, clip.height, sentFactor)].filter(Boolean).join(" · ") }
+                : null
+            }
+            dragging={dragging}
+            onPick={() => void pickClip()}
+            onRemove={() => setClip(null)}
+          />
+        ) : (
         <Textarea
           ref={textareaRef}
           unstyled
@@ -763,10 +855,11 @@ export function VideoComposer() {
           compactUntilFocus
           className={PROMPT_TEXTAREA_CLASS}
         />
+        )
       }
       secondaryControl={
-        // The prompt editor (rewrite the prompt with an LLM, preview the shot, use it): a sparkle square under the "+".
-        <Tooltip content="Prompt Editor: rewrite with AI, preview the shot" side="right">
+        // The prompt editor (rewrite the prompt with an LLM, preview the shot, use it): a sparkle square under the "+". Upscalers have no prompt.
+        upscaleMode ? null : <Tooltip content="Prompt Editor: rewrite with AI, preview the shot" side="right">
           <AddButton aria-label="Prompt Editor" onClick={() => setEditorOpen(true)}>
             <Sparkles size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
           </AddButton>
@@ -812,8 +905,9 @@ export function VideoComposer() {
           {editMode ? (
             <>
               {editSec !== undefined ? (
-                <StaticChip icon={<Clock size={15} />} label={formatSeconds(editSec)} title="The edit is as long as the video" />
+                <StaticChip icon={<Clock size={15} />} label={formatSeconds(editSec)} title={upscaleMode ? "The upscale is as long as the video" : "The edit is as long as the video"} />
               ) : null}
+              {scaleChip}
               {resolutionChip}
             </>
           ) : motionMode ? (
@@ -910,13 +1004,13 @@ export function VideoComposer() {
             </>
           )}
 
-          <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of videos" />
+          {upscaleMode ? null : <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of videos" />}
 
         </>
       }
       estimate={
         quote && quote.quotes.length > 1 ? (
-          <ProviderPicker auto={quote} pinned={pinned} onPin={setPinned} count={count} autoNote={videoAutoNote(quote, preferred)} />
+          <ProviderPicker auto={quote} pinned={pinned} onPin={setPinned} count={runs} autoNote={videoAutoNote(quote, preferred)} />
         ) : estimate !== undefined ? (
           <CostEstimate usd={estimate} provider={shown?.provider} />
         ) : undefined

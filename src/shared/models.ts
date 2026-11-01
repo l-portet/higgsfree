@@ -378,6 +378,45 @@ export const IMAGE_MODELS: ImageModel[] = [
     fal: { textToImage: "fal-ai/flux/schnell", aspect: "image_size" },
     offOpenRouter: true,
   },
+  // Upscalers: one image in, the same image larger out, no prompt. Prices: `lib/upscale.ts`.
+  {
+    kind: "image",
+    id: "topaz/upscale-image",
+    name: "Topaz Upscale",
+    provider: "topaz",
+    description: "Faithful 2x or 4x upscale: sharper detail, no new content",
+    endpoint: "fal",
+    featured: false,
+    badges: ["pro"],
+    caps: { textToImage: false, imageToImage: true, maxReferenceImages: 1, upscale: { factors: [2, 4] } },
+    aspectRatios: ["auto"],
+    sizes: ["1K"],
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    fal: { edit: "topaz/upscale/image/precision", refs: "image_url", upscale: { factor: true } },
+    offOpenRouter: true,
+    kie: { family: "topaz-upscale", model: "topaz/image-upscale" },
+  },
+  {
+    kind: "image",
+    id: "recraft/crisp-upscale",
+    name: "Recraft Crisp Upscale",
+    provider: "recraft",
+    description: "Near-free upscale that keeps the image as it is, only crisper",
+    endpoint: "fal",
+    featured: false,
+    badges: ["fast"],
+    caps: { textToImage: false, imageToImage: true, maxReferenceImages: 1, upscale: { factors: [] } },
+    aspectRatios: ["auto"],
+    sizes: ["1K"],
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    fal: { edit: "fal-ai/recraft/upscale/crisp", refs: "image_url", upscale: { png: true } },
+    offOpenRouter: true,
+    kie: { family: "recraft-upscale", model: "recraft/crisp-upscale" },
+  },
 ];
 
 export const VIDEO_MODELS: VideoModel[] = [
@@ -1308,6 +1347,45 @@ export const VIDEO_MODELS: VideoModel[] = [
     offOpenRouter: true,
     kie: { family: "wan27-edit", model: "wan/2-7-videoedit" },
   },
+  // Upscalers: a video in, the same clip larger out (its length kept), no prompt. Prices: `lib/upscale.ts`.
+  {
+    kind: "video",
+    id: "topaz/upscale-video",
+    name: "Topaz Video Upscale",
+    provider: "topaz",
+    description: "Faithful 2x or 4x upscale of a clip, up to 4K",
+    featured: false,
+    badges: ["pro"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true, upscale: { factors: [2, 4] } },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: [],
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: {},
+    verified: false,
+    fal: { edit: "topaz/upscale/video/precision", upscale: "upscale_factor" },
+    offOpenRouter: true,
+    kie: { family: "topaz-video-upscale", model: "topaz/video-upscale" },
+  },
+  {
+    kind: "video",
+    id: "bytedance/video-upscaler",
+    name: "ByteDance Video Upscaler",
+    provider: "bytedance",
+    description: "Cheap upscale of a clip to 1080p, 2K or 4K",
+    featured: false,
+    badges: ["fast"],
+    caps: { textToVideo: false, imageToVideo: false, lastFrame: false, audio: false, references: false, videoEdit: true, upscale: { factors: [] } },
+    durations: { options: [5] },
+    defaultDuration: 5,
+    resolutions: ["1080p", "2K", "4K"],
+    defaultResolution: "4K",
+    aspectRatios: ["16:9"],
+    estCostPerSecUsd: {},
+    verified: false,
+    fal: { edit: "fal-ai/bytedance-upscaler/upscale/video", upscale: "target_resolution", resolutions: { "1080p": "1080p", "2K": "2k", "4K": "4k" } },
+    offOpenRouter: true,
+  },
   // Listed by OpenRouter but never offered: they need a video or audio input this app does not send.
   {
     kind: "video",
@@ -1349,6 +1427,9 @@ export const DEFAULT_IMAGE_MODEL = "google/gemini-3-pro-image";
 export const DEFAULT_VIDEO_MODEL = "bytedance/seedance-2.5";
 /** What "Edit video" on a clip switches to when the composer is not on an editor: the cheapest, on both providers. */
 export const DEFAULT_VIDEO_EDIT_MODEL = "black-forest-labs/flux-video-edit";
+/** What "Upscale" on a card switches to when the composer is not on an upscaler: Topaz, on fal and kie.ai. */
+export const DEFAULT_IMAGE_UPSCALE_MODEL = "topaz/upscale-image";
+export const DEFAULT_VIDEO_UPSCALE_MODEL = "topaz/upscale-video";
 
 export function findImageModel(id: string): ImageModel | undefined {
   return IMAGE_MODELS.find((m) => m.id === id);
@@ -1416,6 +1497,7 @@ export const PROVIDER_LABEL: Record<string, string> = {
   lightricks: "Lightricks",
   luma: "Luma AI",
   ideogram: "Ideogram",
+  topaz: "Topaz Labs",
   fal: "fal",
   openrouter: "OpenRouter",
   kie: "kie.ai",

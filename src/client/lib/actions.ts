@@ -1,4 +1,4 @@
-/** Actions shared by the generation card and the lightbox: delete, retry, keep (favorite, in a folder), animate, edit a video, reuse prompt. */
+/** Actions shared by the generation card and the lightbox: delete, retry, keep (favorite, in a folder), animate, edit a video, upscale, reuse prompt. */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -97,6 +97,14 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     router.push("/video");
   };
 
+  /** Hand the output to its own composer, on an upscaler. */
+  const upscale = () => {
+    if (!g.output) return;
+    useUi.getState().setPendingUpscale({ type: g.type, mediaId: g.output.id });
+    useUi.getState().closeLightbox();
+    router.push(g.type === "image" ? "/image" : "/video");
+  };
+
   const reuse = () => {
     if (onReuse) return onReuse(g);
     useUi.getState().setDraft({
@@ -117,5 +125,5 @@ export function useGenerationActions(g: Generation, onReuse?: (g: Generation) =>
     router.push(g.type === "image" ? "/image" : "/video");
   };
 
-  return { confirmDelete, setConfirmDelete, deleting, retrying, keeping, remove, retry, keep, keepDefault, unkeep, animate, editVideo, reuse };
+  return { confirmDelete, setConfirmDelete, deleting, retrying, keeping, remove, retry, keep, keepDefault, unkeep, animate, editVideo, upscale, reuse };
 }

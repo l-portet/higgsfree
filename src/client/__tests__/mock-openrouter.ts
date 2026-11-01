@@ -184,6 +184,8 @@ function falRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response
   }
   if (u.hostname === "fal.run") {
     if (String(entry.body?.prompt ?? "").includes("FAL_FAIL")) return json(422, { detail: [{ loc: ["body", "prompt"], msg: "prompt rejected", type: "value_error" }] });
+    // Upscalers answer with the one image, generators with a list.
+    if (path.includes("/upscale/")) return json(200, { image: { url: `${FAL_CDN}/files/out.png`, content_type: "image/png" } });
     return json(200, { images: [{ url: `${FAL_CDN}/files/out.png`, content_type: "image/png" }] });
   }
   if (u.hostname === "rest.fal.ai" && path === "/storage/upload/initiate") {
@@ -244,7 +246,7 @@ function kieRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response
     t.polls++;
     if (taskId === "task_fail") return json(200, { code: 200, data: { taskId, state: "fail", failCode: "501", failMsg: "Content flagged by the provider" } });
     if (t.polls === 1) return json(200, { code: 200, data: { taskId, state: "generating" } });
-    const file = /image|banana|z-image|kontext/.test(t.model) ? "out.png" : "out.mp4";
+    const file = /image|banana|z-image|kontext|crisp/.test(t.model) ? "out.png" : "out.mp4";
     return json(200, { code: 200, data: { taskId, model: t.model, state: "success", resultJson: JSON.stringify({ resultUrls: [`${KIE_CDN}/r/${file}`] }), creditsConsumed: 63 } });
   }
   if (u.hostname === "kieai.redpandaai.co") {

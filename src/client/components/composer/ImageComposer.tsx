@@ -1,17 +1,18 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { Check, Gem, Plus } from "lucide-react";
+import { Check, Gem, ImageUpscale, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { ImageAspectRatio, ImageGenerateRequest, ImageModel, ImageSize, ProviderId } from "@shared/types";
-import { DEFAULT_IMAGE_MODEL } from "@shared/models";
+import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_UPSCALE_MODEL } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { quoteImage } from "@/lib/image-cost";
 import { PROVIDER_NAME } from "@/lib/providers";
+import { factorLabel, upscaleFactor } from "@/lib/upscale";
 import { pinQuote } from "@/lib/video-cost";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles } from "@/lib/files";
-import { pluralize, ratioLabel } from "@/lib/format";
+import { formatUsd, pluralize, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { isImageAspectRatio, isImageSize } from "@/lib/models";
 import { readJson, writeJson } from "@/lib/storage";
@@ -28,6 +29,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS } from "./ComposerFrame";
 import { CostEstimate, ProviderPicker } from "./CostEstimate";
+import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
 
@@ -77,6 +79,7 @@ const SHOWS_IMAGES = /^\/(image|assets)(\/|$)/;
 export function ImageComposer() {
   const models = useModels((s) => s.image);
   const draft = useUi((s) => s.draft);
+  const pendingUpscale = useUi((s) => s.pendingUpscale);
   const router = useRouter();
   const pathname = usePathname() ?? "/";
 
@@ -90,10 +93,14 @@ export function ImageComposer() {
   const [refs, setRefs] = useState<Frame[]>([]);
   /** The provider picked by hand next to Generate; unset, the preferred one runs it. Ignored while it cannot take the request. */
   const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
+  /** Upscalers: the image to upscale (kept apart from the references, which the other models use) and the scale. */
+  const [source, setSource] = useState<Frame | null>(null);
+  const [factor, setFactor] = useState<number>(2);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [arOpen, setArOpen] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
+  const [factorOpen, setFactorOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reasonId = useId();
 
@@ -107,12 +114,15 @@ export function ImageComposer() {
     setModelId(id);
   };
 
+  /** An upscaler: the prompt becomes a drop zone for the one image it takes; ratio, quality and count go. */
+  const upscaleMode = Boolean(model?.caps.upscale);
+
   /** Attach limit: the most any catalog model accepts, so you can attach first and switch model after. */
   const maxRefs = useMemo(() => models.reduce((n, m) => Math.max(n, m.caps.maxReferenceImages), 0), [models]);
 
-  // Snap aspect ratio / size to what the selected model supports.
+  // Snap aspect ratio / size to what the selected model supports. An upscaler uses neither: they stay for the next model.
   useEffect(() => {
-    if (!model) return;
+    if (!model || model.caps.upscale) return;
     setAspectRatio((ar) =>
       model.aspectRatios.includes(ar) ? ar : model.aspectRatios.includes("1:1") ? "1:1" : (model.aspectRatios[0] ?? "auto"),
     );
@@ -139,12 +149,39 @@ export function ImageComposer() {
 
   const removeRef = (id: string) => setRefs((r) => r.filter((x) => x.id !== id));
 
+  /** Upscalers take one image: a new one replaces it. */
+  const setSourceFile = useCallback(async (files: File[]) => {
+    const [file, ...more] = files;
+    if (!file) return;
+    if (more.length) toast.error("Upscalers take one image at a time");
+    const f = await loadFrame(file);
+    if (f) setSource(f);
+  }, []);
+
+  // "Upscale" hand-off from a card / the lightbox: onto an upscaler, unless one is picked already.
+  useEffect(() => {
+    if (pendingUpscale?.type !== "image") return;
+    const id = useUi.getState().consumePendingUpscale("image");
+    if (!id) return;
+    setSource(frameFromMedia(id));
+    if (!model?.caps.upscale) pickModel(DEFAULT_IMAGE_UPSCALE_MODEL);
+    toast.success("Image added", { description: "Pick the scale, then Generate." });
+  }, [pendingUpscale, model]);
+
   // "Reuse prompt" / example prompt hand-off.
   useEffect(() => {
     if (!draft || draft.type !== "image") return;
     useUi.getState().consumeDraft("image");
+    const target = draft.model ? models.find((m) => m.id === draft.model) : undefined;
+    if (target) pickModel(target.id);
+    // An upscale run: its image goes back in the drop zone, at the same scale.
+    if (target?.caps.upscale) {
+      const id = draft.referenceImages?.[0];
+      if (id) setSource(frameFromMedia(id));
+      if (draft.params && "size" in draft.params && draft.params.upscale) setFactor(draft.params.upscale);
+      return;
+    }
     setPrompt(draft.prompt);
-    if (draft.model && models.some((m) => m.id === draft.model)) pickModel(draft.model);
     if (draft.params && "size" in draft.params) {
       setAspectRatio(draft.params.aspectRatio);
       setSize(draft.params.size);
@@ -156,7 +193,8 @@ export function ImageComposer() {
   const refCount = refs.length;
   const modelReason = useCallback(
     (m: ImageModel): string | null => {
-      if (refCount === 0) return null;
+      // An upscaler takes its own image (the drop zone), not the references.
+      if (refCount === 0 || m.caps.upscale) return null;
       if (!m.caps.imageToImage || m.caps.maxReferenceImages === 0) return `${m.name} doesn't support reference images`;
       if (refCount > m.caps.maxReferenceImages) {
         return `${m.name} accepts up to ${m.caps.maxReferenceImages} reference image${m.caps.maxReferenceImages === 1 ? "" : "s"}`;
@@ -171,16 +209,33 @@ export function ImageComposer() {
   const keyGate = useKeyGate(model);
   const notice = keyGate.notice;
 
+  const sentFactor = model?.caps.upscale ? upscaleFactor(model, factor) : undefined;
   const disabledReason: string | null = !model
     ? "No image models available"
-    : !trimmed
+    : upscaleMode
+      ? !source
+        ? "Add an image to upscale"
+        : null
+      : !trimmed
           ? "Enter a prompt"
           : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
 
   // The price on the provider that runs it (the preferred one that can take the request): OpenRouter's from
   // the catalog, fal's and kie.ai's list prices. No key yet: the price where it would run once one is added.
   // A provider picked by hand runs it instead, while it can.
-  const quote = model ? quoteImage(model, { aspectRatio, size, count, references: refCount }, keyGate.keys, keyGate.preferred) : undefined;
+  // An upscaler is priced for one image (before one is attached too), at the scale and, once known, the image's size.
+  const quoteFor = (f: number | undefined) =>
+    model
+      ? quoteImage(
+          model,
+          upscaleMode
+            ? { aspectRatio: "auto", size: "1K", count: 1, references: 1, upscale: f, inputWidth: source?.width, inputHeight: source?.height }
+            : { aspectRatio, size, count, references: refCount },
+          keyGate.keys,
+          keyGate.preferred,
+        )
+      : undefined;
+  const quote = quoteFor(sentFactor);
   const effective = quote ? pinQuote(quote, pinned) : undefined;
   const shown = effective?.quotes.find((q) => q.provider === effective.provider) ?? effective?.quotes.find((q) => !q.refusal);
   const estimate = shown?.usd;
@@ -188,14 +243,21 @@ export function ImageComposer() {
   const submit = async () => {
     if (!model || disabledReason || submitting) return;
     if (keyGate.askForKey(() => void submit())) return;
-    const req: ImageGenerateRequest = { prompt: trimmed, model: model.id, aspectRatio, size, count };
-    if (refs.length) req.referenceImages = refs.map(frameInput);
+    let req: ImageGenerateRequest;
+    if (upscaleMode) {
+      if (!source) return;
+      req = { prompt: "", model: model.id, aspectRatio: "auto", size: "1K", count: 1, referenceImages: [frameInput(source)] };
+      if (sentFactor) req.upscale = sentFactor;
+    } else {
+      req = { prompt: trimmed, model: model.id, aspectRatio, size, count };
+      if (refs.length) req.referenceImages = refs.map(frameInput);
+    }
     if (pinned) req.provider = pinned;
     setSubmitting(true);
     try {
       const res = await api.generateImage(req);
       useGenerations.getState().upsert(res.generations);
-      toast.success(`Generating ${pluralize(res.generations.length, "image")}…`);
+      toast.success(upscaleMode ? `Upscaling with ${model.name}…` : `Generating ${pluralize(res.generations.length, "image")}…`);
       if (SHOWS_IMAGES.test(pathname)) window.scrollTo({ top: 0, behavior: "smooth" });
       else router.push("/image");
     } catch (err) {
@@ -239,21 +301,69 @@ export function ImageComposer() {
     if (!dragHasFiles(e.dataTransfer)) return;
     e.preventDefault();
     setDragging(false);
-    void addFiles(imageFilesFromDataTransfer(e.dataTransfer));
+    const files = imageFilesFromDataTransfer(e.dataTransfer);
+    void (upscaleMode ? setSourceFile(files) : addFiles(files));
+  };
+
+  // Upscalers have no prompt to paste into: an image pasted anywhere on the bar is the one to upscale.
+  const onFormPaste = (e: ClipboardEvent<HTMLFormElement>) => {
+    if (!upscaleMode) return;
+    const files = imageFilesFromClipboard(e);
+    if (!files.length) return;
+    e.preventDefault();
+    void setSourceFile(files);
   };
 
   const pick = async () => {
-    const files = await pickImageFiles({ multiple: true });
-    void addFiles(files);
+    const files = await pickImageFiles({ multiple: !upscaleMode });
+    void (upscaleMode ? setSourceFile(files) : addFiles(files));
   };
 
   if (!model) return null;
 
   const modelMax = model.caps.maxReferenceImages;
-  const addTooltip =
-    modelMax > 0
+  const addTooltip = upscaleMode
+    ? "Choose the image to upscale"
+    : modelMax > 0
       ? `Add reference images (up to ${modelMax} for ${model.name})`
       : `${model.name} doesn't use reference images. Attach some, then switch model.`;
+  const factors = model.caps.upscale?.factors ?? [];
+
+  // An upscaler's scales: the size each gives, and its price where it would run.
+  const scaleChip =
+    factors.length > 1 ? (
+      <Popover open={factorOpen} onOpenChange={setFactorOpen}>
+        <PopoverTrigger asChild>
+          <Chip icon={<ImageUpscale />} label={factorLabel(sentFactor)} aria-label={`Scale: ${factorLabel(sentFactor)}`} className="tabular-nums" />
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start" className="w-[240px]">
+          <PopoverLabel>Scale</PopoverLabel>
+          <div role="listbox" aria-label="Scale">
+            {factors.map((f) => {
+              const q = quoteFor(f);
+              const runs = q ? pinQuote(q, pinned) : undefined;
+              const usd = runs?.quotes.find((x) => x.provider === runs.provider)?.usd;
+              const out = source?.width && source.height ? `${source.width * f} × ${source.height * f}` : "";
+              return (
+                <PopoverItem
+                  key={f}
+                  selected={f === sentFactor}
+                  onClick={() => {
+                    setFactor(f);
+                    setFactorOpen(false);
+                  }}
+                >
+                  <span className="w-7 font-medium tabular-nums">{factorLabel(f)}</span>
+                  <span className="flex-1 text-meta tabular-nums">{out}</span>
+                  <span className="text-meta tabular-nums">{usd !== undefined ? formatUsd(usd, { approx: true }) : ""}</span>
+                  {f === sentFactor ? <Check size={14} className="text-accent" aria-hidden="true" /> : null}
+                </PopoverItem>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    ) : null;
 
   return (
     <ComposerFrame
@@ -262,18 +372,28 @@ export function ImageComposer() {
       onDragEnter={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      aria-label="Image prompt"
+      onPaste={onFormPaste}
+      aria-label={upscaleMode ? "Image upscale" : "Image prompt"}
       dragging={dragging}
       notice={notice ? <ComposerNotice message={notice.message} action={notice.action} onAction={notice.onAction} /> : null}
       addControl={
         <Tooltip content={addTooltip} side="top">
-          <AddButton onClick={() => void pick()} aria-label="Add reference image">
+          <AddButton onClick={() => void pick()} aria-label={upscaleMode ? "Choose image" : "Add reference image"}>
             <Plus size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
           </AddButton>
         </Tooltip>
       }
-      attachments={<AttachmentStrip items={refs} onRemove={removeRef} label="Reference images" />}
+      attachments={upscaleMode ? null : <AttachmentStrip items={refs} onRemove={removeRef} label="Reference images" />}
       textarea={
+        upscaleMode ? (
+          <UpscaleDropZone
+            kind="image"
+            source={source ? { mediaId: source.mediaId, name: source.name, meta: sizeChange(source.width, source.height, sentFactor) } : null}
+            dragging={dragging}
+            onPick={() => void pick()}
+            onRemove={() => setSource(null)}
+          />
+        ) : (
         <Textarea
           ref={textareaRef}
           unstyled
@@ -289,6 +409,7 @@ export function ImageComposer() {
           compactUntilFocus
           className={PROMPT_TEXTAREA_CLASS}
         />
+        )
       }
       chips={
         <>
@@ -296,6 +417,8 @@ export function ImageComposer() {
             <ModelChip model={model} reason={modelReason(model)} />
           </ModelPicker>
 
+          {upscaleMode ? scaleChip : (
+          <>
           <Popover open={arOpen} onOpenChange={setArOpen}>
             <PopoverTrigger asChild>
               <Chip
@@ -358,6 +481,8 @@ export function ImageComposer() {
           )}
 
           <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of images" />
+          </>
+          )}
         </>
       }
       estimate={

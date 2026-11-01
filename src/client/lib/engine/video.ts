@@ -93,9 +93,13 @@ export const MOTION_VIDEO_LIMITS = { minSec: 3, maxSec: { video: 30, image: 10 }
 
 /** A stored video's length from its MP4 / MOV header; undefined for WebM, or when the header says nothing. */
 async function storedVideoLength(blob: Blob): Promise<number | undefined> {
-  if (blob.type === "video/webm") return undefined;
-  const { durationSec } = await parseMp4MetaFromRanges(blob.size, async (start, end) => new Uint8Array(await blob.slice(start, end + 1).arrayBuffer()));
-  return durationSec;
+  return (await storedVideoMeta(blob)).durationSec;
+}
+
+/** Length and size from an MP4 / MOV's header (WebM: nothing). */
+async function storedVideoMeta(blob: Blob): Promise<{ durationSec?: number; width?: number; height?: number }> {
+  if (blob.type === "video/webm") return {};
+  return parseMp4MetaFromRanges(blob.size, async (start, end) => new Uint8Array(await blob.slice(start, end + 1).arrayBuffer()));
 }
 
 /** Check the reference video's length before anything is uploaded (MP4 / MOV; WebM is left to fal). */
@@ -116,13 +120,13 @@ async function assertMotionVideo(model: VideoModel, mediaId: string, orientation
  * Check the video to edit against the model's limits before it is uploaded or inlined (a length it cannot
  * read is left to the provider). Returns its length, which prices the run.
  */
-async function assertSourceVideo(model: VideoModel, mediaId: string): Promise<number | undefined> {
+async function assertSourceVideo(model: VideoModel, mediaId: string): Promise<{ durationSec?: number; width?: number; height?: number }> {
   const blob = await getMediaBlob(mediaId);
-  if (!blob) throw badRequest(`Video to edit is no longer in the library (${mediaId})`);
-  const durationSec = await storedVideoLength(blob);
-  const problem = sourceVideoProblem(model, durationSec, blob.size);
+  if (!blob) throw badRequest(`Video to ${model.caps.upscale ? "upscale" : "edit"} is no longer in the library (${mediaId})`);
+  const meta = await storedVideoMeta(blob);
+  const problem = sourceVideoProblem(model, meta.durationSec, blob.size);
   if (problem) throw badRequest(problem);
-  return durationSec;
+  return meta;
 }
 
 /**
@@ -165,7 +169,8 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   if (req.sourceVideo) inputs.sourceVideo = req.sourceVideo;
   await assertInputsExist(inputs);
   if (inputs.motionVideo) await assertMotionVideo(model, inputs.motionVideo, req.orientation ?? "video");
-  const sourceSec = inputs.sourceVideo ? await assertSourceVideo(model, inputs.sourceVideo) : undefined;
+  const source = inputs.sourceVideo ? await assertSourceVideo(model, inputs.sourceVideo) : undefined;
+  const sourceSec = source?.durationSec;
   const refVideos = inputs.referenceVideos ?? [];
   const refAudios = inputs.referenceAudios ?? [];
   const refVideoSec = await assertReferenceMedia(model, refVideos, refAudios);
@@ -187,6 +192,9 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
       referenceAudios: refAudios.length > 0,
       referenceVideoSec: refVideoSec,
       videoSec: sourceSec,
+      upscale: req.upscale,
+      videoWidth: source?.width,
+      videoHeight: source?.height,
     }, req.provider) ?? keyed;
   // Only kie.ai takes reference videos and audio: it is the one provider here with an upload for them. When it has a
   // key but refuses the request, it runs anyway, so its check below says why.
@@ -211,7 +219,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
     const { motionVideo, sourceVideo } = inputs;
     const payload = buildFalVideoPayload(
       model,
-      { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, orientation: req.orientation },
+      { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, orientation: req.orientation, upscale: req.upscale },
       { ...frames, ...(motionVideo ? { motionVideo: "pending-upload" } : {}), ...(sourceVideo ? { sourceVideo: "pending-upload" } : {}) },
     );
     // Both go in `video_url`: the reference video's movement, or the video being edited.
@@ -236,7 +244,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
     const tp = TASK_PROVIDERS[provider];
     const refDataUrls = await inputDataUrls(inputs.referenceImages ?? []);
     const sourceVideo = inputs.sourceVideo;
-    const params = { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio };
+    const params = { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, upscale: req.upscale };
     // Checked now with placeholders (a refusal is a 400 before anything exists), sent at submit with the uploaded urls.
     const placeholder = "https://pending-upload";
     const planned = tp.video(model, params, {

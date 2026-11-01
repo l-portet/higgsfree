@@ -358,6 +358,29 @@ options for editors, so a curated editor keeps its own and takes only the price 
 catalog. Kling O3 Edit keeps the video's sound (fal's `keep_audio` default); Wan 2.7 Edit decides
 for itself (`audio_setting: "auto"`). None is verified end to end yet.
 
+## Upscaling
+
+Upscalers (`caps.upscale`) take one image or one video and return it larger, with no prompt. They are
+picked like any model (the picker lists them under "Upscale an image" / "Upscale a video"), and
+**Upscale** on a finished image or clip (card or lightbox) hands it to its composer on Topaz. Picked, an
+upscaler turns the prompt into a drop zone for its input (drop, paste for images, or click to choose);
+the chips become the scale (2x / 4x) or, for ByteDance, the target resolution. One run per Generate.
+
+Video upscalers are editors too (`caps.videoEdit`): the video goes up the same way as one to edit and
+the clip keeps its length. Their requests and prices live in `src/client/lib/upscale.ts`, not in the
+fal / kie.ai price tables: Topaz on fal bills by the output's size, so its estimate needs the input's
+(read from the file, or the record's output); while it is unknown, a video run goes to kie.ai, the one priced.
+
+| Model | Id | Runs on | fal endpoint · kie.ai model | Options | Price (2 Nov 2026) |
+|---|---|---|---|---|---|
+| **Topaz Upscale** <sub>PRO</sub> | `topaz/upscale-image` | fal, kie.ai | `topaz/upscale/image/precision` · `topaz/image-upscale` | 2x / 4x (`upscale_factor`) | fal $0.08 per started 24 MP out; kie.ai $0.05 (2x) / $0.10 (4x) |
+| **Recraft Crisp Upscale** <sub>FAST</sub> | `recraft/crisp-upscale` | fal, kie.ai | `fal-ai/recraft/upscale/crisp` · `recraft/crisp-upscale` | none (PNG only on fal: the app converts) | fal $0.004; kie.ai $0.0025 |
+| **Topaz Video Upscale** <sub>PRO</sub> | `topaz/upscale-video` | fal, kie.ai | `topaz/upscale/video/precision` · `topaz/video-upscale` | 2x / 4x | fal $0.01 / $0.02 / $0.06 per s (output up to 720p / 1080p / above); kie.ai $0.04/s (2x), $0.07/s (4x) |
+| **ByteDance Video Upscaler** <sub>FAST</sub> | `bytedance/video-upscaler` | fal | `fal-ai/bytedance-upscaler/upscale/video` | 1080p / 2K / 4K (`target_resolution`, default 4K) | $0.0072 / $0.0144 / $0.0288 per s |
+
+kie.ai lists Topaz images as "2K" and "4K" tiers; the app reads them as the 2x and 4x scales. None is
+verified end to end yet.
+
 ## Live catalog and discovered models
 
 At startup the browser reads `GET /api/v1/videos/models` and `GET /api/v1/images/models`. Both are

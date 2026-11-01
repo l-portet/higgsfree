@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { validateImageFile } from "@/lib/files";
+import { ownerGenerationId } from "@/lib/media-ids";
+import { useGenerations } from "@/store/generations";
 import { uid } from "@/lib/uid";
 
 export interface Frame {
@@ -18,9 +20,11 @@ export interface Frame {
   height?: number;
 }
 
-/** Wrap an already-stored media id (Animate hand-off, Reuse prompt). */
+/** Wrap an already-stored media id (Animate hand-off, Reuse prompt). Another record's output brings its size. */
 export function frameFromMedia(mediaId: string, name = "image"): Frame {
-  return { id: uid(), name, mediaId };
+  const owner = ownerGenerationId(mediaId);
+  const out = owner ? useGenerations.getState().byId[owner]?.output : undefined;
+  return { id: uid(), name, mediaId, width: out?.width, height: out?.height };
 }
 
 /** Value sent with a generate request. */

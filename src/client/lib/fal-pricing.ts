@@ -7,6 +7,7 @@ import { type ByResolution, FAL_PRICES } from "@shared/fal-prices";
 import { editedLength } from "@shared/models";
 import type { ImageModel, VideoModel, VideoResolution } from "@shared/types";
 import { buildFalImagePayload, buildFalVideoPayload, type FalImageParams, type FalVideoParams, type FalVideoPayload } from "./fal-payloads";
+import { upscaleImageUsd, upscaleVideoUsd, type UpscaleInput } from "./upscale";
 
 /** fal's named sizes in pixels. */
 const PRESET_PIXELS: Record<string, number> = {
@@ -32,8 +33,12 @@ function megapixels(size: unknown): number {
 const at = (usd: ByResolution | undefined, res: VideoResolution | undefined): number | undefined =>
   typeof usd === "number" ? usd : res && usd ? usd[res] : undefined;
 
-/** Estimated USD for `count` images of `req` on fal, with or without reference images. */
-export function estimateFalImageCost(model: ImageModel, req: Omit<FalImageParams, "prompt">, count: number, withRefs: boolean): number | undefined {
+/** Estimated USD for `count` images of `req` on fal, with or without reference images. `input`: an upscaler's image size. */
+export function estimateFalImageCost(model: ImageModel, req: Omit<FalImageParams, "prompt">, count: number, withRefs: boolean, input: UpscaleInput = {}): number | undefined {
+  if (model.caps.upscale) {
+    const usd = upscaleImageUsd("fal", model, req.upscale, input);
+    return usd === undefined ? undefined : usd * count;
+  }
   let payload;
   try {
     payload = buildFalImagePayload(model, { ...req, prompt: "" }, withRefs ? ["ref"] : []);
@@ -56,6 +61,9 @@ export interface FalVideoEstimate extends Omit<FalVideoParams, "prompt"> {
   lastFrame?: boolean;
   /** Motion control and video editing: the input video's length, which sets the clip's. Unknown: no estimate. */
   videoSec?: number;
+  /** Upscalers: the input video's size, when known. */
+  videoWidth?: number;
+  videoHeight?: number;
 }
 
 /** The payload fal would get for `req` (placeholder media); throws when fal would refuse it. */
@@ -72,6 +80,7 @@ export function falVideoPayloadFor(model: VideoModel, req: FalVideoEstimate): Fa
 export function estimateFalVideoCost(model: VideoModel, req: FalVideoEstimate, now = new Date()): number | undefined {
   const motion = Boolean(model.caps.motionControl);
   const edit = Boolean(model.caps.videoEdit);
+  if (model.caps.upscale) return upscaleVideoUsd("fal", model, req, req.videoSec, { width: req.videoWidth, height: req.videoHeight });
   let payload;
   try {
     payload = falVideoPayloadFor(model, req);
