@@ -229,8 +229,8 @@ describe("APIMart prices", () => {
   it("GPT Image 2.6, on APIMart only: it runs there with no price known yet", () => {
     const m = image("openai/gpt-image-2.6");
     const req = { aspectRatio: "9:16" as const, size: "2K" as const, count: 4, references: 8 };
-    expect(quoteImage(m, req, { apimart: true }, "openrouter")).toEqual({ quotes: [{ provider: "apimart", noKey: false }], provider: "apimart" });
+    expect(quoteImage(m, req, { apimart: true })).toEqual({ quotes: [{ provider: "apimart", noKey: false }], provider: "apimart", reason: "only" });
     // No other key helps.
-    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true }, "kie")).toEqual({ quotes: [{ provider: "apimart", noKey: true }] });
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toEqual({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 });

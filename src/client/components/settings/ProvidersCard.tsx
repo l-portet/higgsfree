@@ -1,13 +1,12 @@
-import { useEffect, useId, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, PlugZap, Shuffle, Trash2 } from "lucide-react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, PlugZap, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProviderId, SettingsResponse } from "@shared/types";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
-import { cn } from "@/lib/cn";
 import { formatUsd } from "@/lib/format";
 import { KIE_CREDIT_USD } from "@/lib/kie";
-import { PROVIDER_IDS, PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
+import { PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -38,65 +37,6 @@ function TestResult({ provider, state }: { provider: KeyedProvider; state: NonNu
         {state.credits !== undefined ? ` Balance: ${state.credits.toLocaleString("en-US")} credits (${formatUsd(state.credits * KIE_CREDIT_USD)}).` : ""}
         {state.balanceUsd !== undefined ? ` Balance: ${state.balanceUsd < 0 ? "unlimited" : formatUsd(state.balanceUsd)}.` : ""}
       </span>
-    </div>
-  );
-}
-
-/** Segmented control with radio semantics (arrow keys move and select). */
-function ProviderSwitch({
-  value,
-  onChange,
-  disabled,
-  labelledBy,
-  describedBy,
-}: {
-  value: ProviderId;
-  onChange: (id: ProviderId) => void;
-  disabled?: boolean;
-  labelledBy: string;
-  describedBy: string;
-}) {
-  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-    if (!step) return;
-    e.preventDefault();
-    const next = (index + step + PROVIDER_IDS.length) % PROVIDER_IDS.length;
-    const target = PROVIDER_IDS[next];
-    if (!target) return;
-    e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
-    onChange(target);
-  };
-
-  return (
-    <div
-      role="radiogroup"
-      aria-labelledby={labelledBy}
-      aria-describedby={describedBy}
-      aria-disabled={disabled || undefined}
-      className="flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-control border border-border bg-surface-2 p-1"
-    >
-      {PROVIDER_IDS.map((id, i) => {
-        const checked = id === value;
-        return (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={checked}
-            tabIndex={checked ? 0 : -1}
-            disabled={disabled}
-            onClick={() => !checked && onChange(id)}
-            onKeyDown={(e) => onKeyDown(e, i)}
-            className={cn(
-              "inline-flex h-8 min-w-24 flex-1 select-none items-center justify-center whitespace-nowrap rounded-tag px-3 text-[13px] font-medium",
-              "text-fg-muted transition-colors duration-150 hover:text-fg disabled:pointer-events-none disabled:opacity-50",
-              checked && "bg-surface-3 text-fg",
-            )}
-          >
-            {PROVIDER_NAME[id]}
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -260,45 +200,7 @@ function KeysLink({ provider }: { provider: KeyedProvider }) {
   );
 }
 
-/** Which provider runs what several offer: images, and videos at the same price. */
-function PreferenceCard({ settings }: { settings: SettingsResponse | null }) {
-  const save = useSettings((s) => s.save);
-  const [switching, setSwitching] = useState(false);
-  const labelId = useId();
-  const hintId = useId();
-  const preferred = settings?.preferredProvider ?? "openrouter";
-  const keyed = PROVIDER_IDS.filter((p) => settings?.keys[p]).length;
-
-  const onPrefer = async (id: ProviderId) => {
-    if (switching || id === preferred) return;
-    setSwitching(true);
-    try {
-      await save({ preferredProvider: id });
-      toast.success(`Shared models now run on ${PROVIDER_NAME[id]}`, { description: "Videos still go to whichever provider costs less." });
-    } catch (err) {
-      toast.error("Couldn't change the provider", { description: describeApiError(err) });
-    } finally {
-      setSwitching(false);
-    }
-  };
-
-  if (!settings) return null;
-  return (
-    <SettingsCard id="providers" icon={<Shuffle />} title="Models several providers offer">
-      <div id={labelId} className="mb-1.5 text-label">
-        Prefer
-      </div>
-      <ProviderSwitch value={preferred} onChange={(id) => void onPrefer(id)} disabled={keyed < 2} labelledBy={labelId} describedBy={hintId} />
-      <p id={hintId} className="mt-2 text-meta">
-        {keyed >= 2
-          ? "Videos go to whichever costs less; this decides images, and videos at the same price, among the providers you have a key for. Models only one provider offers always run there."
-          : "Add a second key to choose. Until then, each model uses the provider you have a key for."}
-      </p>
-    </SettingsCard>
-  );
-}
-
-/** The fal, kie.ai and APIMart keys, and which provider runs what several offer. */
+/** The fal, kie.ai and APIMart keys. */
 export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
   return (
     <>
@@ -317,7 +219,7 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
         settings={settings}
         description={
           <>
-            kie.ai runs many of these models for less (Veo 3.1, Kling 3.0, MiniMax H3, Wan, Grok Imagine, Nano Banana Pro…): with a key, a video goes there
+            kie.ai runs many of these models for less (Veo 3.1, Kling 3.0, MiniMax H3, Wan, Grok Imagine, Nano Banana Pro…): with a key, a run goes there
             whenever it is the cheapest. Get one at <KeysLink provider="kie" />.
           </>
         }
@@ -329,12 +231,11 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
         description={
           <>
             APIMart runs many of these models at its own prices (Veo 3.1, Seedance, Wan, Kling 3.0, PixVerse, Nano Banana Pro, GPT Image 2…): with a key, a
-            video goes there whenever it is the cheapest. Get one at <KeysLink provider="apimart" />.
+            run goes there whenever it is the cheapest. Get one at <KeysLink provider="apimart" />.
           </>
         }
         offHint="No key yet. Runs go to the other providers until one is saved here."
       />
-      <PreferenceCard settings={settings} />
     </>
   );
 }

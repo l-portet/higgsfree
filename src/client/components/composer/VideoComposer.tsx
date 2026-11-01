@@ -33,7 +33,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { DurationControl, matchedDuration, type DurationMatch } from "@/components/video/DurationControl";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS, type Attachment } from "./ComposerFrame";
-import { CostEstimate, ProviderPicker, videoAutoNote } from "./CostEstimate";
+import { CostEstimate, ProviderPicker } from "./CostEstimate";
 import { PromptEditorDialog } from "./PromptEditorDialog";
 import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
@@ -148,7 +148,6 @@ export function VideoComposer() {
   const pendingUpscale = useUi((s) => s.pendingUpscale);
   // A string, so the selector's value only changes when a key is added or removed.
   const keyed = useSettings((s) => PROVIDER_IDS.filter((p) => s.settings?.keys[p]).join(","));
-  const preferred = useSettings((s) => s.settings?.preferredProvider ?? "openrouter");
   const router = useRouter();
   const pathname = usePathname() ?? "/";
 
@@ -531,10 +530,9 @@ export function VideoComposer() {
             model,
             { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: clipSec, upscale: sentFactor, videoWidth: clip?.width, videoHeight: clip?.height },
             Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
-            preferred,
           )
         : undefined,
-    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, clipSec, sentFactor, clip?.width, clip?.height, keyed, preferred],
+    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, clipSec, sentFactor, clip?.width, clip?.height, keyed],
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);
@@ -662,7 +660,6 @@ export function VideoComposer() {
                 model,
                 { duration: 5, videoSec: clipSec, upscale: f, videoWidth: clip?.width, videoHeight: clip?.height },
                 Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
-                preferred,
               );
               const usd = shownQuote(pinQuote(q, pinned))?.usd;
               const out = clip?.width && clip.height ? `${clip.width * f} × ${clip.height * f}` : "";
@@ -1010,7 +1007,7 @@ export function VideoComposer() {
       }
       estimate={
         quote && quote.quotes.length > 1 ? (
-          <ProviderPicker auto={quote} pinned={pinned} onPin={setPinned} count={runs} autoNote={videoAutoNote(quote, preferred)} />
+          <ProviderPicker auto={quote} pinned={pinned} onPin={setPinned} count={runs} />
         ) : estimate !== undefined ? (
           <CostEstimate usd={estimate} provider={shown?.provider} />
         ) : undefined

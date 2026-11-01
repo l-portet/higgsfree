@@ -4,7 +4,7 @@ import type { ProviderId } from "@shared/types";
 import { cn } from "@/lib/cn";
 import { formatUsd } from "@/lib/format";
 import { PROVIDER_NAME } from "@/lib/providers";
-import { pinQuote, SAME_PRICE_USD, shownQuote, type ProviderQuote, type VideoQuote } from "@/lib/video-cost";
+import { pinQuote, SAME_PRICE_USD, shownQuote, type ProviderQuote, type QuoteReason } from "@/lib/video-cost";
 import { useUi } from "@/store/ui";
 import { Popover, PopoverContent, PopoverItem, PopoverLabel, PopoverTrigger } from "@/components/ui/Popover";
 import { hasProviderLogo } from "@/components/icons/marks";
@@ -41,6 +41,7 @@ const cents = (usd: number): number => Math.round(usd * 100) / 100;
 interface PickerQuote {
   quotes: ProviderQuote[];
   provider?: ProviderId;
+  reason?: QuoteReason;
   picked?: boolean;
 }
 
@@ -58,8 +59,8 @@ function rowNote(q: ProviderQuote, auto: PickerQuote, count: number): string | u
 }
 
 /**
- * The price just before Generate, as a menu: Auto (the cheapest for a video, the Settings preference for an image)
- * or any provider that offers the model, by hand. `auto` is the quote without the pick; `pinned` the pick, which
+ * The price just before Generate, as a menu: Auto (the cheapest provider with a key that takes the request) or any
+ * provider that offers the model, by hand. `auto` is the quote without the pick; `pinned` the pick, which
  * applies only while that provider has a key and takes the request. `count` multiplies a per-clip price.
  */
 export function ProviderPicker({
@@ -67,14 +68,11 @@ export function ProviderPicker({
   pinned,
   onPin,
   count = 1,
-  autoNote,
 }: {
   auto: PickerQuote;
   pinned: ProviderId | undefined;
   onPin: (provider: ProviderId | undefined) => void;
   count?: number;
-  /** Under "Auto": who it picks and why ("Cheapest: kie.ai"). */
-  autoNote?: string;
 }) {
   const [open, setOpen] = useState(false);
   const effective = pinQuote(auto, pinned);
@@ -109,7 +107,7 @@ export function ProviderPicker({
             <Sparkles size={14} aria-hidden="true" className="mt-[3px] shrink-0 text-fg-subtle" />
             <div className="min-w-0 flex-1">
               <div className="font-medium">Auto</div>
-              {autoNote ? <div className="text-caption">{autoNote}</div> : null}
+              <div className="text-caption">{autoNote(auto)}</div>
             </div>
             {!effective.picked ? <Check size={14} className="mt-[3px] shrink-0 text-accent" aria-hidden="true" /> : null}
           </PopoverItem>
@@ -147,18 +145,17 @@ export function ProviderPicker({
   );
 }
 
-/** "Cheapest: kie.ai" under a video's Auto row, from why `quoteVideo` picked it. */
-export function videoAutoNote(quote: VideoQuote, preferred: ProviderId): string | undefined {
+/** Under the Auto row: who it picks and why ("Cheapest: kie.ai"), from `routeQuotes`' reason. */
+function autoNote(quote: PickerQuote): string {
   const runner = quote.provider ? PROVIDER_NAME[quote.provider] : undefined;
-  if (!runner) return "The cheapest one you have a key for";
-  const set = quote.provider === preferred ? ", as set in Settings" : "";
+  if (!runner) return "The cheapest provider you have a key for";
   switch (quote.reason) {
     case "cheaper":
       return `Cheapest: ${runner}`;
     case "tie":
-      return `Same price: ${runner}${set}`;
+      return `Same price: ${runner}`;
     case "unpriced":
-      return `Not priced yet: ${runner}${set}`;
+      return `Not priced yet: ${runner}`;
     default:
       return runner;
   }

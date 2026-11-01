@@ -20,7 +20,7 @@ import { errorMessage, log } from "../log";
 import { newBatchId, newGenerationId, outputMediaId } from "../media-ids";
 import * as or from "../openrouter";
 import { buildImagePayload } from "../payloads";
-import { getPreferredProvider, getStoredKey } from "../settings";
+import { getStoredKey } from "../settings";
 import { validateImageRequest } from "../validate";
 import { IMAGE_TIMEOUT_MS, limits, timing } from "./constants";
 import { assertInputsExist, inputDataUrls, pngDataUrl, storedImageSize } from "./inputs";
@@ -47,13 +47,12 @@ export async function submitImageBatch(req: ImageGenerateRequest): Promise<Gener
   // Upscalers: the scale sent, and the image's size (fal's Topaz bills by the output's).
   const factor = model.caps.upscale ? upscaleFactor(model, req.upscale) : undefined;
   const input = model.caps.upscale && refIds[0] ? await storedImageSize(refIds[0]) : {};
-  // The provider picked in the composer, else the preferred one, that can take the request (`quoteImage`); when none
-  // with a key can, the key-based choice stands and its refusal says why.
+  // The provider picked in the composer, else the cheapest, that can take the request (`quoteImage`); when none with a
+  // key can, the key-based choice stands and its refusal says why.
   const quote = quoteImage(
     model,
     { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length, upscale: factor, inputWidth: input.width, inputHeight: input.height },
     storedKeys(),
-    getPreferredProvider(),
   );
   const chosen = pinQuote(quote, req.provider).provider;
   const chosenKey = chosen ? keyFor(chosen) : undefined;

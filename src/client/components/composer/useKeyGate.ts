@@ -12,9 +12,8 @@ import { useUi } from "@/store/ui";
 export interface KeyGate {
   /** Short notice above the prompt ("Kling 3.0 Motion Control runs on fal."), or undefined. */
   notice?: { message: string; action: string; onAction: () => void };
-  /** Which providers have a key, and the preferred one (for the composers' quotes). */
+  /** Which providers have a key (for the composers' quotes). */
   keys: ProviderKeys;
-  preferred: ProviderId;
   /** Opens the key dialog when the model's provider has no key; true means the caller should stop. */
   askForKey: (onSaved: () => void) => boolean;
 }
@@ -33,8 +32,7 @@ function reasonFor(model: Pick<CatalogModel, "name" | "fal" | "kie" | "apimart" 
 export function useKeyGate(model: CatalogModel | undefined): KeyGate {
   const settings = useSettings((s) => s.settings);
   const keys = keysOf(settings);
-  const preferred = settings?.preferredProvider ?? "openrouter";
-  const need = settings && model ? keyToAsk(model, keys, preferred) : undefined;
+  const need = settings && model ? keyToAsk(model, keys) : undefined;
   const reason = model && need ? reasonFor(model, need, keys) : undefined;
 
   const open = (provider: ProviderId, why: string | undefined, onSaved?: () => void): void => {
@@ -43,13 +41,12 @@ export function useKeyGate(model: CatalogModel | undefined): KeyGate {
 
   const gate: KeyGate = {
     keys,
-    preferred,
     askForKey: (onSaved) => {
       // Read the store, not the render: after "Save and generate" this runs again with the new key.
       const s = useSettings.getState().settings;
       if (!s || !model) return false;
       const k = keysOf(s);
-      const p = keyToAsk(model, k, s.preferredProvider);
+      const p = keyToAsk(model, k);
       if (!p) return false;
       open(p, reasonFor(model, p, k), onSaved);
       return true;

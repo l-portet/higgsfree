@@ -119,10 +119,10 @@ describe("kie.ai videos", () => {
 });
 
 describe("kie.ai images", () => {
-  it("runs on kie when preferred: the reference is uploaded and the task polled until the image is there", async () => {
+  it("runs on kie when it is the cheapest: the reference is uploaded and the task polled until the image is there", async () => {
     setStoredKey("test-key");
     setProviderKey("kie", KIE_KEY);
-    await api.updateSettings({ preferredProvider: "kie" });
+    // Nano Banana Pro at 2K: $0.09 on kie, $0.134 on OpenRouter.
     const ref = await uploadImage();
     const g = (await api.generateImage({ prompt: "p", model: "google/gemini-3-pro-image", aspectRatio: "16:9", size: "2K", count: 1, referenceImages: [ref] })).generations[0];
     if (!g) throw new Error("no generation");
@@ -136,12 +136,11 @@ describe("kie.ai images", () => {
     expect(mock.calls("/api/v1/chat/completions")).toHaveLength(0);
   });
 
-  it("goes to another provider when the preferred one cannot take the request", async () => {
+  it("goes to another provider when the one picked cannot take the request", async () => {
     setStoredFalKey(FAL_KEY);
     setProviderKey("kie", KIE_KEY);
-    await api.updateSettings({ preferredProvider: "kie" });
     // kie's FLUX.1 Kontext has no 3:2; fal's does.
-    const g = (await api.generateImage({ prompt: "p", model: "fal/flux-kontext-pro", aspectRatio: "3:2", size: "1K", count: 1 })).generations[0];
+    const g = (await api.generateImage({ prompt: "p", model: "fal/flux-kontext-pro", aspectRatio: "3:2", size: "1K", count: 1, provider: "kie" })).generations[0];
     expect(g?.provider).toBe("fal");
   });
 });

@@ -1,7 +1,7 @@
 /**
- * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, or several. An image goes to the preferred one
- * (OpenRouter unless Settings say otherwise) among those with a key; a video to the cheapest
- * (`video-cost.ts`). A model whose providers have no key cannot run; the composer says why.
+ * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, or several. A run goes to the cheapest with a key
+ * that takes it (`routeQuotes` in `video-cost.ts`), or to the one picked in the composer. A model whose providers have
+ * no key cannot run; the composer says why.
  */
 import type { CatalogModel, ProviderId } from "@shared/types";
 
@@ -44,19 +44,20 @@ export interface ProviderChoice {
 
 type Routed = Pick<CatalogModel, "fal" | "kie" | "apimart" | "offOpenRouter">;
 
-export function chooseProvider(m: Routed, keys: ProviderKeys, preferred: ProviderId): ProviderChoice {
+/** The first provider of the model with a key (before prices are known), or the ones whose key would let it run. */
+export function chooseProvider(m: Routed, keys: ProviderKeys): ProviderChoice {
   const offered = modelProviders(m);
   const usable = offered.filter((p) => keys[p]);
   if (usable.length === 0) return { missing: offered };
-  return { provider: usable.includes(preferred) ? preferred : usable[0], missing: [] };
+  return { provider: usable[0], missing: [] };
 }
 
 /**
  * The key to ask for when Generate is pressed and the model cannot run: OpenRouter when it serves
  * the model (the default provider), otherwise the first that does. Undefined when the model can run.
  */
-export function keyToAsk(m: Routed, keys: ProviderKeys, preferred: ProviderId): ProviderId | undefined {
-  const { provider, missing } = chooseProvider(m, keys, preferred);
+export function keyToAsk(m: Routed, keys: ProviderKeys): ProviderId | undefined {
+  const { provider, missing } = chooseProvider(m, keys);
   if (provider) return undefined;
   return missing.includes("openrouter") ? "openrouter" : missing[0];
 }
@@ -69,8 +70,8 @@ export function keyPhrase(providers: ProviderId[]): string {
 }
 
 /** "Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it." (undefined when the model can run). */
-export function providerNotice(m: Pick<CatalogModel, "name"> & Routed, keys: ProviderKeys, preferred: ProviderId): string | undefined {
-  const { provider, missing } = chooseProvider(m, keys, preferred);
+export function providerNotice(m: Pick<CatalogModel, "name"> & Routed, keys: ProviderKeys): string | undefined {
+  const { provider, missing } = chooseProvider(m, keys);
   if (provider) return undefined;
   if (missing.length === 1 && missing[0]) return `${m.name} runs on ${PROVIDER_NAME[missing[0]]}. Add ${keyPhrase(missing)} in Settings to use it.`;
   return `${m.name} needs ${keyPhrase(missing)}. Add one in Settings to use it.`;

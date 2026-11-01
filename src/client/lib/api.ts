@@ -48,7 +48,7 @@ import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DE
 import * as apimart from "./apimart";
 import * as kie from "./kie";
 import { isProviderId, PROVIDER_NAME } from "./providers";
-import { getProviderKey, getStoredFalKey, getStoredKey, requireApiKey, setPreferredProvider, setProviderKey, setStoredKey, settingsResponse } from "./settings";
+import { getProviderKey, getStoredFalKey, getStoredKey, requireApiKey, setProviderKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
 import { detectVideo, OPENROUTER_VIDEO_MIME } from "./video-meta";
 
@@ -70,10 +70,6 @@ export async function updateSettings(body: UpdateSettingsRequest): Promise<Setti
     if (key === undefined) continue;
     setProviderKey(provider, key);
     if (provider === "openrouter") invalidateCredits();
-  }
-  if (body.preferredProvider !== undefined) {
-    if (!isProviderId(body.preferredProvider)) throw badRequest(`Unknown provider: ${String(body.preferredProvider)}`);
-    setPreferredProvider(body.preferredProvider);
   }
   return settingsResponse();
 }
