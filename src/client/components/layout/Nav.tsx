@@ -35,11 +35,10 @@ function IconBox({ children }: { children: ReactNode }) {
   return <span className="inline-flex size-4 shrink-0 items-center justify-center">{children}</span>;
 }
 
-/** "Add key" with a grey dot until a key is set (opens the key dialog); then the remaining credits with an accent dot (opens Settings). */
+/** "Add key" with a grey dot until a key is set; then the remaining credits with an accent dot. Either way it opens the keys in Settings, every provider listed. */
 function KeyBox() {
   const settings = useSettings((s) => s.settings);
   const credits = useSettings((s) => s.credits);
-  const openKeyDialog = useUi((s) => s.openKeyDialog);
   const openSettings = useUi((s) => s.openSettings);
   const hasKey = Boolean(settings?.hasKey);
   const label = hasKey ? (credits ? formatUsd(credits.remaining) : "Key") : "Add key";
@@ -47,12 +46,12 @@ function KeyBox() {
     ? credits
       ? `${formatUsd(credits.remaining)} left on your OpenRouter key`
       : "OpenRouter key set"
-    : "Add your OpenRouter key";
+    : "Add an API key";
   return (
     <Tooltip content={title} side="bottom">
       <button
         type="button"
-        onClick={() => (hasKey ? openSettings("keys") : openKeyDialog({ provider: "openrouter" }))}
+        onClick={() => openSettings("keys")}
         aria-label={title}
         className={cn(BOX, "group gap-2 px-[17px] text-fg-muted transition-colors duration-150 hover:text-fg")}
       >
