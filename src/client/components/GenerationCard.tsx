@@ -230,14 +230,15 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
           />
         ) : null}
 
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 flex flex-col justify-between opacity-0 transition-opacity duration-150",
-            "group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
-            keepOpen && "opacity-100",
-          )}
-        >
-          <div className="flex items-start gap-1 bg-gradient-to-b from-black/60 to-transparent p-2 pb-6">
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+          {/* The actions show on hover; the info row below stays visible. */}
+          <div
+            className={cn(
+              "flex items-start gap-1 bg-gradient-to-b from-black/60 to-transparent p-2 pb-6 opacity-0 transition-opacity duration-150",
+              "group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
+              keepOpen && "opacity-100",
+            )}
+          >
             {showType ? <OverlayBadge className="mr-auto">{isVideo ? "Video" : "Image"}</OverlayBadge> : null}
             {showActions ? (
               <div className="pointer-events-auto ml-auto flex items-center gap-1">
@@ -279,7 +280,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
               </div>
             ) : null}
           </div>
-          <div className="flex items-center gap-1 bg-gradient-to-t from-black/60 to-transparent p-2 pt-6">
+          <div className="flex items-center gap-1 p-2">
             <OverlayBadge className="min-w-0 max-w-[calc(100%-16px)] tabular-nums">
               <span className="truncate">{info}</span>
             </OverlayBadge>
