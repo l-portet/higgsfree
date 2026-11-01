@@ -3,7 +3,7 @@ import type { CatalogModel, ProviderId, VideoModel } from "@shared/types";
 import { ApiClientError } from "../errors";
 import { chooseProvider, PROVIDER_IDS, providerNotice, type ProviderKeys } from "../providers";
 import { getPreferredProvider, getProviderKey } from "../settings";
-import { quoteVideo, type VideoQuoteRequest } from "../video-cost";
+import { pinQuote, quoteVideo, type VideoQuoteRequest } from "../video-cost";
 
 export function keyFor(provider: ProviderId): string | undefined {
   return getProviderKey(provider);
@@ -33,11 +33,11 @@ export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "kie" | "a
 }
 
 /**
- * A video goes to the cheaper provider that takes the request (`quoteVideo`). Undefined when none with a
- * key takes it: the caller keeps `resolveRun`'s choice, whose errors say why.
+ * A video goes to the provider picked in the composer, else the cheaper one that takes the request (`quoteVideo`).
+ * Undefined when none with a key takes it: the caller keeps `resolveRun`'s choice, whose errors say why.
  */
-export function videoRun(model: VideoModel, req: VideoQuoteRequest): ProviderRun | undefined {
-  const { provider } = quoteVideo(model, req, storedKeys(), getPreferredProvider());
+export function videoRun(model: VideoModel, req: VideoQuoteRequest, pinned?: ProviderId): ProviderRun | undefined {
+  const { provider } = pinQuote(quoteVideo(model, req, storedKeys(), getPreferredProvider()), pinned);
   const key = provider ? keyFor(provider) : undefined;
   return provider && key ? { provider, key } : undefined;
 }

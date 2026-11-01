@@ -2,12 +2,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Check, Gem, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { ImageAspectRatio, ImageGenerateRequest, ImageModel, ImageSize } from "@shared/types";
+import type { ImageAspectRatio, ImageGenerateRequest, ImageModel, ImageSize, ProviderId } from "@shared/types";
 import { DEFAULT_IMAGE_MODEL } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { quoteImage } from "@/lib/image-cost";
+import { PROVIDER_NAME } from "@/lib/providers";
+import { pinQuote } from "@/lib/video-cost";
 import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickImageFiles } from "@/lib/files";
 import { pluralize, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
@@ -25,7 +27,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { ModelPicker } from "@/components/ModelPicker";
 import { RatioGlyph } from "@/components/RatioGlyph";
 import { AddButton, AttachmentStrip, ComposerFrame, ComposerNotice, PROMPT_TEXTAREA_CLASS } from "./ComposerFrame";
-import { CostEstimate } from "./CostEstimate";
+import { CostEstimate, ProviderPicker } from "./CostEstimate";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
 
@@ -86,6 +88,8 @@ export function ImageComposer() {
   const [count, setCount] = useState<number>(initial.count);
   const [prompt, setPrompt] = useState<string>(initial.prompt);
   const [refs, setRefs] = useState<Frame[]>([]);
+  /** The provider picked by hand next to Generate; unset, the preferred one runs it. Ignored while it cannot take the request. */
+  const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [arOpen, setArOpen] = useState(false);
@@ -175,8 +179,10 @@ export function ImageComposer() {
 
   // The price on the provider that runs it (the preferred one that can take the request): OpenRouter's from
   // the catalog, fal's and kie.ai's list prices. No key yet: the price where it would run once one is added.
+  // A provider picked by hand runs it instead, while it can.
   const quote = model ? quoteImage(model, { aspectRatio, size, count, references: refCount }, keyGate.keys, keyGate.preferred) : undefined;
-  const shown = quote?.quotes.find((q) => q.provider === quote.provider) ?? quote?.quotes.find((q) => !q.refusal);
+  const effective = quote ? pinQuote(quote, pinned) : undefined;
+  const shown = effective?.quotes.find((q) => q.provider === effective.provider) ?? effective?.quotes.find((q) => !q.refusal);
   const estimate = shown?.usd;
 
   const submit = async () => {
@@ -184,6 +190,7 @@ export function ImageComposer() {
     if (keyGate.askForKey(() => void submit())) return;
     const req: ImageGenerateRequest = { prompt: trimmed, model: model.id, aspectRatio, size, count };
     if (refs.length) req.referenceImages = refs.map(frameInput);
+    if (pinned) req.provider = pinned;
     setSubmitting(true);
     try {
       const res = await api.generateImage(req);
@@ -353,7 +360,22 @@ export function ImageComposer() {
           <Stepper value={count} min={1} max={MAX_COUNT} onChange={setCount} label="Number of images" />
         </>
       }
-      estimate={estimate !== undefined ? <CostEstimate usd={estimate} provider={shown?.provider} /> : undefined}
+      estimate={
+        quote && quote.quotes.length > 1 ? (
+          <ProviderPicker
+            auto={quote}
+            pinned={pinned}
+            onPin={setPinned}
+            autoNote={
+              quote.provider
+                ? `${PROVIDER_NAME[quote.provider]}${quote.provider === keyGate.preferred ? ", as set in Settings" : ""}`
+                : "Your preferred provider, as set in Settings"
+            }
+          />
+        ) : estimate !== undefined ? (
+          <CostEstimate usd={estimate} provider={shown?.provider} />
+        ) : undefined
+      }
       generate={{ disabledReason, submitting, reasonId }}
       className={cn(submitting && "cursor-progress")}
     />

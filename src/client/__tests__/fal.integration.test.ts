@@ -120,6 +120,26 @@ describe("who runs a model", () => {
     expect(mock.calls("/api/v1/videos")).toHaveLength(2);
   });
 
+  it("a provider picked in the composer runs it, while it has a key and takes the request", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    const run = async (body: Record<string, unknown>): Promise<Generation> => {
+      const g = (await api.generateVideo({ prompt: "p", model: "bytedance/seedance-2.5", duration: 5, resolution: "720p", aspectRatio: "16:9", ...body })).generations[0];
+      if (!g) throw new Error("no generation");
+      return g;
+    };
+    // Seedance 2.5 costs less on OpenRouter; picked, fal runs it anyway.
+    expect((await run({ provider: "fal" })).provider).toBe("fal");
+    expect(mock.calls("/api/v1/videos")).toHaveLength(0);
+    // No kie.ai key: the pick is ignored and the cheapest runs it.
+    expect((await run({ provider: "kie" })).provider).toBe("openrouter");
+    // An image picked onto fal, against the OpenRouter preference.
+    const img = await image({ provider: "fal" });
+    await waitFor(completed(img.id));
+    expect(img.provider).toBe("fal");
+    expect(mock.calls("/api/v1/chat/completions")).toHaveLength(0);
+  });
+
   it("a fal error is shown verbatim on the failed card", async () => {
     setStoredFalKey(FAL_KEY);
     const g = await image({ model: "fal/flux-dev", prompt: "FAL_FAIL", aspectRatio: "1:1", size: "1K" });

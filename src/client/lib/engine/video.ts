@@ -171,7 +171,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
   const refVideoSec = await assertReferenceMedia(model, refVideos, refAudios);
   const mediaRefs = refVideos.length > 0 || refAudios.length > 0;
 
-  // The cheaper provider that takes the request runs it; when none with a key does, the key-based choice
+  // The provider picked in the composer, else the cheaper one that takes the request, runs it; when none with a key does, the key-based choice
   // stands and its refusal below says why.
   let { provider, key } =
     videoRun(model, {
@@ -187,7 +187,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
       referenceAudios: refAudios.length > 0,
       referenceVideoSec: refVideoSec,
       videoSec: sourceSec,
-    }) ?? keyed;
+    }, req.provider) ?? keyed;
   // Only kie.ai takes reference videos and audio: it is the one provider here with an upload for them. When it has a
   // key but refuses the request, it runs anyway, so its check below says why.
   const kieKey = keyFor("kie");
