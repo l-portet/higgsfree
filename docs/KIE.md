@@ -33,8 +33,8 @@ kie.ai credits: …", 400 / 404 / 422 → 400 with kie's `msg`, 429 kept, 455 (m
 ## Jobs
 
 - kie.ai and APIMart share one shape in the engine (`task-providers.ts`). Inputs first: kie takes images and videos by url only, so at submit each frame and reference image is
-  uploaded with the base64 endpoint and the video to edit with the stream endpoint, into `higgsfree/` (kie
-  deletes uploads after 24 h). Then `createTask`; `data.taskId` is the record's `providerJobId`.
+  uploaded with the base64 endpoint and the video to edit, reference videos and reference audio with the stream
+  endpoint, into `higgsfree/` (kie deletes uploads after 24 h). Then `createTask`; `data.taskId` is the record's `providerJobId`.
 - The payload is built once before anything exists with placeholder urls, so a request kie cannot take is a
   400 before a record is created, and again at submit with the uploaded urls.
 - Poll `recordInfo` every 6 s (videos, under the job's lock and resumable like the others) or inline (images,
@@ -69,6 +69,18 @@ family cannot take throws a 400 whose message is what the price tooltip shows ("
 
 Every family also refuses style references unless it takes them (Seedance, Wan 3.0, Kling 4.0), and a last frame without a
 first one.
+
+**Reference videos and audio** (`caps.mediaReferences`), never with frames. kie.ai is the only provider that runs them
+(fal and OpenRouter refuse them in `video-cost.ts`, APIMart has no upload for them):
+
+| Family | Videos | Audio | Notes |
+|---|---|---|---|
+| `wan3` | `reference_video_urls`, ≤ 5, 1–15 s each, 15 s in all, MP4 / MOV ≤ 100 MB | `reference_audio_urls`, ≤ 5, 15 s in all, MP3 / WAV ≤ 15 MB | audio alone is fine; reference videos + `duration` ≤ 30 s; billed on output + reference-video seconds at the usual rate |
+| `seedance` | `reference_video_urls`, ≤ 3 (2.5: ≤ 10), 2–15 s each, 15 s in all (2.5: 30 s), ≤ 50 MB (2.5: 200 MB) | `reference_audio_urls`, same counts and totals, ≤ 15 MB | audio needs an image or a video with it (not on 2.5); billed on output + reference-video seconds at the lower "with video input" rate |
+| `kling4` | `video_urls` on `reference-to-video`, ≤ 5, 2–30 s each | none (kie only takes a voice to copy, `voices[]`) | billed like Seedance, at the "with video input" rate (output + input seconds, assumed from the other providers' docs) |
+
+The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@Video1`, `@Audio1` (Seedance),
+`@image_1`, `@video_1` (Kling 4.0).
 
 ## Image fields (`buildKieImagePayload`)
 

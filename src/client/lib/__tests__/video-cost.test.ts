@@ -91,6 +91,16 @@ describe("quoteVideo", () => {
     expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, "openrouter", NOW)).toMatchObject({ reason: "none" });
   });
 
+  it("Gemini Omni Flash 1.2, on APIMart only: it runs there with no price known yet", () => {
+    const omni = video("google/gemini-omni-flash-1.2");
+    const q = quoteVideo(omni, { prompt: "a fox", duration: 8, resolution: "1080p", aspectRatio: "9:16", references: true }, { apimart: true }, "openrouter", NOW);
+    expect(q).toMatchObject({ provider: "apimart", reason: "only" });
+    expect(q.quotes).toEqual([{ provider: "apimart", noKey: false }]);
+    expect(quoteVideo(omni, { prompt: "", duration: 8 }, { apimart: true }, "apimart", NOW).quotes[0]).toMatchObject({ refusal: "Needs a prompt" });
+    // No other key helps.
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 8 }, { openrouter: true, fal: true, kie: true }, "kie", NOW)).toMatchObject({ reason: "none" });
+  });
+
   it("prices motion control and editing by the input video, once its length is known", () => {
     const motion = quoteVideo(video("fal/kling-v3-pro-motion-control"), { duration: 5, videoSec: 7.5 }, BOTH, "openrouter", NOW);
     expect(motion).toMatchObject({ provider: "fal", reason: "only" });
@@ -100,5 +110,15 @@ describe("quoteVideo", () => {
     const known = quoteVideo(flux, { duration: 5, videoSec: 10 }, BOTH, "openrouter", NOW);
     expect(known).toMatchObject({ provider: "openrouter", reason: "tie" });
     expect(usd(known)).toEqual({ openrouter: expect.closeTo(0.3), fal: expect.closeTo(0.3) });
+  });
+
+  it("sends reference videos and audio to kie.ai only", () => {
+    const wan = video("alibaba/wan-3.0");
+    const all = { openrouter: true, kie: true, apimart: true };
+    const q = quoteVideo(wan, { prompt: "p", duration: 5, resolution: "720p", referenceAudios: true }, all, "openrouter", NOW);
+    expect(q.provider).toBe("kie");
+    expect(q.quotes.find((x) => x.provider === "openrouter")?.refusal).toBe("Takes no reference video or audio");
+    expect(q.quotes.find((x) => x.provider === "apimart")?.refusal).toBe("Takes no uploaded video or audio");
+    expect(quoteVideo(wan, { prompt: "p", duration: 5, referenceVideos: true }, { openrouter: true, apimart: true }, "openrouter", NOW).reason).toBe("none");
   });
 });

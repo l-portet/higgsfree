@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { findVideoModel } from "@shared/models";
 import type { VideoModel } from "@shared/types";
-import { sourceVideoProblem } from "../validate";
+import { sourceVideoProblem, validateVideoRequest } from "../validate";
 
 const video = (id: string): VideoModel => {
   const m = findVideoModel(id);
@@ -24,5 +24,22 @@ describe("sourceVideoProblem", () => {
     expect(sourceVideoProblem(video("fal/kling-o3-edit"), undefined, undefined)).toBeUndefined();
     expect(sourceVideoProblem(video("fal/grok-imagine-edit"), 30, 1_000_000)).toBeUndefined(); // keeps the first 8 s
     expect(sourceVideoProblem(video("fal/gemini-omni-flash-1.1-edit"), 60, 80 * 1024 * 1024)).toBeUndefined(); // no known limits
+  });
+});
+
+describe("validateVideoRequest: reference videos and audio", () => {
+  const req = { prompt: "p", model: "alibaba/wan-3.0", duration: 5 };
+  it("takes them on models that do, up to their count, and never with frames", () => {
+    const wan = video("alibaba/wan-3.0");
+    expect(() => validateVideoRequest(wan, { ...req, referenceVideos: ["up_abcdefgh.mp4"], referenceAudios: ["up_abcdefgh.mp3"] }, "p")).not.toThrow();
+    expect(() => validateVideoRequest(wan, { ...req, referenceAudios: Array(6).fill("up_abcdefgh.wav") }, "p")).toThrow("at most 5");
+    expect(() => validateVideoRequest(wan, { ...req, referenceAudios: ["up_abcdefgh.png"] }, "p")).not.toThrow();
+    expect(() => validateVideoRequest(wan, { ...req, referenceAudios: ["not-an-id"] }, "p")).toThrow("stored audio clip");
+    expect(() => validateVideoRequest(wan, { ...req, firstFrame: "up_abcdefgh.png", referenceVideos: ["up_abcdefgh.mp4"] }, "p")).toThrow("do not go with frames");
+  });
+  it("refuses them on models that do not", () => {
+    const wan27 = video("alibaba/wan-2.7");
+    expect(() => validateVideoRequest(wan27, { ...req, referenceVideos: ["up_abcdefgh.mp4"] }, "p")).toThrow("does not take a reference video");
+    expect(() => validateVideoRequest(wan27, { ...req, referenceAudios: ["up_abcdefgh.mp3"] }, "p")).toThrow("does not take reference audio");
   });
 });

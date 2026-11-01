@@ -62,11 +62,14 @@ returns a task id, the task url polled until the result urls are there.
 | `pixverse` | PixVerse 6 → `pixverse-v6` | `resolution`, `duration`, `audio`, `size` (text-to-video), `image_urls` [first] or `first_frame_image` + `last_frame_image` (5 or 8 s) | |
 | `pixverse-max` | PixVerse 6 Max → `pixverse-v6-max` | `resolution`, `duration` 1–15, `audio`, `aspect_ratio` (text-to-video; not `size`), `image_urls` [first]; the prompt is optional with a frame | a last frame, an empty prompt without a frame |
 | `gemini-omni` | Gemini Omni Flash 1.1 → `gemini-omni-1.1-flash-ext` | `duration` 4 / 6 / 8 / 10, `resolution` (`4k`), `aspect_ratio`, `generation_type: "frame"` + `image_urls` [first] | a last frame, other durations |
+| `gemini-omni12` | Gemini Omni Flash 1.2 → `gemini-omni-1.2-flash` | no `duration` (the prompt sets the length, about 3–10 s), `resolution` (`4k`), `aspect_ratio` (with frames too), `first_frame_image`, `last_frame_image`, references as `image_urls`; no `metadata.task` (APIMart picks the task) | an empty prompt, frames and references together |
 | `flux3` | FLUX.3 Video → `flux-3-video` | `duration` 5–20, `resolution` `hd` / `fhd`, `aspect_ratio` (`auto`), `image_urls` [first], `audio` | a last frame |
 | `vidu` | Vidu Q4 → `viduq4-preview` | `first_frame_image`, `duration` 3–16, `resolution` (`2K`, `4K`), `audio` | no first frame |
 
 Most families need a prompt. Every family refuses a last frame without a first one, and style references
-unless it takes them (Seedance, Wan 3.0, Kling 4.0).
+unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2). Reference videos and audio are
+refused too: APIMart's models take them as public urls (`video_urls`, `audio_urls`), but it only uploads images
+(`/v1/uploads/videos` and `/audios` are 404s, Oct 2026), so they run on kie.ai (docs/KIE.md).
 
 ## Image fields (`buildApimartImagePayload`)
 
@@ -93,8 +96,12 @@ one, and the price test lists it as unpriced.
 from its public catalog on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct); a test checks every route is priced and every price is used. They are
 the **Gold tier**, the "current price" APIMart shows (80% of its list price): a Platinum or Diamond account
 pays 5–10% less. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0 and
-PixVerse), per clip (Veo, 8 s; Gemini Omni Flash by length), or per image (by size). The shared estimator
+PixVerse), per clip (Veo, 8 s; Gemini Omni Flash 1.1 by length), or per image (by size). The shared estimator
 (`list-pricing.ts`) prices the payload the run would send.
+
+The exceptions are Gemini Omni Flash 1.2 (`gemini-omni-1.2-flash`) and GPT Image 2.6 (`gpt-image-2.6`), which
+neither the catalog nor their model pages priced on 30 Oct 2026: they have no estimate rather than a guessed one,
+and the test lists them as unpriced.
 
 ## Known gaps
 
@@ -103,6 +110,8 @@ PixVerse), per clip (Veo, 8 s; Gemini Omni Flash by length), or per image (by si
   shown verbatim on the card.
 - **The account tier is not known.** Estimates use Gold prices; the recorded cost is what was charged.
 - **No video inputs.** Video editing and motion control never go to APIMart.
+- **Gemini Omni Flash 1.2 has no length or price to show.** The prompt sets the clip's length (the 8 s in the
+  composer is a placeholder), and APIMart lists no price for it yet; the recorded cost is still right.
 - **Veo is 8 s only** on the models used here (APIMart's per-second "official" Veo channels are not wired).
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
 - **GPT Image 2.6 has no price to show.** APIMart lists none yet; the recorded cost is still right.

@@ -32,6 +32,11 @@ export interface KieVideoMedia {
   lastFrame?: string;
   /** Style references. */
   references?: string[];
+  /** Reference videos and audio (models with `caps.mediaReferences`). */
+  referenceVideos?: string[];
+  referenceAudios?: string[];
+  /** How long the reference videos run together, when known (Wan 3.0 caps it plus the clip at 30 s). */
+  referenceVideoSec?: number;
   /** The video being edited. */
   sourceVideo?: string;
 }
@@ -73,6 +78,19 @@ function durationsLabel(list: number[]): string {
 const ALWAYS_SOUND = new Set<KieVideoRoute["family"]>(["veo", "minimax-h3"]);
 /** Families that take style references. */
 const TAKES_REFERENCES = new Set<KieVideoRoute["family"]>(["seedance", "wan3", "kling4"]);
+/** How many reference videos and audio clips each family takes (the rest take none). Seedance 2.5 takes more than 2.0. */
+function mediaLimits(route: KieVideoRoute): { videos: number; audios: number } {
+  switch (route.family) {
+    case "wan3":
+      return { videos: 5, audios: 5 };
+    case "seedance":
+      return route.model === "bytedance/seedance-2-5" ? { videos: 10, audios: 10 } : { videos: 3, audios: 3 };
+    case "kling4":
+      return { videos: 5, audios: 0 };
+    default:
+      return { videos: 0, audios: 0 };
+  }
+}
 
 export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, media: KieVideoMedia): KieVideoPayload {
   const route = model.kie;
@@ -83,12 +101,17 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
   const first = media.firstFrame;
   const last = media.lastFrame;
   const refs = media.references ?? [];
+  const refVideos = media.referenceVideos ?? [];
+  const refAudios = media.referenceAudios ?? [];
   const frames = Boolean(first || last);
+  const takes = mediaLimits(route);
 
   if (Boolean(model.caps.videoEdit) !== (route.family === "wan27-edit")) throw badRequest(`${on} has no route for this kind of run`);
   if (last && !first) throw badRequest(`${on} needs a first frame with the last frame`);
   if (refs.length && !TAKES_REFERENCES.has(route.family)) throw badRequest("Takes no style references");
-  if (refs.length && frames) throw badRequest("Takes frames or style references, not both");
+  if (refVideos.length > takes.videos) throw badRequest(takes.videos ? `Takes up to ${takes.videos} reference videos` : "Takes no reference video");
+  if (refAudios.length > takes.audios) throw badRequest(takes.audios ? `Takes up to ${takes.audios} reference audio clips` : "Takes no reference audio");
+  if ((refs.length || refVideos.length || refAudios.length) && frames) throw badRequest("Takes frames or references, not both");
   if (req.audio === false && ALWAYS_SOUND.has(route.family)) throw badRequest("Always adds sound");
 
   const params: VideoParams = { duration: model.caps.videoEdit ? 0 : snapDuration(model, req.duration) };
@@ -138,6 +161,7 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
       } else {
         if (aspect) input.aspect_ratio = aspect;
         if (refs.length) input.image_urls = refs;
+        if (refVideos.length) input.video_urls = refVideos;
       }
       priceKey = "kling-4.0";
       break;
@@ -147,6 +171,10 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
       if (first) input.first_frame_url = first;
       if (last) input.last_frame_url = last;
       if (refs.length) input.reference_image_urls = refs;
+      // Seedance 2.0 takes reference audio only alongside an image or a video.
+      if (refAudios.length && !refs.length && !refVideos.length && route.model !== "bytedance/seedance-2-5") throw badRequest("Takes reference audio with a reference image or video");
+      if (refVideos.length) input.reference_video_urls = refVideos;
+      if (refAudios.length) input.reference_audio_urls = refAudios;
       break;
     case "minimax-h3":
       if (!prompt) throw badRequest("Needs a prompt");
@@ -164,6 +192,12 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
       if (first) input.first_frame_url = first;
       if (last) input.last_frame_url = last;
       if (refs.length) input.reference_image_urls = refs;
+      if (refVideos.length) input.reference_video_urls = refVideos;
+      if (refAudios.length) input.reference_audio_urls = refAudios;
+      // The reference videos and the clip together run 30 s at most.
+      if (refVideos.length && media.referenceVideoSec !== undefined && media.referenceVideoSec + params.duration > 30.05) {
+        throw badRequest(`Takes 30 s of reference video and clip together: make the clip ${Math.max(2, Math.floor(30 - media.referenceVideoSec))} s or shorter`);
+      }
       break;
     case "wan27":
       if (!prompt) throw badRequest("Needs a prompt");

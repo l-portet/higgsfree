@@ -32,6 +32,7 @@ import { countInFolder, getFolder as readFolder, listFolders as readFolders, put
 import { clearLibrary, getAllGenerations, getGeneration as readGeneration, listGenerations as readGenerations, patchGeneration, removeGeneration, toPublic, type GenerationPatch } from "./db/generations";
 import { normalizeNote } from "./notes";
 import { listUploads, putMedia } from "./db/media";
+import { detectAudio } from "./audio-meta";
 import { base64ToBytes, blobToDataUrl, toDataUrl } from "./data-url";
 import { cancelJob, retryGeneration as engineRetry, submitImageBatch, submitVideo } from "./engine";
 import { inputDataUrl } from "./engine/inputs";
@@ -40,7 +41,7 @@ import { compareFolders, FOLDER_COVER_COUNT, folderNameKey, newFolderId, normali
 import { detectImage } from "./image-meta";
 import { publish } from "./live";
 import * as fal from "./fal";
-import { MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-ids";
+import { MAX_AUDIO_UPLOAD_BYTES, MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES, newUploadId } from "./media-ids";
 import { revokeAllMediaUrls } from "./media-urls";
 import { chatText, listLiveModels, nativeImage } from "./openrouter";
 import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DEFAULT_PREVIEW_CONFIG, MAX_RECREATE_VIDEO_BYTES, storyboardLayout, type PreviewConfig, type RewriteContext } from "./prompt-editor";
@@ -345,13 +346,8 @@ export async function upload(file: Blob): Promise<UploadResponse> {
   return { media };
 }
 
-/** Store a reference video (motion control) in the library: MP4, MOV or WebM, up to 90 MB. */
-export async function uploadVideo(file: Blob): Promise<UploadResponse> {
-  if (file.size === 0) throw badRequest("Empty file");
-  if (file.size > MAX_VIDEO_UPLOAD_BYTES) throw new ApiClientError(413, `Video exceeds the ${Math.round(MAX_VIDEO_UPLOAD_BYTES / 1024 / 1024)} MB limit`);
-  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer());
-  const format = detectVideo(head);
-  if (!format) throw badRequest("Unsupported video type: only MP4, MOV and WebM are accepted");
+/** Store a sniffed file as an upload, typed by what its bytes are. */
+async function storeUpload(file: Blob, format: { ext: string; mime: string }): Promise<UploadResponse> {
   const id = newUploadId(format.ext);
   const blob = file.type === format.mime ? file : new Blob([file], { type: format.mime });
   try {
@@ -361,6 +357,24 @@ export async function uploadVideo(file: Blob): Promise<UploadResponse> {
     throw err;
   }
   return { media: { id, mime: format.mime, bytes: file.size } };
+}
+
+/** Store an input video (motion control, editing, reference clips) in the library: MP4, MOV or WebM, up to 90 MB. */
+export async function uploadVideo(file: Blob): Promise<UploadResponse> {
+  if (file.size === 0) throw badRequest("Empty file");
+  if (file.size > MAX_VIDEO_UPLOAD_BYTES) throw new ApiClientError(413, `Video exceeds the ${Math.round(MAX_VIDEO_UPLOAD_BYTES / 1024 / 1024)} MB limit`);
+  const format = detectVideo(new Uint8Array(await file.slice(0, 64).arrayBuffer()));
+  if (!format) throw badRequest("Unsupported video type: only MP4, MOV and WebM are accepted");
+  return storeUpload(file, format);
+}
+
+/** Store a reference audio clip in the library: MP3 or WAV, up to 15 MB. */
+export async function uploadAudio(file: Blob): Promise<UploadResponse> {
+  if (file.size === 0) throw badRequest("Empty file");
+  if (file.size > MAX_AUDIO_UPLOAD_BYTES) throw new ApiClientError(413, `Audio exceeds the ${Math.round(MAX_AUDIO_UPLOAD_BYTES / 1024 / 1024)} MB limit`);
+  const format = detectAudio(new Uint8Array(await file.slice(0, 64).arrayBuffer()));
+  if (!format) throw badRequest("Unsupported audio type: only MP3 and WAV are accepted");
+  return storeUpload(file, format);
 }
 
 // ---------- library stats ----------

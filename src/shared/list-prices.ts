@@ -14,6 +14,11 @@ export type ListPrice =
       amount: Amount;
       /** With the audio track on, when it costs more. */
       audioAmount?: Amount;
+      /**
+       * With reference videos attached: the run is billed on the output plus the reference videos' length, at this
+       * rate (`amount` when absent, as on Wan 3.0).
+       */
+      videoInputAmount?: Amount;
     }
   | {
       /** Per clip, whatever its length, or by its length. */

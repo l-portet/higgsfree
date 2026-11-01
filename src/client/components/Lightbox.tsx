@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, RefreshCw, RotateCcw, Trash2, VideoOff, WandSparkles, X } from "lucide-react";
+import { AudioLines, ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, Pause, RefreshCw, RotateCcw, Trash2, VideoOff, VolumeOff, WandSparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { downloadFilename } from "@/lib/files";
 import { formatBytes, formatDateTime, formatDims, formatDurationMs, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
@@ -124,7 +124,7 @@ function Details({ g }: { g: Generation }) {
         </dl>
       </section>
 
-      {g.inputs?.referenceImages?.length || g.inputs?.firstFrame || g.inputs?.lastFrame || g.inputs?.motionVideo || g.inputs?.sourceVideo ? (
+      {g.inputs?.referenceImages?.length || g.inputs?.referenceVideos?.length || g.inputs?.referenceAudios?.length || g.inputs?.firstFrame || g.inputs?.lastFrame || g.inputs?.motionVideo || g.inputs?.sourceVideo ? (
         <section>
           <h3 className="mb-2 text-label">Inputs</h3>
           <div className="flex flex-wrap gap-2">
@@ -134,6 +134,12 @@ function Details({ g }: { g: Generation }) {
             {g.inputs.lastFrame ? <InputThumb id={g.inputs.lastFrame} label="Last frame" /> : null}
             {g.inputs.referenceImages?.map((id, i) => (
               <InputThumb key={`${id}-${i}`} id={id} label={`Reference ${i + 1}`} />
+            ))}
+            {g.inputs.referenceVideos?.map((id, i) => (
+              <InputThumb key={`${id}-${i}`} id={id} label={`Video ${i + 1}`} video />
+            ))}
+            {g.inputs.referenceAudios?.map((id, i) => (
+              <AudioThumb key={`${id}-${i}`} id={id} label={`Audio ${i + 1}`} />
             ))}
           </div>
         </section>
@@ -214,6 +220,34 @@ function InputThumb({ id, label, video }: { id: string; label: string; video?: b
           <Missing size={18} aria-label={`${label} not available`} />
         )}
       </div>
+      <figcaption className="mt-1 truncate text-center text-caption">{label}</figcaption>
+    </figure>
+  );
+}
+
+/** A reference audio clip: a tile that plays it. */
+function AudioThumb({ id, label }: { id: string; label: string }) {
+  const src = useMediaUrl(id);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) void a.play();
+    else a.pause();
+  };
+  return (
+    <figure className="w-16">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={!src}
+        aria-label={src ? `${playing ? "Pause" : "Play"} ${label}` : `${label} not available`}
+        className="flex size-16 items-center justify-center rounded-thumb border border-border bg-surface-2 text-fg-muted transition-colors hover:text-fg disabled:text-fg-subtle"
+      >
+        {!src ? <VolumeOff size={18} /> : playing ? <Pause size={18} /> : <AudioLines size={18} />}
+      </button>
+      {src ? <audio ref={audioRef} src={src} preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} /> : null}
       <figcaption className="mt-1 truncate text-center text-caption">{label}</figcaption>
     </figure>
   );

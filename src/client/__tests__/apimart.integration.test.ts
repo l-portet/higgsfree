@@ -107,6 +107,27 @@ describe("APIMart videos", () => {
     await waitFor(completed(g.id));
   });
 
+  it("Gemini Omni Flash 1.2, on APIMart only: both frames uploaded, no duration sent, the cost recorded", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    await expect(video({ model: "google/gemini-omni-flash-1.2", duration: 8 })).rejects.toMatchObject({ status: 401, error: expect.stringContaining("APIMart") });
+    setProviderKey("apimart", APIMART_KEY);
+    const [first, last] = [await uploadImage(), await uploadImage()];
+    const g = await video({ model: "google/gemini-omni-flash-1.2", duration: 8, resolution: "1080p", aspectRatio: "9:16", firstFrame: first, lastFrame: last });
+    expect(g).toMatchObject({ provider: "apimart", params: { duration: 8, resolution: "1080p", aspectRatio: "9:16" } });
+    expect(mock.apimart("/v1/videos/generations")[0]?.body).toEqual({
+      model: "gemini-omni-1.2-flash",
+      prompt: "a fox in the snow",
+      resolution: "1080p",
+      aspect_ratio: "9:16",
+      first_frame_image: "https://upload.apimart.ai/f/image/up-1.png",
+      last_frame_image: "https://upload.apimart.ai/f/image/up-2.png",
+    });
+    await waitFor(completed(g.id));
+    expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", costUsd: 0.42 });
+  });
+
   it("a task APIMart fails ends with its message; a refused submit is a 400", async () => {
     setProviderKey("apimart", APIMART_KEY);
     const g = await video({ prompt: "APIMART_FAIL" });

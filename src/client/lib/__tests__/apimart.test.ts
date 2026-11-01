@@ -96,6 +96,29 @@ describe("buildApimartVideoPayload", () => {
     expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", lastFrame: "https://b" })).toThrow("Takes no last frame");
   });
 
+  it("Gemini Omni Flash 1.2: no duration, frames in their own fields, references as `image_urls`, the ratio with a frame too", () => {
+    const m = video("google/gemini-omni-flash-1.2");
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 5, aspectRatio: "9:16", resolution: "4K" }, {})).toEqual({
+      kind: "videos",
+      body: { model: "gemini-omni-1.2-flash", prompt: "p", resolution: "4k", aspect_ratio: "9:16" },
+      priceKey: "gemini-omni-1.2-flash",
+      params: { duration: 8, resolution: "4K", aspectRatio: "9:16" },
+    });
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 8, aspectRatio: "9:16" }, { firstFrame: "https://a", lastFrame: "https://b" })).toMatchObject({
+      body: { model: "gemini-omni-1.2-flash", prompt: "p", resolution: "720p", aspect_ratio: "9:16", first_frame_image: "https://a", last_frame_image: "https://b" },
+      params: { duration: 8, resolution: "720p", aspectRatio: "9:16" },
+    });
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 8 }, { references: ["https://r", "https://s"] }).body).toEqual({
+      model: "gemini-omni-1.2-flash",
+      prompt: "p",
+      resolution: "720p",
+      image_urls: ["https://r", "https://s"],
+    });
+    expect(() => buildApimartVideoPayload(m, { prompt: "", duration: 8 }, { firstFrame: "https://a" })).toThrow("Needs a prompt");
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 8 }, { lastFrame: "https://b" })).toThrow("needs a first frame");
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 8, aspectRatio: "1:1" }, {})).toThrow("Takes no 1:1");
+  });
+
   it("maps the other families' own field names", () => {
     expect(buildApimartVideoPayload(video("minimax/hailuo-3"), { prompt: "p", duration: 6 }, { firstFrame: "https://a" }).body).toEqual({
       model: "MiniMax-H3",
@@ -173,13 +196,15 @@ describe("resultUrls", () => {
 describe("APIMart prices", () => {
   it("price every route at its defaults, and nothing else", () => {
     // APIMart lists no price for these yet (read 30 Oct 2026): no estimate rather than a guessed one.
-    const unpriced = new Set(["gpt-image-2.6"]);
+    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6"]);
     const used = new Set<string>();
     for (const m of VIDEO_MODELS.filter((v) => v.apimart && !v.hidden)) {
       const durations: Partial<Record<string, number>> = { veo: 8, "gemini-omni": 8 };
       const req = { prompt: "a prompt", duration: durations[m.apimart?.family ?? ""] ?? m.defaultDuration, firstFrame: !m.caps.textToVideo };
-      used.add(apimartVideoPayloadFor(m, req).priceKey);
-      expect(estimateApimartVideoCost(m, req), `${m.id} on APIMart`).toBeGreaterThan(0);
+      const { priceKey } = apimartVideoPayloadFor(m, req);
+      used.add(priceKey);
+      if (unpriced.has(priceKey)) expect(estimateApimartVideoCost(m, req), `${m.id} on APIMart`).toBeUndefined();
+      else expect(estimateApimartVideoCost(m, req), `${m.id} on APIMart`).toBeGreaterThan(0);
     }
     for (const m of IMAGE_MODELS.filter((i) => i.apimart)) {
       const { priceKey } = buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []);

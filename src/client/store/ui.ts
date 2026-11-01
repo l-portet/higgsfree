@@ -24,6 +24,9 @@ export interface Draft {
   params?: ImageParams | VideoParams;
   /** Media ids (reference / edit images). */
   referenceImages?: string[];
+  /** Media ids (reference videos and audio of a video run). */
+  referenceVideos?: string[];
+  referenceAudios?: string[];
   /** Media ids (image-to-video anchor frames; motion control: the character image). */
   firstFrame?: string;
   lastFrame?: string;

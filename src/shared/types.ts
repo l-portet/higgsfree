@@ -53,6 +53,10 @@ export interface GenerationInputs {
   motionVideo?: string;
   /** Video editing: the video being edited (media id of an upload, or another record's output). */
   sourceVideo?: string;
+  /** Reference clips the model takes its cues from (media ids of uploaded videos, or other records' outputs). */
+  referenceVideos?: string[];
+  /** Reference audio: a voice, a song, sound effects (media ids of uploaded MP3 / WAV files). */
+  referenceAudios?: string[];
 }
 
 export interface Generation {
@@ -195,6 +199,11 @@ export interface VideoModel {
     motionControl?: boolean;
     /** Video editing: a source video (`sourceVideo`) and a prompt saying what to change are required; the clip keeps the source's length. */
     videoEdit?: boolean;
+    /**
+     * Takes reference videos and audio besides reference images (Wan 3.0, Seedance 2.0): how many of each, and how
+     * long they may run together (seconds, per kind). Absent = image references only. Like images, never with frames.
+     */
+    mediaReferences?: { videos: number; audios: number; maxSec: number };
   };
   /** Video editing: the provider's limits on the source video (absent = not known, left to the provider). */
   editSource?: {
@@ -328,7 +337,7 @@ export interface ApimartVideoRoute {
 }
 
 export type ApimartVideoFamily =
-  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "kling4" | "pixverse" | "pixverse-max" | "gemini-omni" | "flux3" | "vidu";
+  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "kling4" | "pixverse" | "pixverse-max" | "gemini-omni" | "gemini-omni12" | "flux3" | "vidu";
 
 export interface ApimartImageRoute {
   family: ApimartImageFamily;
@@ -373,6 +382,10 @@ export interface VideoGenerateRequest {
   lastFrame?: string;
   /** Style / character references (no frame lock). */
   references?: string[];
+  /** Reference videos (media ids), for models with `caps.mediaReferences`. */
+  referenceVideos?: string[];
+  /** Reference audio (media ids), for models with `caps.mediaReferences`. */
+  referenceAudios?: string[];
   /** Motion control: media id of the reference video (an upload). */
   motionVideo?: string;
   orientation?: MotionOrientation;
