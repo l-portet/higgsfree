@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 19 image models (8 of them fal-only) and 49 video models, of which 47 are offered
+Curated today: 20 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models)) and 49 video models, of which 47 are offered
 (17 fal-only, 2 [on kie.ai or APIMart only](#kieai-and-apimart-only), 7 of the 47 are
 [video editors](#video-editing)) and 2 are hidden.
 
@@ -57,6 +57,9 @@ Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Q
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
 model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
+
+Not on OpenRouter: the [fal-only image models](#fal-only-image-models), and GPT Image 2.6, which runs on
+APIMart only (see [APIMart-only image models](#apimart-only-image-models)).
 
 Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
 
@@ -213,6 +216,23 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 | **FLUX.1 [dev]** | `fal/flux-dev` | `fal-ai/flux/dev` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [schnell]** <sub>FAST</sub> | `fal/flux-schnell` | `fal-ai/flux/schnell` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 
+### APIMart-only image models
+
+Not on OpenRouter, fal nor kie.ai: these run only with an APIMart key (fields and rules in
+[APIMART.md](APIMART.md)). The id is the app's own (`<maker>/<name>`). None is verified yet.
+
+| Model | Id | APIMart model | t2i | i2i (max refs) | Sizes | Aspect ratios |
+|---|---|---|:-:|:-:|---|---|
+| **GPT Image 2.6** <sub>NEW</sub> | `openai/gpt-image-2.6` | `gpt-image-2.6` ¹ | ✓ | ✓ (8, `image_urls`) | 1K / 2K / 4K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 5:4, 4:5, 16:9, 9:16 |
+
+¹ OpenAI's GPT Image 2.6, read from APIMart's model page on 30 Oct 2026; not on fal, kie.ai or
+OpenRouter yet. Text to image and edits are one model, with GPT Image 2's APIMart fields: `size` is
+the ratio (`auto` by default), `resolution` `1k` / `2k` / `4k`, references as `image_urls`. APIMart
+takes 16 references, the app sends 8 at most. Not sent: `quality` (auto / low / medium / high, APIMart
+picks), `n` (up to 4; the app makes one call per image), `output_format` and `background`
+(transparent). APIMart lists no price for it yet, so there is no estimate; the cost of each run is
+recorded.
+
 ### kie.ai and APIMart only
 
 Not on OpenRouter nor fal: these run only with a kie.ai or APIMart key (fields and rules in
@@ -272,7 +292,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
 | MiniMax H3, H3 Max, Hailuo 2.3 | `MiniMax-H3`, `MiniMax-H3-Max`, `MiniMax-Hailuo-2.3` | Nano Banana 2 Lite | `gemini-3.1-flash-lite-image-ext` |
 | Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
-| Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2 | `gpt-image-2` |
+| Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here) | `gpt-image-2`, `gpt-image-2.6` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
 
@@ -435,7 +455,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, everything discovered is `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, or GPT Image 2.6 on APIMart only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, everything discovered is `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
