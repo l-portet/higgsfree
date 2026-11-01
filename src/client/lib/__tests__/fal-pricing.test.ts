@@ -21,7 +21,8 @@ const LATER = new Date("2026-12-01T12:00:00Z");
 describe("fal prices", () => {
   it("cover every endpoint the catalog routes to, at every size and resolution it offers, and nothing else", () => {
     const routed = new Set<string>();
-    for (const m of IMAGE_MODELS) {
+    // Upscalers are priced in `upscale.ts` (by the output's size, or a flat rate), not from `FAL_PRICES`.
+    for (const m of IMAGE_MODELS.filter((i) => !i.caps.upscale)) {
       for (const e of [m.fal?.textToImage, m.fal?.edit]) {
         if (!e) continue;
         routed.add(e);
@@ -30,7 +31,7 @@ describe("fal prices", () => {
         if (p?.unit === "image" && typeof p.usd !== "number") for (const s of m.sizes) expect(p.usd[s], `${e} at ${s}`).toBeDefined();
       }
     }
-    for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
+    for (const m of VIDEO_MODELS.filter((v) => !v.hidden && !v.caps.upscale)) {
       for (const e of [m.fal?.textToVideo, m.fal?.imageToVideo, m.fal?.firstLastFrameToVideo, m.fal?.motionControl, m.fal?.edit]) {
         if (!e) continue;
         routed.add(e);

@@ -8,20 +8,29 @@ export interface VideoFormat {
 export const OPENROUTER_VIDEO_MIME: Record<VideoFormat["ext"], string> = { mp4: "video/mp4", mov: "video/mov", webm: "video/webm" };
 
 /** A clip's length in seconds, as the browser reads it from the file's header. `undefined` when it cannot. */
-export function readVideoDuration(file: Blob, timeoutMs = 5000): Promise<number | undefined> {
+export async function readVideoDuration(file: Blob, timeoutMs = 5000): Promise<number | undefined> {
+  return (await readVideoMeta(file, timeoutMs)).durationSec;
+}
+
+/** A clip's length (seconds) and size (pixels), as the browser reads them from the file's header; each undefined when it cannot. */
+export function readVideoMeta(file: Blob, timeoutMs = 5000): Promise<{ durationSec?: number; width?: number; height?: number }> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
-    const done = (seconds?: number) => {
+    const done = (seconds?: number, width?: number, height?: number) => {
       clearTimeout(timer);
       video.removeAttribute("src");
       URL.revokeObjectURL(url);
-      resolve(seconds !== undefined && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined);
+      resolve({
+        durationSec: seconds !== undefined && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined,
+        width: width || undefined,
+        height: height || undefined,
+      });
     };
     const timer = setTimeout(() => done(), timeoutMs);
     video.preload = "metadata";
     video.muted = true;
-    video.onloadedmetadata = () => done(video.duration);
+    video.onloadedmetadata = () => done(video.duration, video.videoWidth, video.videoHeight);
     video.onerror = () => done();
     video.src = url;
   });

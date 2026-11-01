@@ -158,13 +158,16 @@ export function ModelPicker(props: ModelPickerProps) {
 
   const groups = useMemo(() => {
     if (terms.length) return [{ label: "Results", items: models.filter((m) => matches(m, terms)) }];
-    // Video editors (a video in, the same video changed out) get their own group under the featured models.
-    const editors = models.filter((m) => m.kind === "video" && m.caps.videoEdit);
-    const featured = models.filter((m) => m.featured && !editors.includes(m));
-    const rest = models.filter((m) => !m.featured && !editors.includes(m));
+    // Video editors (a video in, the same video changed out) and upscalers get their own groups under the featured models.
+    const upscalers = models.filter((m) => m.caps.upscale);
+    const editors = models.filter((m) => m.kind === "video" && m.caps.videoEdit && !m.caps.upscale);
+    const grouped = (m: CatalogModel) => editors.includes(m) || upscalers.includes(m);
+    const featured = models.filter((m) => m.featured && !grouped(m));
+    const rest = models.filter((m) => !m.featured && !grouped(m));
     const out: { label: string; items: CatalogModel[] }[] = [];
     if (featured.length) out.push({ label: "Featured", items: featured });
     if (editors.length) out.push({ label: "Edit a video", items: editors });
+    if (upscalers.length) out.push({ label: models[0]?.kind === "video" ? "Upscale a video" : "Upscale an image", items: upscalers });
     if (rest.length) out.push({ label: "All models", items: rest });
     return out;
   }, [models, terms]);

@@ -31,6 +31,8 @@ export interface MediaRef {
 export interface ImageParams {
   aspectRatio: ImageAspectRatio;
   size: ImageSize;
+  /** Upscalers: how many times wider and taller the image comes back (absent for a model with no factor). */
+  upscale?: number;
 }
 
 export interface VideoParams {
@@ -41,6 +43,8 @@ export interface VideoParams {
   audio?: boolean;
   /** Motion control only. */
   orientation?: MotionOrientation;
+  /** Upscalers: how many times wider and taller the clip comes back (absent for one that takes a target resolution). */
+  upscale?: number;
 }
 
 export interface GenerationInputs {
@@ -130,7 +134,7 @@ export interface FolderRequest {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "fal" | "openrouter" | "kie" | "apimart";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "fal" | "openrouter" | "kie" | "apimart";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -155,6 +159,11 @@ export interface ImageModel {
     imageToImage: boolean;
     /** Max reference images accepted (0 = none). */
     maxReferenceImages: number;
+    /**
+     * An upscaler: one image in (the reference), the same image larger out, no prompt. `factors`: the scales it
+     * offers (empty = it picks its own).
+     */
+    upscale?: { factors: number[] };
   };
   aspectRatios: ImageAspectRatio[];
   sizes: ImageSize[];
@@ -204,6 +213,11 @@ export interface VideoModel {
      * long they may run together (seconds, per kind). Absent = image references only. Like images, never with frames.
      */
     mediaReferences?: { videos: number; audios: number; maxSec: number };
+    /**
+     * An upscaler (with `videoEdit`: a source video in, its length kept), no prompt. `factors`: the scales it offers;
+     * empty = it takes a target resolution instead (`resolutions`).
+     */
+    upscale?: { factors: number[] };
   };
   /** Video editing: the provider's limits on the source video (absent = not known, left to the provider). */
   editSource?: {
@@ -265,6 +279,8 @@ export interface FalImageRoute {
   resolution?: boolean;
   /** Fixed fields sent with every request. */
   extra?: Record<string, string | number | boolean>;
+  /** An upscaler on `edit` (the image as `image_url`): the factor goes in `upscale_factor`; `png`: it takes PNG input only. */
+  upscale?: { factor?: boolean; png?: boolean };
 }
 
 /** How fal serves a video model. Values are mapped from the app's options on the way out. */
@@ -292,6 +308,8 @@ export interface FalVideoRoute {
   resolutions?: Partial<Record<VideoResolution, string>>;
   /** Field that toggles the audio track. */
   audio?: "generate_audio" | "generate_audio_switch";
+  /** An upscaler on `edit` (the video as `video_url`, no prompt): the scale as `upscale_factor`, or the resolution as `target_resolution`. */
+  upscale?: "upscale_factor" | "target_resolution";
   extra?: Record<string, string | number | boolean>;
 }
 
@@ -311,7 +329,7 @@ export interface KieVideoRoute {
 }
 
 export type KieVideoFamily =
-  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "pixverse" | "vidu" | "wan27-edit";
+  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "pixverse" | "vidu" | "wan27-edit" | "topaz-video-upscale";
 
 export interface KieImageRoute {
   family: KieImageFamily;
@@ -323,7 +341,7 @@ export interface KieImageRoute {
   tier?: string;
 }
 
-export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "flux-kontext" | "z-image";
+export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "flux-kontext" | "z-image" | "topaz-upscale" | "recraft-upscale";
 
 /**
  * How APIMart serves a model: `POST /v1/videos/generations` or `/v1/images/generations` with `{ model, prompt, … }`.
@@ -370,6 +388,8 @@ export interface ImageGenerateRequest {
   referenceImages?: string[];
   /** Run on this provider (picked in the composer) when it has a key and takes the request; otherwise the usual choice. */
   provider?: ProviderId;
+  /** Upscalers: the scale (one of the model's `caps.upscale.factors`). */
+  upscale?: number;
 }
 
 export interface VideoGenerateRequest {
@@ -395,6 +415,8 @@ export interface VideoGenerateRequest {
   sourceVideo?: string;
   /** Run on this provider (picked in the composer) when it has a key and takes the request; otherwise the cheapest. */
   provider?: ProviderId;
+  /** Upscalers: the scale (one of the model's `caps.upscale.factors`). */
+  upscale?: number;
 }
 
 export interface GenerateResponse {

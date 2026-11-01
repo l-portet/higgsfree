@@ -1,5 +1,5 @@
 import { memo, useRef, useState, type DragEvent, type FocusEvent, type ReactNode } from "react";
-import { CircleAlert, Download, Heart, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
+import { CircleAlert, Download, Heart, ImageUpscale, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { cn } from "@/lib/cn";
 import { downloadFilename } from "@/lib/files";
@@ -25,12 +25,13 @@ import { KeepMenu } from "@/components/favorites/KeepMenu";
 function paramsLabel(g: Generation): string {
   if (isImageParams(g.params)) {
     const dims = formatDims(g.output?.width, g.output?.height);
-    return [g.params.size, dims].filter(Boolean).join(" · ");
+    // An upscale: its scale rather than a quality it never had.
+    return [g.params.upscale ? `${g.params.upscale}x` : g.params.size, dims].filter(Boolean).join(" · ");
   }
   const p = g.params;
   const seconds = g.output?.durationSec ?? p.duration;
-  // Motion control and video editing: the length follows the input video and is known only once the clip is back.
-  return [seconds > 0 ? formatSeconds(seconds) : undefined, p.resolution].filter(Boolean).join(" · ");
+  // Motion control, video editing and upscaling: the length follows the input video and is known only once the clip is back.
+  return [seconds > 0 ? formatSeconds(seconds) : undefined, p.upscale ? `${p.upscale}x` : undefined, p.resolution].filter(Boolean).join(" · ");
 }
 
 export interface GenerationCardProps {
@@ -270,6 +271,9 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
                 ) : null}
                 <IconButton label={isVideo ? "Edit video" : "Animate"} size="sm" variant="overlay" onClick={isVideo ? actions.editVideo : actions.animate}>
                   <WandSparkles />
+                </IconButton>
+                <IconButton label={isVideo ? "Upscale video" : "Upscale image"} size="sm" variant="overlay" onClick={actions.upscale}>
+                  <ImageUpscale />
                 </IconButton>
                 <IconButton label="Reuse prompt" size="sm" variant="overlay" onClick={actions.reuse}>
                   <RotateCcw />

@@ -8,6 +8,7 @@
 import type { ImageAspectRatio, ImageModel, ImageSize, KieImageRoute, KieVideoRoute, VideoAspectRatio, VideoModel, VideoParams, VideoResolution } from "@shared/types";
 import { snapDuration } from "@shared/models";
 import { badRequest } from "./errors";
+import { kieUpscaleImage, kieUpscaleVideo } from "./upscale";
 
 export interface KiePayload {
   /** createTask `model`. */
@@ -25,6 +26,8 @@ export interface KieVideoParams {
   aspectRatio?: VideoAspectRatio;
   resolution?: VideoResolution;
   audio?: boolean;
+  /** Upscalers: the scale. */
+  upscale?: number;
 }
 
 export interface KieVideoMedia {
@@ -63,6 +66,7 @@ const VIDEO_LIMITS: Record<KieVideoRoute["family"], { durations?: number[]; aspe
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2k", "4K": "4k" } },
   "wan27-edit": { resolutions: { "720p": "720p", "1080p": "1080p" } },
+  "topaz-video-upscale": {},
 };
 
 /** "4–15 s" or "4, 6 or 8 s". */
@@ -95,6 +99,7 @@ function mediaLimits(route: KieVideoRoute): { videos: number; audios: number } {
 export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, media: KieVideoMedia): KieVideoPayload {
   const route = model.kie;
   if (!route) throw badRequest(`${model.name} is not available on kie.ai`);
+  if (model.caps.upscale) return kieUpscaleVideo(model, route, req, media.sourceVideo);
   const on = `${model.name} on kie.ai`;
   const limits = VIDEO_LIMITS[route.family];
   const prompt = req.prompt.trim();
@@ -267,6 +272,8 @@ export interface KieImageParams {
   prompt: string;
   aspectRatio: ImageAspectRatio;
   size: ImageSize;
+  /** Upscalers: the scale. */
+  upscale?: number;
 }
 
 /** Each family's aspect ratios (`auto` = kie's own default) and how many reference images it takes. */
@@ -277,11 +284,14 @@ const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[
   "gpt-image-2": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"], maxRefs: 16, sizes: true },
   "flux-kontext": { aspects: ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], maxRefs: 1 },
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16"], maxRefs: 0 },
+  "topaz-upscale": { aspects: ["auto"], maxRefs: 1 },
+  "recraft-upscale": { aspects: ["auto"], maxRefs: 1 },
 };
 
 export function buildKieImagePayload(model: ImageModel, req: KieImageParams, referenceUrls: string[]): KiePayload {
   const route = model.kie;
   if (!route) throw badRequest(`${model.name} is not available on kie.ai`);
+  if (model.caps.upscale) return kieUpscaleImage(model, route, referenceUrls[0], req.upscale);
   const limits = IMAGE_LIMITS[route.family];
   if (referenceUrls.length > limits.maxRefs) throw badRequest(limits.maxRefs ? `Takes up to ${limits.maxRefs} reference image${limits.maxRefs > 1 ? "s" : ""}` : "Takes no reference images");
   if (!limits.aspects.includes(req.aspectRatio)) throw badRequest(`Takes no ${req.aspectRatio}`);

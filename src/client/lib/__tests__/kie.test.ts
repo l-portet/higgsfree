@@ -185,13 +185,14 @@ describe("resultUrls", () => {
 describe("kie prices", () => {
   it("price every route at its defaults, and nothing else", () => {
     const used = new Set<string>();
-    for (const m of VIDEO_MODELS.filter((v) => v.kie && !v.hidden)) {
+    // Upscalers are priced in `upscale.ts`, not from `KIE_PRICES`.
+    for (const m of VIDEO_MODELS.filter((v) => v.kie && !v.hidden && !v.caps.upscale)) {
       const req = { prompt: "a prompt", duration: m.defaultDuration, firstFrame: !m.caps.textToVideo, videoSec: 5 };
       const defaults = m.kie?.family === "gemini-omni" ? { ...req, duration: 8 } : m.kie?.family === "grok" ? { ...req, duration: 6 } : req;
       used.add(kieVideoPayloadFor(m, defaults).priceKey);
       expect(estimateKieVideoCost(m, defaults), `${m.id} on kie`).toBeGreaterThan(0);
     }
-    for (const m of IMAGE_MODELS.filter((i) => i.kie)) {
+    for (const m of IMAGE_MODELS.filter((i) => i.kie && !i.caps.upscale)) {
       used.add(buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []).priceKey);
       expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on kie`).toBeGreaterThan(0);
     }

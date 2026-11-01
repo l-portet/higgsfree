@@ -9,6 +9,7 @@ import type { ImageModel, VideoModel } from "@shared/types";
 import { KIE_CREDIT_USD } from "./kie";
 import { buildKieImagePayload, buildKieVideoPayload, type KieImageParams, type KieVideoParams, type KieVideoPayload } from "./kie-payloads";
 import { imageListUsd, videoListUsd } from "./list-pricing";
+import { upscaleImageUsd, upscaleVideoUsd } from "./upscale";
 
 export interface KieVideoEstimate extends Omit<KieVideoParams, "prompt"> {
   prompt?: string;
@@ -43,6 +44,7 @@ export function kieVideoPayloadFor(model: VideoModel, req: KieVideoEstimate): Ki
 
 /** Estimated USD for one clip of `req` on kie.ai. */
 export function estimateKieVideoCost(model: VideoModel, req: KieVideoEstimate): number | undefined {
+  if (model.caps.upscale) return upscaleVideoUsd("kie", model, req, req.videoSec, {});
   let payload;
   try {
     payload = kieVideoPayloadFor(model, req);
@@ -56,6 +58,10 @@ export function estimateKieVideoCost(model: VideoModel, req: KieVideoEstimate): 
 
 /** Estimated USD for `count` images of `req` on kie.ai, with or without reference images. */
 export function estimateKieImageCost(model: ImageModel, req: Omit<KieImageParams, "prompt">, count: number, withRefs: boolean): number | undefined {
+  if (model.caps.upscale) {
+    const usd = upscaleImageUsd("kie", model, req.upscale, {});
+    return usd === undefined ? undefined : usd * count;
+  }
   let payload;
   try {
     payload = buildKieImagePayload(model, { ...req, prompt: "" }, withRefs ? ["https://ref"] : []);

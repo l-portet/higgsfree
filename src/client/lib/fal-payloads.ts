@@ -6,6 +6,7 @@
 import type { FalVideoRoute, ImageAspectRatio, ImageModel, ImageSize, MotionOrientation, VideoAspectRatio, VideoModel, VideoParams, VideoResolution } from "@shared/types";
 import { snapDuration } from "@shared/models";
 import { badRequest } from "./errors";
+import { falUpscaleImage, falUpscaleVideo } from "./upscale";
 
 export interface FalPayload {
   endpoint: string;
@@ -34,11 +35,14 @@ export interface FalImageParams {
   prompt: string;
   aspectRatio: ImageAspectRatio;
   size: ImageSize;
+  /** Upscalers: the scale. */
+  upscale?: number;
 }
 
 export function buildFalImagePayload(model: ImageModel, req: FalImageParams, referenceUrls: string[]): FalPayload {
   const route = model.fal;
   if (!route) throw badRequest(`${model.name} is not available on fal`);
+  if (model.caps.upscale) return falUpscaleImage(model, route, referenceUrls[0], req.upscale);
   const edit = referenceUrls.length > 0;
   const endpoint = edit ? route.edit : route.textToImage;
   if (!endpoint) throw badRequest(edit ? `${model.name} on fal does not take reference images` : `${model.name} needs at least one reference image`);
@@ -65,6 +69,8 @@ export interface FalVideoParams {
   resolution?: VideoResolution;
   audio?: boolean;
   orientation?: MotionOrientation;
+  /** Upscalers: the scale. */
+  upscale?: number;
 }
 
 export interface FalVideoMedia {
@@ -94,6 +100,7 @@ export function buildFalVideoPayload(model: VideoModel, req: FalVideoParams, med
   if (!route) throw badRequest(`${model.name} is not available on fal`);
   const prompt = req.prompt.trim();
 
+  if (model.caps.upscale) return falUpscaleVideo(model, route, req, media.sourceVideo);
   if (model.caps.videoEdit) {
     if (!route.edit) throw badRequest(`${model.name} has no video-edit endpoint on fal`);
     if (!media.sourceVideo) throw badRequest("Video editing needs a video to edit");

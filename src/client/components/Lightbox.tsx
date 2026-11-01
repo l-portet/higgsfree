@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { AudioLines, ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, Pause, RefreshCw, RotateCcw, Trash2, VideoOff, VolumeOff, WandSparkles, X } from "lucide-react";
+import { AudioLines, ChevronLeft, ChevronRight, CircleAlert, Copy, Download, Heart, ImageOff, ImageUpscale, Pause, RefreshCw, RotateCcw, Trash2, VideoOff, VolumeOff, WandSparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { downloadFilename } from "@/lib/files";
 import { formatBytes, formatDateTime, formatDims, formatDurationMs, formatElapsed, formatSeconds, formatUsd } from "@/lib/format";
@@ -162,6 +162,11 @@ function Details({ g }: { g: Generation }) {
         ) : out && g.status === "completed" ? (
           <Button leftIcon={<WandSparkles />} onClick={actions.editVideo}>
             Edit video
+          </Button>
+        ) : null}
+        {out && g.status === "completed" ? (
+          <Button leftIcon={<ImageUpscale />} onClick={actions.upscale}>
+            Upscale
           </Button>
         ) : null}
         <Button leftIcon={<RotateCcw />} onClick={actions.reuse}>

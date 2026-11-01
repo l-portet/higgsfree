@@ -1,6 +1,7 @@
 /** Inputs go to OpenRouter as data URLs, read from the library right before the call. */
 import type { GenerationInputs } from "@shared/types";
-import { blobToDataUrl } from "../data-url";
+import { blobToDataUrl, parseDataUrl } from "../data-url";
+import { detectImage } from "../image-meta";
 import { getMediaBlob, mediaExists } from "../db/media";
 import { badRequest } from "../errors";
 import { mimeForId } from "../media-ids";
@@ -29,6 +30,26 @@ export async function inputDataUrl(id: string): Promise<string> {
 
 export function inputDataUrls(ids: readonly string[]): Promise<string[]> {
   return Promise.all(ids.map(inputDataUrl));
+}
+
+/** A stored image's size, from its header (undefined when it cannot be read). */
+export async function storedImageSize(id: string): Promise<{ width?: number; height?: number }> {
+  const blob = await getMediaBlob(id);
+  if (!blob) return {};
+  const meta = detectImage(new Uint8Array(await blob.slice(0, 256 * 1024).arrayBuffer()));
+  return meta ? { width: meta.width, height: meta.height } : {};
+}
+
+/** An image data URL as PNG, for an endpoint that takes nothing else (Recraft Crisp on fal): redrawn on a canvas unless it is one already. */
+export async function pngDataUrl(dataUrl: string): Promise<string> {
+  if (dataUrl.startsWith("data:image/png")) return dataUrl;
+  const parsed = parseDataUrl(dataUrl);
+  if (!parsed) throw badRequest("The image could not be read");
+  const bitmap = await createImageBitmap(new Blob([parsed.bytes], { type: parsed.mime }));
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return blobToDataUrl(await canvas.convertToBlob({ type: "image/png" }));
 }
 
 /** A stored video as a data URL, typed the way OpenRouter names the format (the id's extension was sniffed on the way in). */

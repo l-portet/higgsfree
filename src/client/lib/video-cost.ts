@@ -30,6 +30,10 @@ export interface VideoQuoteRequest {
   referenceVideoSec?: number;
   /** Motion control and video editing: the input video's length, which sets the clip's. Unknown: no price. */
   videoSec?: number;
+  /** Upscalers: the scale, and the input video's size when known (fal's Topaz bills by the output's). */
+  upscale?: number;
+  videoWidth?: number;
+  videoHeight?: number;
 }
 
 export interface ProviderQuote {

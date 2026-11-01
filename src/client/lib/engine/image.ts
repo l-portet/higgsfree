@@ -13,6 +13,7 @@ import { publish } from "../live";
 import * as fal from "../fal";
 import { buildFalImagePayload } from "../fal-payloads";
 import { quoteImage } from "../image-cost";
+import { upscaleFactor } from "../upscale";
 import { pinQuote } from "../video-cost";
 import { isTaskProvider, TASK_PROVIDERS, type TaskProvider } from "../task-providers";
 import { errorMessage, log } from "../log";
@@ -22,7 +23,7 @@ import { buildImagePayload } from "../payloads";
 import { getPreferredProvider, getStoredKey } from "../settings";
 import { validateImageRequest } from "../validate";
 import { IMAGE_TIMEOUT_MS, limits, timing } from "./constants";
-import { assertInputsExist, inputDataUrls } from "./inputs";
+import { assertInputsExist, inputDataUrls, pngDataUrl, storedImageSize } from "./inputs";
 import { keyFor, resolveRun, storedKeys } from "./provider";
 import { failGeneration, isCancelled, savePublish, tryWithJobLock } from "./state";
 
@@ -43,16 +44,24 @@ export async function submitImageBatch(req: ImageGenerateRequest): Promise<Gener
   validateImageRequest(model, { ...req, prompt });
   const refIds = req.referenceImages ?? [];
   await assertInputsExist({ referenceImages: refIds });
+  // Upscalers: the scale sent, and the image's size (fal's Topaz bills by the output's).
+  const factor = model.caps.upscale ? upscaleFactor(model, req.upscale) : undefined;
+  const input = model.caps.upscale && refIds[0] ? await storedImageSize(refIds[0]) : {};
   // The provider picked in the composer, else the preferred one, that can take the request (`quoteImage`); when none
   // with a key can, the key-based choice stands and its refusal says why.
-  const quote = quoteImage(model, { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length }, storedKeys(), getPreferredProvider());
+  const quote = quoteImage(
+    model,
+    { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length, upscale: factor, inputWidth: input.width, inputHeight: input.height },
+    storedKeys(),
+    getPreferredProvider(),
+  );
   const chosen = pinQuote(quote, req.provider).provider;
   const chosenKey = chosen ? keyFor(chosen) : undefined;
   const { provider, key } = chosen && chosenKey ? { provider: chosen, key: chosenKey } : keyed;
 
   const ts = new Date().toISOString();
   const batchId = newBatchId();
-  const params: ImageParams = { aspectRatio: req.aspectRatio, size: req.size };
+  const params: ImageParams = { aspectRatio: req.aspectRatio, size: req.size, ...(factor ? { upscale: factor } : {}) };
   const rows: StoredGeneration[] = [];
   for (let i = 0; i < req.count; i++) {
     const g: Generation = {
@@ -82,9 +91,12 @@ async function runImageBatch(provider: ProviderId, key: string, model: ImageMode
 /** fal answers with a CDN url; the bytes are fetched (no key) and sniffed like any other image. */
 async function falImageBytes(key: string, model: ImageModel, row: StoredGeneration, refDataUrls: string[], signal: AbortSignal): Promise<Uint8Array<ArrayBuffer>> {
   const params = row.params as ImageParams;
-  const { endpoint, input } = buildFalImagePayload(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size }, refDataUrls);
-  const res = await fal.run<{ images?: { url?: string }[] }>(key, endpoint, input, signal);
-  const url = res.images?.[0]?.url;
+  // An endpoint that takes PNG only (Recraft Crisp) gets the image redrawn as one.
+  const refs = model.fal?.upscale?.png ? await Promise.all(refDataUrls.map(pngDataUrl)) : refDataUrls;
+  const { endpoint, input } = buildFalImagePayload(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size, upscale: params.upscale }, refs);
+  // Generators answer with a list, upscalers with the one image.
+  const res = await fal.run<{ images?: { url?: string }[]; image?: { url?: string } }>(key, endpoint, input, signal);
+  const url = res.images?.[0]?.url ?? res.image?.url;
   if (!url) throw new ApiClientError(502, "fal returned no image", res);
   return new Uint8Array(await (await fal.download(url, signal)).arrayBuffer());
 }
@@ -93,7 +105,7 @@ async function falImageBytes(key: string, model: ImageModel, row: StoredGenerati
 async function taskImage(tp: TaskProvider, key: string, model: ImageModel, row: StoredGeneration, refDataUrls: string[], signal: AbortSignal): Promise<{ bytes: Uint8Array<ArrayBuffer>; costUsd?: number }> {
   const params = row.params as ImageParams;
   const refs = await Promise.all(refDataUrls.map((u) => tp.uploadImage(key, u, signal)));
-  const url = tp.taskUrl(await tp.image(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size }, refs).submit(key, signal));
+  const url = tp.taskUrl(await tp.image(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size, upscale: params.upscale }, refs).submit(key, signal));
   for (;;) {
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, timing.pollIntervalMs);

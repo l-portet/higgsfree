@@ -37,6 +37,12 @@ export interface Draft {
   sourceVideo?: string;
 }
 
+export interface PendingUpscale {
+  type: GenerationType;
+  /** Media id of the image or video. */
+  mediaId: string;
+}
+
 export interface LightboxState {
   ids: string[];
   index: number;
@@ -69,6 +75,11 @@ interface UiState {
   pendingSourceVideo: string | null;
   setPendingSourceVideo: (id: string | null) => void;
   consumePendingSourceVideo: () => string | null;
+
+  /** An image or video handed to its composer to upscale (the composer switches to an upscaler). */
+  pendingUpscale: PendingUpscale | null;
+  setPendingUpscale: (pending: PendingUpscale | null) => void;
+  consumePendingUpscale: (type: GenerationType) => string | null;
 
   draft: Draft | null;
   setDraft: (draft: Draft | null) => void;
@@ -119,6 +130,15 @@ export const useUi = create<UiState>()((set, get) => ({
     const id = get().pendingSourceVideo;
     if (id) set({ pendingSourceVideo: null });
     return id;
+  },
+
+  pendingUpscale: null,
+  setPendingUpscale: (pending) => set({ pendingUpscale: pending }),
+  consumePendingUpscale: (type) => {
+    const p = get().pendingUpscale;
+    if (!p || p.type !== type) return null;
+    set({ pendingUpscale: null });
+    return p.mediaId;
   },
 
   draft: null,
