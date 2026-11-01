@@ -3,7 +3,7 @@ import { SITE_DESCRIPTION } from "@shared/site";
 
 export const DEFAULT_TITLE = "higgsfree — open-source AI image & video studio";
 
-const CARD_IMAGE = { url: "/og-image.png", width: 1200, height: 630, alt: "higgsfree" };
+const CARD_IMAGE = { url: "/og-image.png", width: 1200, height: 630, alt: "higgsfree — AI images and video, on your own key" };
 
 export interface CardInput {
   /** The page's own url. Omitted in the layout, which has no url of its own. */
