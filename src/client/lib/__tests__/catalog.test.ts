@@ -199,11 +199,14 @@ describe("video models (hidden)", () => {
 describe("fal routes", () => {
   it("every fal-only model has a route, and every route covers what the model offers", () => {
     for (const m of IMAGE_MODELS) {
-      if (m.offOpenRouter) expect(m.fal, `${m.id} is fal-only without a route`).toBeDefined();
+      // GPT Image 2.6 is only on APIMart.
+      if (m.offOpenRouter) {
+        expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
+        expect(m.endpoint).toBe("fal");
+      }
       if (!m.fal) continue;
       if (m.caps.textToImage) expect(m.fal.textToImage, `${m.id} text-to-image endpoint`).toBeTruthy();
       if (m.caps.imageToImage) expect(m.fal.edit, `${m.id} edit endpoint`).toBeTruthy();
-      if (m.offOpenRouter) expect(m.endpoint).toBe("fal");
     }
     for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
       // PixVerse 6 Max is only on kie.ai and APIMart, Gemini Omni Flash 1.2 only on APIMart.

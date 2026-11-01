@@ -157,6 +157,30 @@ describe("APIMart images", () => {
     });
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42, output: { mime: "image/png", width: 2, height: 2 } });
   });
+
+  it("GPT Image 2.6, on APIMart only: refused without its key, then run there with the references uploaded, the cost recorded", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const req = { prompt: "p", model: "openai/gpt-image-2.6", aspectRatio: "4:5" as const, size: "4K" as const, count: 1 };
+    await expect(api.generateImage(req)).rejects.toMatchObject({ status: 401, error: "GPT Image 2.6 runs on APIMart. Add an APIMart key in Settings to use it." });
+    expect((await api.listGenerations()).items).toHaveLength(0);
+    setProviderKey("apimart", APIMART_KEY);
+    const refs = [await uploadImage(), await uploadImage()];
+    const g = (await api.generateImage({ ...req, referenceImages: refs })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g).toMatchObject({ provider: "apimart", params: { aspectRatio: "4:5", size: "4K" } });
+    await waitFor(completed(g.id));
+    expect(mock.apimart("/v1/images/generations")[0]?.body).toEqual({
+      model: "gpt-image-2.6",
+      prompt: "p",
+      n: 1,
+      image_urls: ["https://upload.apimart.ai/f/image/up-1.png", "https://upload.apimart.ai/f/image/up-2.png"],
+      size: "4:5",
+      resolution: "4k",
+    });
+    expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
+  });
 });
 
 describe("APIMart key", () => {

@@ -144,7 +144,8 @@ export interface ImageModel {
   /**
    * Which OpenRouter endpoint serves this model: `chat` (chat completions with `image_config`),
    * `images` (the OpenAI-style `/images/generations`), or `native` (`POST /api/v1/images`, whose
-   * options come straight from OpenRouter's image catalog). `fal` = not on OpenRouter at all.
+   * options come straight from OpenRouter's image catalog). `fal` = not on OpenRouter at all (it runs on its
+   * `fal`, `kie` or `apimart` route).
    */
   endpoint: "chat" | "images" | "native" | "fal";
   featured: boolean;
