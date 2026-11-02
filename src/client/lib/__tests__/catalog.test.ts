@@ -82,7 +82,8 @@ describe("image models", () => {
 describe("video models (visible)", () => {
   it.each(VISIBLE_VIDEO.map((m) => [m.id, m] as const))("%s: resolutions, durations, defaults and costs are consistent", (_id, m) => {
     // fal-only models: no resolution choice on some endpoints, and no published price (see above).
-    if (!m.offOpenRouter) expect(m.resolutions.length).toBeGreaterThan(0);
+    // Upscalers take a scale instead.
+    if (!m.offOpenRouter && !m.caps.upscale) expect(m.resolutions.length).toBeGreaterThan(0);
     expect(new Set(m.resolutions).size).toBe(m.resolutions.length);
     expect(m.aspectRatios.length).toBeGreaterThan(0);
     for (const ar of m.aspectRatios) expect(VIDEO_ASPECT_RATIOS, `${m.id} lists unknown aspect ratio ${ar}`).toContain(ar);
@@ -102,7 +103,8 @@ describe("video models (visible)", () => {
     }
 
     if (m.defaultResolution !== undefined) expect(m.resolutions, `${m.id} defaultResolution ${m.defaultResolution}`).toContain(m.defaultResolution);
-    if (!m.offOpenRouter) expect(estimateVideoCost(m, m.defaultDuration), `${m.id} default cost`).toBeGreaterThan(0);
+    // An upscaler's price follows the source's size and length (`lib/upscale.ts`), not a per-second rate.
+    if (!m.offOpenRouter && !m.caps.upscale) expect(estimateVideoCost(m, m.defaultDuration), `${m.id} default cost`).toBeGreaterThan(0);
 
     const durations = allowedDurations(m);
     expect(durations.length).toBeGreaterThan(0);

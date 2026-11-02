@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { Check, Gem, ImageUpscale, Plus } from "lucide-react";
+import { Check, Gem, ImageUpscale, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { ImageAspectRatio, ImageGenerateRequest, ImageModel, ImageSize, ProviderId } from "@shared/types";
 import { DEFAULT_IMAGE_MODEL } from "@shared/models";
@@ -112,6 +112,8 @@ export function ImageComposer() {
   /** Upscalers: the image to upscale (kept apart from the references, which the other models use) and the scale. */
   const [source, setSource] = useState<Frame | null>(null);
   const [factor, setFactor] = useState<number>(2);
+  /** Upscalers with a creative mode: it is on. */
+  const [creative, setCreative] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [arOpen, setArOpen] = useState(false);
@@ -214,6 +216,7 @@ export function ImageComposer() {
       const id = draft.referenceImages?.[0];
       if (id) setSource(frameFromMedia(id));
       if (draft.params && "size" in draft.params && draft.params.upscale) setFactor(draft.params.upscale);
+      if (draft.params && "size" in draft.params) setCreative(Boolean(draft.params.creative));
       return;
     }
     setPrompt(draft.prompt);
@@ -246,6 +249,7 @@ export function ImageComposer() {
   const notice = keyGate.notice;
 
   const sentFactor = model?.caps.upscale ? upscaleFactor(model, factor) : undefined;
+  const sentCreative = upscaleMode && Boolean(model?.caps.upscale?.creative) && creative;
   const disabledReason: string | null = !model
     ? "No image models available"
     : upscaleMode
@@ -269,7 +273,7 @@ export function ImageComposer() {
       ? quoteImage(
           model,
           upscaleMode
-            ? { aspectRatio: "auto", size: "1K", count: 1, references: 1, upscale: f, inputWidth: source?.width, inputHeight: source?.height }
+            ? { aspectRatio: "auto", size: "1K", count: 1, references: 1, upscale: f, creative: sentCreative, inputWidth: source?.width, inputHeight: source?.height }
             : { aspectRatio, size, count, references: refCount },
           keyGate.keys,
         )
@@ -287,6 +291,7 @@ export function ImageComposer() {
       if (!source) return;
       req = { prompt: "", model: model.id, aspectRatio: "auto", size: "1K", count: 1, referenceImages: [frameInput(source)] };
       if (sentFactor) req.upscale = sentFactor;
+      if (sentCreative) req.creative = true;
     } else {
       req = { prompt: trimmed, model: model.id, aspectRatio, size, count };
       if (refs.length) req.referenceImages = refs.map(frameInput);
@@ -384,7 +389,7 @@ export function ImageComposer() {
               const q = quoteFor(f);
               const runs = q ? pinQuote(q, pinned) : undefined;
               const usd = runs?.quotes.find((x) => x.provider === runs.provider)?.usd;
-              const out = source?.width && source.height ? `${source.width * f} × ${source.height * f}` : "";
+              const out = source?.width && source.height ? `${Math.round(source.width * f)} × ${Math.round(source.height * f)}` : "";
               return (
                 <PopoverItem
                   key={f}
@@ -405,6 +410,19 @@ export function ImageComposer() {
         </PopoverContent>
       </Popover>
     ) : null;
+
+  // An upscaler's creative mode (generative detail instead of a faithful upscale), for the ones that have it.
+  const creativeChip = model.caps.upscale?.creative ? (
+    <Chip
+      icon={<Sparkles />}
+      label="Creative"
+      tone="accent"
+      active={creative}
+      aria-pressed={creative}
+      onClick={() => setCreative((c) => !c)}
+      title={creative ? "Creative: rebuilds detail, may change small things" : "Faithful: sharper, nothing new added"}
+    />
+  ) : null;
 
   return (
     <ComposerFrame
@@ -462,7 +480,12 @@ export function ImageComposer() {
             </ModelPicker>
           </ModeModelChip>
 
-          {upscaleMode ? scaleChip : (
+          {upscaleMode ? (
+            <>
+              {scaleChip}
+              {creativeChip}
+            </>
+          ) : (
           <>
           <Popover open={arOpen} onOpenChange={setArOpen}>
             <PopoverTrigger asChild>

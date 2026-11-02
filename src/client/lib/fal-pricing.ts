@@ -36,7 +36,7 @@ const at = (usd: ByResolution | undefined, res: VideoResolution | undefined): nu
 /** Estimated USD for `count` images of `req` on fal, with or without reference images. `input`: an upscaler's image size. */
 export function estimateFalImageCost(model: ImageModel, req: Omit<FalImageParams, "prompt">, count: number, withRefs: boolean, input: UpscaleInput = {}): number | undefined {
   if (model.caps.upscale) {
-    const usd = upscaleImageUsd("fal", model, req.upscale, input);
+    const usd = upscaleImageUsd("fal", model, req.upscale, input, req.creative);
     return usd === undefined ? undefined : usd * count;
   }
   let payload;

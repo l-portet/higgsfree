@@ -116,6 +116,9 @@ async function resubmit(g: Generation): Promise<Generation[]> {
     const p = g.params as ImageParams;
     const req: ImageGenerateRequest = { prompt: g.prompt, model: g.model, aspectRatio: p.aspectRatio ?? "auto", size: p.size ?? "1K", count: 1 };
     if (g.inputs?.referenceImages?.length) req.referenceImages = g.inputs.referenceImages;
+    // An upscale runs again at the same scale and mode.
+    if (p.upscale) req.upscale = p.upscale;
+    if (p.creative) req.creative = true;
     return submitImageBatch(req);
   }
   const p = g.params as VideoParams;
@@ -123,6 +126,8 @@ async function resubmit(g: Generation): Promise<Generation[]> {
   if (p.aspectRatio) req.aspectRatio = p.aspectRatio;
   if (p.resolution) req.resolution = p.resolution;
   if (p.audio !== undefined) req.audio = p.audio;
+  if (p.upscale) req.upscale = p.upscale;
+  if (p.creative) req.creative = true;
   if (g.inputs?.firstFrame) req.firstFrame = g.inputs.firstFrame;
   if (g.inputs?.lastFrame) req.lastFrame = g.inputs.lastFrame;
   if (g.inputs?.referenceImages?.length) req.references = g.inputs.referenceImages;

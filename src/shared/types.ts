@@ -33,6 +33,8 @@ export interface ImageParams {
   size: ImageSize;
   /** Upscalers: how many times wider and taller the image comes back (absent for a model with no factor). */
   upscale?: number;
+  /** Upscalers with a creative mode: it was on (generative detail rather than a faithful upscale). */
+  creative?: boolean;
 }
 
 export interface VideoParams {
@@ -45,6 +47,8 @@ export interface VideoParams {
   orientation?: MotionOrientation;
   /** Upscalers: how many times wider and taller the clip comes back (absent for one that takes a target resolution). */
   upscale?: number;
+  /** Upscalers with a creative mode: it was on (generative detail rather than a faithful upscale). */
+  creative?: boolean;
 }
 
 export interface GenerationInputs {
@@ -161,9 +165,9 @@ export interface ImageModel {
     maxReferenceImages: number;
     /**
      * An upscaler: one image in (the reference), the same image larger out, no prompt. `factors`: the scales it
-     * offers (empty = it picks its own).
+     * offers (empty = it picks its own); `creative`: it has a creative mode (generative detail), a toggle in the composer.
      */
-    upscale?: { factors: number[] };
+    upscale?: { factors: number[]; creative?: boolean };
   };
   aspectRatios: ImageAspectRatio[];
   sizes: ImageSize[];
@@ -219,7 +223,7 @@ export interface VideoModel {
      * An upscaler (with `videoEdit`: a source video in, its length kept), no prompt. `factors`: the scales it offers;
      * empty = it takes a target resolution instead (`resolutions`).
      */
-    upscale?: { factors: number[] };
+    upscale?: { factors: number[]; creative?: boolean };
   };
   /** Video editing: the provider's limits on the source video (absent = not known, left to the provider). */
   editSource?: {
@@ -283,8 +287,11 @@ export interface FalImageRoute {
   resolution?: boolean;
   /** Fixed fields sent with every request. */
   extra?: Record<string, string | number | boolean>;
-  /** An upscaler on `edit` (the image as `image_url`): the factor goes in `upscale_factor`; `png`: it takes PNG input only. */
-  upscale?: { factor?: boolean; png?: boolean };
+  /**
+   * An upscaler on `edit` (the image as `image_url`): the factor goes in `upscale_factor`; `png`: it takes PNG input only;
+   * `creativeEdit`: the endpoint its creative mode runs on instead.
+   */
+  upscale?: { factor?: boolean; png?: boolean; creativeEdit?: string };
 }
 
 /** How fal serves a video model. Values are mapped from the app's options on the way out. */
@@ -314,6 +321,8 @@ export interface FalVideoRoute {
   audio?: "generate_audio" | "generate_audio_switch";
   /** An upscaler on `edit` (the video as `video_url`, no prompt): the scale as `upscale_factor`, or the resolution as `target_resolution`. */
   upscale?: "upscale_factor" | "target_resolution";
+  /** An upscaler's creative mode: another endpoint (`edit`), or a 0/1 field on the same one (`field`). */
+  upscaleCreative?: { edit?: string; field?: string };
   extra?: Record<string, string | number | boolean>;
 }
 
@@ -402,6 +411,8 @@ export interface ImageGenerateRequest {
   provider?: ProviderId;
   /** Upscalers: the scale (one of the model's `caps.upscale.factors`). */
   upscale?: number;
+  /** Upscalers with `caps.upscale.creative`: the creative mode. */
+  creative?: boolean;
 }
 
 export interface VideoGenerateRequest {
@@ -429,6 +440,8 @@ export interface VideoGenerateRequest {
   provider?: ProviderId;
   /** Upscalers: the scale (one of the model's `caps.upscale.factors`). */
   upscale?: number;
+  /** Upscalers with `caps.upscale.creative`: the creative mode. */
+  creative?: boolean;
 }
 
 export interface GenerateResponse {

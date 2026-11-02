@@ -26,8 +26,9 @@ export interface KieVideoParams {
   aspectRatio?: VideoAspectRatio;
   resolution?: VideoResolution;
   audio?: boolean;
-  /** Upscalers: the scale. */
+  /** Upscalers: the scale, and the creative mode (none on kie.ai). */
   upscale?: number;
+  creative?: boolean;
 }
 
 export interface KieVideoMedia {
@@ -272,8 +273,9 @@ export interface KieImageParams {
   prompt: string;
   aspectRatio: ImageAspectRatio;
   size: ImageSize;
-  /** Upscalers: the scale. */
+  /** Upscalers: the scale, and the creative mode (none on kie.ai). */
   upscale?: number;
+  creative?: boolean;
 }
 
 /** Each family's aspect ratios (`auto` = kie's own default) and how many reference images it takes. */
@@ -291,7 +293,7 @@ const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[
 export function buildKieImagePayload(model: ImageModel, req: KieImageParams, referenceUrls: string[]): KiePayload {
   const route = model.kie;
   if (!route) throw badRequest(`${model.name} is not available on kie.ai`);
-  if (model.caps.upscale) return kieUpscaleImage(model, route, referenceUrls[0], req.upscale);
+  if (model.caps.upscale) return kieUpscaleImage(model, route, referenceUrls[0], req.upscale, req.creative);
   const limits = IMAGE_LIMITS[route.family];
   if (referenceUrls.length > limits.maxRefs) throw badRequest(limits.maxRefs ? `Takes up to ${limits.maxRefs} reference image${limits.maxRefs > 1 ? "s" : ""}` : "Takes no reference images");
   if (!limits.aspects.includes(req.aspectRatio)) throw badRequest(`Takes no ${req.aspectRatio}`);

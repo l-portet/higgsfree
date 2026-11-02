@@ -21,11 +21,12 @@ function validateImageUpscale(model: ImageModel, req: ImageGenerateRequest): voi
   if (req.upscale !== undefined && !factors.includes(req.upscale)) {
     throw badRequest(factors.length ? `${model.name} upscales ${factors.map((f) => `${f}x`).join(" or ")}` : `${model.name} picks its own scale. Leave it unset.`);
   }
+  if (req.creative && !model.caps.upscale?.creative) throw badRequest(`${model.name} has no creative mode`);
 }
 
 export function validateImageRequest(model: ImageModel, req: ImageGenerateRequest): void {
   if (model.caps.upscale) return validateImageUpscale(model, req);
-  if (req.upscale !== undefined) throw badRequest(`${model.name} does not upscale`);
+  if (req.upscale !== undefined || req.creative) throw badRequest(`${model.name} does not upscale`);
   if (!req.prompt.trim()) throw badRequest("Prompt is required");
   if (req.prompt.length > MAX_PROMPT_CHARS) throw badRequest(`Prompt is longer than ${MAX_PROMPT_CHARS} characters`);
   if (!Number.isInteger(req.count) || req.count < 1 || req.count > MAX_IMAGE_COUNT) throw badRequest(`count must be between 1 and ${MAX_IMAGE_COUNT}`);
@@ -74,13 +75,14 @@ export function validateVideoRequest(model: VideoModel, req: VideoGenerateReques
     if (req.upscale !== undefined && !factors.includes(req.upscale)) {
       throw badRequest(factors.length ? `${model.name} upscales ${factors.map((f) => `${f}x`).join(" or ")}` : `${model.name} takes a target resolution, not a scale`);
     }
+    if (req.creative && !model.caps.upscale.creative) throw badRequest(`${model.name} has no creative mode`);
     if (req.resolution !== undefined && !model.resolutions.includes(req.resolution)) {
       if (model.resolutions.length === 0) throw badRequest(`${model.name} takes a scale, not a resolution. Leave it unset.`);
       throw new UnsupportedOptionError(model.name, "resolution", req.resolution, model.resolutions);
     }
     return;
   }
-  if (req.upscale !== undefined) throw badRequest(`${model.name} does not upscale`);
+  if (req.upscale !== undefined || req.creative) throw badRequest(`${model.name} does not upscale`);
   if (model.caps.videoEdit) {
     assertMediaIds([req.sourceVideo], "The video to edit", "video");
     if (!req.sourceVideo) throw badRequest(`${model.name} needs a video to edit`);

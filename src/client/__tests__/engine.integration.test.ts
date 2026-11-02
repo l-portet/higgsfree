@@ -420,7 +420,8 @@ describe("live model catalog", () => {
     const { video } = await api.getModels();
     const ids = video.map((m) => m.id);
     expect(ids).toContain("x-ai/grok-imagine-video-1.5-lite");
-    expect(ids).not.toContain("black-forest-labs/flux-video-upscale"); // upscaling
+    // The curated upscaler stays an upscaler (a scale, a creative mode, the source's length).
+    expect(video.find((m) => m.id === "black-forest-labs/flux-video-upscale")).toMatchObject({ caps: { videoEdit: true, upscale: { factors: [1.5, 2, 3], creative: true } } });
     expect(ids).not.toContain("heygen/avatar-iv"); // needs audio
     // Curated editors stay, with their own options and OpenRouter's price (and minimum).
     expect(video.find((m) => m.id === "black-forest-labs/flux-video-edit")).toMatchObject({ caps: { videoEdit: true }, resolutions: ["720p"], estCostPerSecUsd: { "720p": 0.03 } });

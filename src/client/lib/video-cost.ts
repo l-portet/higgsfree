@@ -9,6 +9,7 @@ import { estimateFalVideoCost, falVideoPayloadFor } from "./fal-pricing";
 import { apimartVideoPayloadFor, estimateApimartVideoCost } from "./apimart-pricing";
 import { estimateKieVideoCost, kieVideoPayloadFor } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
+import { upscaleVideoUsd } from "./upscale";
 import { estimateRevanaVideoCost, revanaVideoPayloadFor } from "./revana-pricing";
 
 /** The parts of a video request that set its price, or whether a provider takes it. */
@@ -32,6 +33,8 @@ export interface VideoQuoteRequest {
   videoSec?: number;
   /** Upscalers: the scale, and the input video's size when known (fal's Topaz bills by the output's). */
   upscale?: number;
+  /** Upscalers with a creative mode: it is on. */
+  creative?: boolean;
   videoWidth?: number;
   videoHeight?: number;
 }
@@ -68,6 +71,7 @@ export interface VideoQuote {
 export const SAME_PRICE_USD = 0.005;
 
 function openRouterUsd(model: VideoModel, req: VideoQuoteRequest): number | undefined {
+  if (model.caps.upscale) return upscaleVideoUsd("openrouter", model, req, req.videoSec, { width: req.videoWidth, height: req.videoHeight });
   if (model.caps.videoEdit) return req.videoSec === undefined ? undefined : estimateVideoCost(model, editedLength(model, req.videoSec), req.resolution);
   return estimateVideoCost(model, snapDuration(model, req.duration), req.resolution, req.audio);
 }
