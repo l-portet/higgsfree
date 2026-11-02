@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import type { Generation, MotionOrientation, ProviderId, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
 import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, DEFAULT_VIDEO_UPSCALE_MODEL, editedLength, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
-import { describeApiError } from "@/lib/api";
+import { ApiClientError, describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { audioFilesFromDataTransfer, dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pickAudioFiles, pickImageFiles, pickVideoFiles, videoFilesFromDataTransfer } from "@/lib/files";
 import { formatSeconds, formatUsd, ratioLabel } from "@/lib/format";
@@ -570,13 +570,34 @@ export function VideoComposer() {
     }
     if (pinned) req.provider = pinned;
     setSubmitting(true);
+    // Generate frees up once the run's card is in the feed, not when the provider took the job: uploading a clip to
+    // upscale or edit can take minutes, and other runs can start meanwhile. A failure after that shows on the card
+    // and in a toast.
+    const startRun = () =>
+      new Promise<Generation>((resolve, reject) => {
+        let queued = false;
+        api
+          .generateVideo(req, (g) => {
+            queued = true;
+            resolve(g);
+          })
+          .then(
+            (res) => resolve(res.generations[0] as Generation),
+            (err: unknown) => {
+              if (!queued) reject(err);
+              else if (!(err instanceof ApiClientError && (err.status === 409 || err.status === 499))) {
+                toast.error("Generation failed", { description: describeApiError(err) });
+              }
+            },
+          );
+      });
     try {
       // `count` clips are `count` independent jobs: one request each, in parallel.
-      const results = await Promise.allSettled(Array.from({ length: runs }, () => api.generateVideo(req)));
+      const results = await Promise.allSettled(Array.from({ length: runs }, startRun));
       const done: Generation[] = [];
       let failure: unknown;
       for (const r of results) {
-        if (r.status === "fulfilled") done.push(...r.value.generations);
+        if (r.status === "fulfilled") done.push(r.value);
         else failure ??= r.reason;
       }
       if (done.length) useGenerations.getState().upsert(done);

@@ -325,7 +325,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
 }
 
 /** Insert the pending record, submit, mark it running. Throws after failing the record. */
-async function startVideo(p: PreparedVideo, signal: AbortSignal): Promise<StoredGeneration> {
+async function startVideo(p: PreparedVideo, signal: AbortSignal, onQueued?: (g: Generation) => void): Promise<StoredGeneration> {
   const ts = new Date().toISOString();
   const g: Generation = {
     id: p.id, type: "video", status: "pending", prompt: p.prompt, model: p.model.id, modelName: p.model.name, params: p.params, provider: p.provider, createdAt: ts, updatedAt: ts,
@@ -334,6 +334,7 @@ async function startVideo(p: PreparedVideo, signal: AbortSignal): Promise<Stored
   const row = toStored(g);
   await insertGenerations([row], limits.maxActiveJobs);
   publish({ type: "generation", generation: toPublic(row) });
+  onQueued?.(toPublic(row));
   try {
     const submitted = await p.submit(signal);
     const running = await savePublish(p.id, { status: "running", providerJobId: submitted.jobId, pollingUrl: submitted.pollingUrl });
@@ -349,8 +350,10 @@ async function startVideo(p: PreparedVideo, signal: AbortSignal): Promise<Stored
 /**
  * Resolves once the provider accepted the job (the record is `running`); the poll loop
  * keeps going under the same lock until the clip is in the library or the job failed.
+ * `onQueued` fires earlier, as soon as the pending record exists: before the inputs are
+ * uploaded and the provider answers, which for a long clip to upscale can take minutes.
  */
-export function submitVideo(req: VideoGenerateRequest): Promise<Generation> {
+export function submitVideo(req: VideoGenerateRequest, onQueued?: (g: Generation) => void): Promise<Generation> {
   return new Promise<Generation>((resolve, reject) => {
     let settled = false;
     const settle = (fn: () => void): void => {
@@ -369,7 +372,7 @@ export function submitVideo(req: VideoGenerateRequest): Promise<Generation> {
       const result = await tryWithJobLock(prepared.id, "video", async (signal) => {
         let started: StoredGeneration;
         try {
-          started = await startVideo(prepared, signal);
+          started = await startVideo(prepared, signal, onQueued);
         } catch (err) {
           settle(() => reject(err as Error));
           return;

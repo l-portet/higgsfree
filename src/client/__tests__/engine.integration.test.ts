@@ -119,6 +119,18 @@ describe("image pipeline", () => {
 });
 
 describe("video pipeline", () => {
+  it("announces the pending record before the provider has the job, so the composer frees up while inputs upload", async () => {
+    const queued: Generation[] = [];
+    let submitsAtQueue = -1;
+    const res = await api.generateVideo({ prompt: "p", model: "bytedance/seedance-2.5", duration: 5 }, (g) => {
+      queued.push(g);
+      submitsAtQueue = mock.calls("/api/v1/videos").length;
+    });
+    expect(queued).toHaveLength(1);
+    expect(queued[0]).toMatchObject({ id: res.generations[0]?.id, status: "pending" });
+    expect(submitsAtQueue).toBe(0);
+  });
+
   it("submits image-to-video with frame_images and no aspect_ratio for Seedance, then polls, downloads and records cost", async () => {
     // The tab that finishes the job hears about it once, with the stored record (the ding / notification hook).
     const announced: Generation[] = [];
