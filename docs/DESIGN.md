@@ -184,7 +184,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   caption ("Auto pick", "~$0.20 more", "~$0.05 less", "Same price", accent "No key yet. Add one" which opens the key
   dialog, or why it cannot take the request, greyed out). The selected row has the accent check. A model only one
   provider offers shows the price alone (`CostEstimate`).
-- Composer chips: [⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
+- Composer chips: [Create ˅ / ⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
   slider (ranges) or a list (fixed options) limited to the model's values; aspect ratio locks to the first frame for
   models that drop it on i2v; resolution is a list with per-option estimates; Sound is an accent toggle shown only for
   models with native audio; the count runs that many independent jobs. `+` opens a small menu: first frame, last
