@@ -31,24 +31,6 @@ export function FeedFallback({ aspect, statusLine }: { aspect?: string; statusLi
   );
 }
 
-/** Count line + chip toolbar, then the grid. */
-export function AssetsFallback() {
-  return (
-    <Page {...BUSY} className="flex flex-1 flex-col">
-      <div className="mb-4 flex items-center justify-between">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-9 w-20 rounded-control" />
-      </div>
-      <div className="mb-5 flex items-center gap-1.5">
-        <Skeleton className="h-9 w-16 rounded-control" />
-        <Skeleton className="h-9 w-24 rounded-control" />
-        <Skeleton className="h-9 w-24 rounded-control" />
-      </div>
-      <CardGrid />
-    </Page>
-  );
-}
-
 /** Title + three card blocks in the narrow settings column. */
 export function PlainFallback() {
   return (

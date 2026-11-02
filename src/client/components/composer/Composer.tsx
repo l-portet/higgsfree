@@ -9,24 +9,18 @@ import { VideoComposer } from "./VideoComposer";
  */
 export function Composer() {
   const mode = useComposer((s) => s.mode);
-  const hidden = useComposer((s) => s.hidden);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current;
     const root = document.documentElement;
-    if (!el || hidden) {
-      root.style.setProperty("--composer-h", "0px");
-      return;
-    }
+    if (!el) return;
     const report = () => root.style.setProperty("--composer-h", `${Math.ceil(el.getBoundingClientRect().height)}px`);
     report();
     const ro = new ResizeObserver(report);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [hidden]);
-
-  if (hidden) return null;
+  }, []);
 
   return (
     <div

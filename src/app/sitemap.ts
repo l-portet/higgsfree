@@ -6,7 +6,7 @@ export const dynamic = "force-static";
 
 /**
  * The two pages worth indexing. Left out on purpose: `/video`, which is the same view as `/` and
- * canonicals to it, and `/assets`, `/favorites` and `/settings` — all views onto a library that lives
+ * canonicals to it, and `/favorites` and `/settings` — all views onto a library that lives
  * in the visitor's own browser, so to a crawler they are empty and interchangeable. Those carry `noindex`.
  */
 export default function sitemap(): MetadataRoute.Sitemap {

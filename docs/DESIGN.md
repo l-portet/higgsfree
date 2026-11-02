@@ -100,9 +100,9 @@ There is no page chrome: the app is four views under one floating nav, with one 
   - **Logo box**: the brand tile at 30 px with the "higgsfree" wordmark beside it (Inter Tight 15 px bold), always,
     from `md` (768 px); below it the box is the 46 × 46 tile alone (no room beside the tab labels, and phones need
     the space). Links to the Video view (the default).
-  - **Views**: Video · Image · Assets · Favorites as 36 px tabs (`rounded-control`, `px-3`, `gap-2`, 2 px apart) in a
+  - **Views**: Video · Image · Favorites as 36 px tabs (`rounded-control`, `px-3`, `gap-2`, 2 px apart) in a
     4 px padded box. Labels 13 px medium, `-0.01em`. Icons sit in a 16 px box with 1.5 px strokes, sized to match the
-    mock (14 px frames, a 12 px heart); the video frame, the tray and the key are drawn in `components/icons/nav.tsx`.
+    mock (14 px frames, a 12 px heart); the video frame and the key are drawn in `components/icons/nav.tsx`.
     Inactive: `fg-muted` label, `fg-subtle` icon. Active: raised (`surface-2`, `border-strong`, `shadow-raised`),
     `fg` label, accent icon. Below `sm` (640 px) the labels collapse to icons. The tab icons are painted, not drawn:
     a box whose `background-color` is the colour, cut to the icon by a mask built from its shapes (`icons/nav`).
@@ -128,8 +128,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   `border-strong`, 13 px medium with `-0.01em`. Option chips: `fg-muted` label, `fg-faint` icon. The model chip names
   the thing: `fg` label and icon. Generate: 13 px semibold, `px-3.5`, shortcut badge `rounded-tag` on `black/10`.
   ⌘/Ctrl+Enter submits; the whole bar is a drop target and accepts pasted images. It is one global surface: it follows the Image
-  and Video views and keeps its last mode on Assets and Favorites, where a submit navigates to the matching view.
-  While asset selection is active the composer steps aside for the selection bar.
+  and Video views and keeps its last mode on Favorites, where a submit navigates to the matching view.
 - **Missing key** (`useKeyGate`): Generate is never blocked by a missing key. Pressed while the selected model's
   provider has no key, it opens the key dialog for that provider, whose primary button reads "Save and generate":
   the key is checked, saved, and the generation starts. When the user has the other provider's key (a fal-only model
@@ -152,7 +151,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   (`animate-reveal`, 1.4 s: a feathered radial mask from the centre, blur 10 px to sharp) once its image or first frame is in,
   the loader fading out behind it,
   and failed cards show as much of the provider error and prompt as the cell's height holds, with Retry and Details
-  (the full text). The loading skeletons and the route fallback use the same cells. Assets and Favorites keep the
+  (the full text). The loading skeletons and the route fallback use the same cells. Favorites keeps the
   masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) or, on a video, Edit video (→ the
   composer on the last editor used, with this clip attached; same WandSparkles glyph) · Reuse prompt
   · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
@@ -229,11 +228,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   field. The draft is shared, so Recreate then Rewrite tweaks and previews it. Footer: Cancel and Use prompt (the
   only accent button), which puts the text in the composer. Every call runs on the OpenRouter key; without one,
   the key dialog opens and the action runs once the key is saved. Errors show verbatim under each half.
-## Assets view (`/assets`)
-- Empty: "Nothing generated yet" with one line, no toolbar.
-- Otherwise a count line ("9 generations · 410 KB") with Select at the right, a toolbar of type chips (All · Images ·
-  Videos), a status dropdown and a search field (`/` focuses it), then the grid. Select turns cards into checkboxes
-  (shift-click for ranges, ⌘A for all) with a floating selection bar: Download / Delete / Done.
+## Lightbox
 - Clicking a card opens the **Lightbox** (full-screen dialog): media left, metadata right (prompt with copy, model,
   params, cost, created, elapsed, provider job id, inputs) and actions (Download, Animate on an image or Edit video on
   a video, Reuse prompt, Keep, Retry, Delete). ← → move between items. An edit's inputs show its SOURCE video.
