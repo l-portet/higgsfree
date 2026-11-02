@@ -86,7 +86,7 @@ function restore(models: ImageModel[]) {
 }
 
 /** Views that show image runs as they come in; from anywhere else a submit navigates to the Image view. */
-const SHOWS_IMAGES = /^\/(image|assets)(\/|$)/;
+const SHOWS_IMAGES = /^\/image(\/|$)/;
 
 export function ImageComposer() {
   const models = useModels((s) => s.image);

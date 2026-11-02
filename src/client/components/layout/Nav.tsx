@@ -2,7 +2,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Logo } from "@/components/Logo";
-import { ASSETS_ICON, HEART_ICON, IMAGE_ICON, KeyIcon, tabIconStyle, VIDEO_ICON } from "@/components/icons/nav";
+import { HEART_ICON, IMAGE_ICON, KeyIcon, tabIconStyle, VIDEO_ICON } from "@/components/icons/nav";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import type { ProviderId } from "@shared/types";
@@ -16,7 +16,6 @@ import { useUi } from "@/store/ui";
 const TABS: { href: string; label: string; icon: CSSProperties }[] = [
   { href: "/", label: "Video", icon: tabIconStyle(VIDEO_ICON) },
   { href: "/image", label: "Image", icon: tabIconStyle(IMAGE_ICON) },
-  { href: "/assets", label: "Assets", icon: tabIconStyle(ASSETS_ICON) },
   { href: "/favorites", label: "Favorites", icon: tabIconStyle(HEART_ICON) },
 ];
 

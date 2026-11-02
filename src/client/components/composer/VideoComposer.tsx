@@ -148,7 +148,7 @@ const totalSec = (clips: VideoClip[]): number | undefined =>
   clips.every((c) => c.durationSec !== undefined) ? clips.reduce((sum, c) => sum + (c.durationSec ?? 0), 0) : undefined;
 
 /** Views that show video runs as they come in; from anywhere else a submit navigates to the Video view. */
-const SHOWS_VIDEOS = /^\/(video|assets)(\/|$)/;
+const SHOWS_VIDEOS = /^\/video(\/|$)/;
 
 export function VideoComposer() {
   const models = useModels((s) => s.video);

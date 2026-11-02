@@ -72,16 +72,6 @@ export const IMAGE_ICON: TabIcon = {
   ],
 };
 
-/** A tray with two shrinking bars stacked on it. */
-export const ASSETS_ICON: TabIcon = {
-  size: 16,
-  shapes: [
-    ["rect", { x: 2.6, y: 11.4, width: 18.8, height: 9.45, rx: 3 }],
-    ["path", { d: "M5.9 6.4h11.9" }],
-    ["path", { d: "M8.7 3.05h6.7" }],
-  ],
-};
-
 /** Lucide's `heart` (ISC). */
 export const HEART_ICON: TabIcon = {
   size: 13,
