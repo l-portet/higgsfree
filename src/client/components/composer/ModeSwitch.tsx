@@ -1,78 +1,62 @@
-import { useState, type ReactNode } from "react";
-import { Check, ImageUpscale, PenLine, WandSparkles } from "lucide-react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { ImageUpscale, PenLine, WandSparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { COMPOSER_MODES, type ComposerMode } from "@/lib/modes";
-import { Chip } from "@/components/ui/Chip";
-import { Popover, PopoverContent, PopoverItem, PopoverLabel, PopoverTrigger } from "@/components/ui/Popover";
 
-const MODE_ICON: Record<ComposerMode, ReactNode> = {
+export const MODE_ICON: Record<ComposerMode, ReactNode> = {
   create: <WandSparkles />,
   edit: <PenLine />,
   upscale: <ImageUpscale />,
 };
 
-const MODE_HINT: Record<ComposerMode, string> = {
-  create: "From a prompt",
-  edit: "Change one you have",
-  upscale: "Sharper, larger",
-};
-
-/** A half of `ModeModelChip`: the chip's look without its own border, filling the group's height. */
-export const CHIP_SEGMENT = "h-full rounded-[9px] border-0 bg-transparent px-2.5";
-
 /**
- * Create / Edit / Upscale, and the model, in one chip: "Create v / (mark) Seedance 2.5 v". Each half opens its own list
- * (`ModeSwitch`, then the model picker, which lists the mode's models). One chip instead of two keeps the options on
- * one row.
+ * Create / Edit / Upscale, at the top of the model picker: a segmented row whose tab picks which models the list shows
+ * (and so the composer's mode). Arrow keys move between the tabs.
  */
-export function ModeModelChip({ children, className }: { children: ReactNode; className?: string }) {
+export function ModeTabs({ value, onChange, label }: { value: ComposerMode; onChange: (mode: ComposerMode) => void; label: string }) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const i = COMPOSER_MODES.findIndex((m) => m.value === value);
+    const next = (i + step + COMPOSER_MODES.length) % COMPOSER_MODES.length;
+    const mode = COMPOSER_MODES[next];
+    if (!mode) return;
+    onChange(mode.value);
+    refs.current[next]?.focus();
+  };
+
   return (
-    <div className={cn("inline-flex h-9 min-w-0 max-w-full items-center rounded-control border border-border-strong bg-surface-2", className)}>
-      {children}
+    <div role="tablist" aria-label={label} onKeyDown={onKeyDown} className="grid grid-cols-3 gap-0.5 rounded-control bg-surface-2 p-[3px]">
+      {COMPOSER_MODES.map((m, i) => {
+        const on = m.value === value;
+        return (
+          <button
+            key={m.value}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            tabIndex={on ? 0 : -1}
+            onClick={() => onChange(m.value)}
+            className={cn(
+              "inline-flex h-7 select-none items-center justify-center gap-1.5 rounded-[7px] text-[12.5px] font-medium tracking-[-0.01em]",
+              "transition-[background-color,color,box-shadow] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              "[&_svg]:size-3.5",
+              on ? "bg-surface-3 text-fg shadow-[0_0_0_1px_var(--color-border-strong)]" : "text-fg-muted hover:text-fg",
+            )}
+          >
+            <span aria-hidden="true" className={cn("inline-flex", on ? "text-fg" : "text-fg-faint")}>
+              {MODE_ICON[m.value]}
+            </span>
+            {m.label}
+          </button>
+        );
+      })}
     </div>
-  );
-}
-
-/** The slash between the two halves. */
-export function ChipSlash() {
-  return (
-    <span aria-hidden="true" className="select-none px-px text-[13px] text-fg-faint">
-      /
-    </span>
-  );
-}
-
-/** The mode half of `ModeModelChip`: opens a short list of the three modes. */
-export function ModeSwitch({ value, onChange, label }: { value: ComposerMode; onChange: (mode: ComposerMode) => void; label: string }) {
-  const [open, setOpen] = useState(false);
-  const current = COMPOSER_MODES.find((m) => m.value === value) ?? COMPOSER_MODES[0];
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Chip label={current?.label ?? "Create"} chevron strong aria-label={`${label}: ${current?.label ?? "Create"}`} className={cn(CHIP_SEGMENT, "shrink-0")} />
-      </PopoverTrigger>
-      <PopoverContent side="top" align="start" className="w-[220px]">
-        <div role="listbox" aria-label={label}>
-          <PopoverLabel>Mode</PopoverLabel>
-          {COMPOSER_MODES.map((m) => (
-            <PopoverItem
-              key={m.value}
-              selected={m.value === value}
-              onClick={() => {
-                onChange(m.value);
-                setOpen(false);
-              }}
-            >
-              <span className="inline-flex text-fg-muted [&_svg]:size-[15px]" aria-hidden="true">
-                {MODE_ICON[m.value]}
-              </span>
-              <span className="flex-1">{m.label}</span>
-              <span className="text-caption">{MODE_HINT[m.value]}</span>
-              {m.value === value ? <Check size={14} className="text-accent" aria-hidden="true" /> : null}
-            </PopoverItem>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
   );
 }

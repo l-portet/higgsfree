@@ -156,17 +156,17 @@ There is no page chrome: the app is four views under one floating nav, with one 
   masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) or, on a video, Edit video (→ the
   composer on the last editor used, with this clip attached; same WandSparkles glyph) · Reuse prompt
   · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
-- **Mode and model chip** (both composers, the first chip, `ModeModelChip`): one chip split in two,
-  [Create ˅ / ⟨mark⟩ Nano Banana Pro ˅], so the options keep to one row. One `border-strong` outline on `surface-2`;
-  each half is a borderless 34 px segment (`CHIP_SEGMENT`, 9 px radius) that lights `surface-3` on hover or while
-  open, with a `fg-faint` slash between. The left half (`ModeSwitch`) opens a short list (label "Mode"; each row its
-  icon, WandSparkles, PenLine or ImageUpscale, the name and a caption: "From a prompt", "Change one you have",
-  "Sharper, larger"; the accent check on the current). The right half opens the model picker, which lists only the
-  mode's models (`lib/modes.ts`); each mode remembers its last model. A model can be in two modes: an image model that
-  takes a source image creates and edits; a video model that takes reference videos (Seedance 2.x, Wan 3.0 / Prime,
-  Kling 4.0) creates and edits from a reference. Motion control is in Create, in its own picker group. Animate
-  switches to Create, Edit video to Edit, Upscale to Upscale.
-- Composer chips: [Create ˅ / ⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
+- **Mode** (both composers): Create / Edit / Upscale live in the model picker, as a segmented row of tabs above the
+  search (`ModeTabs`: `surface-2` track, 28 px tabs with the mode's icon, WandSparkles, PenLine or ImageUpscale, the
+  active one `surface-3` with a 1 px `border-strong` ring). A tab switches the list (and the composer) at once; the
+  picker stays open. The list shows only the mode's models (`lib/modes.ts`), and each mode remembers its last model.
+  A search looks in every mode: a result from another one carries a small tag ("Upscale"), and picking it switches
+  to that mode. The model chip is the only chip for it: in Edit and Upscale a 14 px `fg-subtle` glyph of the mode
+  follows the name (the bar itself says the rest: Upscale's drop zone, Edit's "Say what to change"). A model can be
+  in two modes: an image model that takes a source image creates and edits; a video model that takes reference
+  videos (Seedance 2.x, Wan 3.0 / Prime, Kling 4.0) creates and edits from a reference. Motion control is in Create,
+  in its own picker group. Animate switches to Create, Edit video to Edit, Upscale to Upscale.
+- Composer chips: [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
   reference images (up to the largest count any model takes; the picker dims models that cannot take what is
   attached). Image Edit is the same bar with an image required ("Add an image to edit") and the placeholder "Say what
   to change: swap, add, remove, restyle…".
@@ -184,7 +184,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   caption ("Auto pick", "~$0.20 more", "~$0.05 less", "Same price", accent "No key yet. Add one" which opens the key
   dialog, or why it cannot take the request, greyed out). The selected row has the accent check. A model only one
   provider offers shows the price alone (`CostEstimate`).
-- Composer chips: [Create ˅ / ⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
+- Composer chips: [⟨mark⟩ Seedance 2.5 ˅] [▭ 16:9] [⏱ 5s] [◇ 720p] [⫶ Sound] [− 1/4 +]. Duration opens a stepper +
   slider (ranges) or a list (fixed options) limited to the model's values; aspect ratio locks to the first frame for
   models that drop it on i2v; resolution is a list with per-option estimates; Sound is an accent toggle shown only for
   models with native audio; the count runs that many independent jobs. `+` opens a small menu: first frame, last

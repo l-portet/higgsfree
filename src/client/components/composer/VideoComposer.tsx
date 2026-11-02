@@ -12,7 +12,7 @@ import { formatSeconds, formatUsd, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { ownerGenerationId } from "@/lib/media-ids";
 import { editSourceHint, isVideoAspectRatio, isVideoResolution } from "@/lib/models";
-import { editsByReference, isComposerMode, modelForMode, modelModes, type ComposerMode } from "@/lib/modes";
+import { editsByReference, inMode, isComposerMode, modelForMode, modelModes, type ComposerMode } from "@/lib/modes";
 import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
@@ -39,7 +39,6 @@ import { PromptEditorDialog } from "./PromptEditorDialog";
 import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
-import { ChipSlash, CHIP_SEGMENT, ModeModelChip, ModeSwitch } from "./ModeSwitch";
 
 const STORAGE_KEY = "higgsfree.video.panel";
 const MAX_REFS = 4;
@@ -1006,13 +1005,17 @@ export function VideoComposer() {
       }
       chips={
         <>
-          <ModeModelChip>
-            <ModeSwitch value={mode} onChange={(m) => switchMode(m)} label="Video mode" />
-            <ChipSlash />
-            <ModelPicker kind="video" mode={mode} value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
-              <ModelChip model={model} reason={modelReason(model)} className={cn(CHIP_SEGMENT, "min-w-0")} />
-            </ModelPicker>
-          </ModeModelChip>
+          {/* The mode lives in the picker: tabs above the list. A model picked from a search in another mode switches to it. */}
+          <ModelPicker
+            kind="video"
+            mode={mode}
+            onModeChange={(m) => switchMode(m)}
+            value={model.id}
+            onChange={(m) => (inMode(m, mode) ? pickModel(m.id) : switchMode(modelModes(m)[0] ?? "create", m.id))}
+            disabledReason={modelReason}
+          >
+            <ModelChip model={model} reason={modelReason(model)} mode={mode} />
+          </ModelPicker>
 
           {editMode ? (
             <>
