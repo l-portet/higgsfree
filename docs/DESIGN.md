@@ -170,7 +170,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   hover, duration + resolution + cost in the badge. One line above it, always there so the grid never moves:
   "N rendering · usually 2–5 min" while clips render, the clip count otherwise.
 - The price before Generate (13 px `fg-subtle`, hidden below `sm`) starts with the mark of the provider that runs
-  it (13 px; kie.ai and APIMart, which have no mark, get their letter in a 15 px tile; the cheapest one while no key
+  it (13 px; kie.ai, APIMart and Revana, which have no mark, get their letter in a 15 px tile; the cheapest one while no key
   is set). On a model several providers offer it is a menu (`ProviderPicker`, a small chevron after the price), in
   both composers: "Run on" (`· 3 videos` for a batch), then **Auto** with a caption saying who it picks ("Cheapest:
   kie.ai", "Same price: OpenRouter", "Not priced yet: fal"), then a row per provider: mark, name, total, and a
@@ -262,10 +262,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
   `rounded-control`; the open one raised on `surface-2`), and the open section's cards on the right, shown flat
   (no card border or fill, sections separated by a divider). Below `sm` the sections become a scrolling row under the
   title. Keys: the OpenRouter key (masked key, Save / Test connection / Remove key, a Connected / Not set badge),
-  then the fal, kie.ai and APIMart key cards. There is no provider preference (the price menu next to Generate picks one per run), no credits breakdown (the key box shows the balance) and no default-model setting:
+  then the fal, kie.ai, APIMart and Revana key cards. There is no provider preference (the price menu next to Generate picks one per run), no credits breakdown (the key box shows the balance) and no default-model setting:
   each composer starts on the app's default and then remembers the last model picked. Old `/settings` links (`#fal`,
   `#providers`, `#library`…) open the dialog over the Image view.
-- **fal, kie.ai and APIMart key cards** (`ProviderKeyCard`): the OpenRouter card's anatomy, titled "fal key" / "kie.ai key" / "APIMart key" with
+- **fal, kie.ai, APIMart and Revana key cards** (`ProviderKeyCard`): the OpenRouter card's anatomy, titled "fal key" / "kie.ai key" / "APIMart key" / "Revana key" with
   a Connected / Not set badge, a line on what the key opens with a link to the provider's keys page, a monospace
   password field, Save / Test connection / Remove key (confirm dialog). kie's and APIMart's test results add the
   balance ("Balance: 1,234 credits ($6.17)", "Balance: $12.50").

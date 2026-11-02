@@ -46,6 +46,7 @@ import { revokeAllMediaUrls } from "./media-urls";
 import { chatText, listLiveModels, nativeImage } from "./openrouter";
 import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DEFAULT_PREVIEW_CONFIG, MAX_RECREATE_VIDEO_BYTES, storyboardLayout, type PreviewConfig, type RewriteContext } from "./prompt-editor";
 import * as apimart from "./apimart";
+import * as revana from "./revana";
 import * as kie from "./kie";
 import { isProviderId, PROVIDER_NAME } from "./providers";
 import { getProviderKey, getStoredFalKey, getStoredKey, requireApiKey, setProviderKey, setStoredKey, settingsResponse } from "./settings";
@@ -87,8 +88,8 @@ export async function testSettings(apiKey?: string): Promise<CreditsResponse> {
 }
 
 /**
- * Check a fal, kie.ai or APIMart key (the stored one when none is passed). Resolves when the provider accepts it,
- * with the balance where the provider gives one: kie's in credits, APIMart's in USD (−1: unlimited).
+ * Check a fal, kie.ai, APIMart or Revana key (the stored one when none is passed). Resolves when the provider accepts
+ * it, with the balance where the provider gives one: kie's in credits, APIMart's and Revana's in USD (−1: unlimited).
  */
 export async function testProviderKey(provider: Exclude<ProviderId, "openrouter">, apiKey?: string): Promise<{ ok: true; credits?: number; balanceUsd?: number }> {
   const name = PROVIDER_NAME[provider];
@@ -97,6 +98,7 @@ export async function testProviderKey(provider: Exclude<ProviderId, "openrouter"
   try {
     if (provider === "kie") return { ok: true, credits: (await kie.testKey(key)).credits };
     if (provider === "apimart") return { ok: true, balanceUsd: (await apimart.testKey(key)).balanceUsd };
+    if (provider === "revana") return { ok: true, balanceUsd: (await revana.testKey(key)).balanceUsd };
     await fal.testKey(key);
     return { ok: true };
   } catch (err) {

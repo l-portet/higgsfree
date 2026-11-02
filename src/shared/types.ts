@@ -5,7 +5,7 @@
 
 export type GenerationType = "image" | "video";
 /** Who runs a generation. A model can be offered by several. */
-export type ProviderId = "openrouter" | "fal" | "kie" | "apimart";
+export type ProviderId = "openrouter" | "fal" | "kie" | "apimart" | "revana";
 /** Motion control: whose orientation the character keeps (fal caps the reference video at 30 s for `video`, 10 s for `image`). */
 export type MotionOrientation = "video" | "image";
 export type GenerationStatus = "pending" | "running" | "completed" | "failed";
@@ -134,7 +134,7 @@ export interface FolderRequest {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "fal" | "openrouter" | "kie" | "apimart";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "fal" | "openrouter" | "kie" | "apimart" | "revana";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -181,7 +181,9 @@ export interface ImageModel {
   kie?: KieImageRoute;
   /** APIMart serves it too. */
   apimart?: ApimartImageRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`). */
+  /** Revana serves it too. */
+  revana?: RevanaRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`). */
   offOpenRouter?: boolean;
 }
 
@@ -255,7 +257,9 @@ export interface VideoModel {
   kie?: KieVideoRoute;
   /** APIMart serves it too. */
   apimart?: ApimartVideoRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`). */
+  /** Revana serves it too. */
+  revana?: RevanaRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`). */
   offOpenRouter?: boolean;
 }
 
@@ -342,6 +346,14 @@ export interface KieImageRoute {
 }
 
 export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "flux-kontext" | "z-image" | "topaz-upscale" | "recraft-upscale";
+
+/**
+ * How Revana serves a model: `POST /v1/generations` `{ model, input }`, one input shape for every model. `model` is
+ * Revana's id; what it takes (resolutions, ratios, durations, inputs) and costs is in `REVANA_MODELS`.
+ */
+export interface RevanaRoute {
+  model: string;
+}
 
 /**
  * How APIMart serves a model: `POST /v1/videos/generations` or `/v1/images/generations` with `{ model, prompt, … }`.

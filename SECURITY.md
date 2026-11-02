@@ -53,6 +53,10 @@ What the app does about it:
   - OpenRouter (or the configured base url);
   - fal's API hosts (`fal.run`, `queue.fal.run`, `rest.fal.ai`, `api.fal.ai`) and the hosts its files
     and uploads are served from (`fal.media`, `*.fal.media`, `storage.googleapis.com`);
+  - kie.ai (`api.kie.ai`, `kieai.redpandaai.co`, `*.aiquickdraw.com`) and APIMart (`api.apimart.ai`,
+    `upload.apimart.ai`);
+  - Revana (`api.revana.si`) and the Cloudflare R2 storage its uploads and results use
+    (`*.r2.cloudflarestorage.com`);
   - Google Analytics (`*.google-analytics.com`, `*.analytics.google.com`, `*.googletagmanager.com`).
 
   `script-src` is `self`, inline scripts and `*.googletagmanager.com`; `img-src` is `self`, `blob:`,
@@ -89,8 +93,12 @@ the key.
 On APIMart, each frame and reference image is uploaded to its file host (`upload.apimart.ai`) first and kept
 there 72 hours; its results are public urls on the same host, for 24 to 72 hours. APIMart takes no video.
 
-The app does not keep these urls, but the providers have them. Treat anything you send to fal, kie.ai or
-APIMart, and anything they make, as reachable by url.
+On Revana, each frame, reference and video to edit is uploaded to Revana's storage (a presigned `PUT` to
+Cloudflare R2) and passed as a keyless `api.revana.si` link, kept 14 days. Its results are read with the key
+from `api.revana.si`, which redirects to a short-lived file url.
+
+The app does not keep these urls, but the providers have them. Treat anything you send to fal, kie.ai,
+APIMart or Revana, and anything they make, as reachable by url.
 
 ## What a hosted copy can see
 

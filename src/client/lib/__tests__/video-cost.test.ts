@@ -17,7 +17,7 @@ describe("quoteVideo", () => {
   it("runs a video on the cheaper provider, whatever the preference", () => {
     const q = quoteVideo(video("bytedance/seedance-2.5"), { duration: 5, resolution: "720p", aspectRatio: "16:9", audio: true }, BOTH, NOW);
     expect(q).toMatchObject({ provider: "openrouter", reason: "cheaper" });
-    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie", "apimart", "revana"]);
     expect(usd(q).openrouter).toBeCloseTo(1.1555);
     expect(usd(q).fal).toBeCloseTo(2.838);
     const pricier = { ...video("bytedance/seedance-2.5"), estCostPerSecUsd: { "720p": 1 } };
@@ -52,7 +52,7 @@ describe("quoteVideo", () => {
     // Veo 3.1 at 1080p, 8 s with sound: $3.20 on OpenRouter, $1.275 a clip on kie.
     const veo = quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio: true }, ALL, NOW);
     expect(veo).toMatchObject({ provider: "kie", reason: "cheaper" });
-    expect(usd(veo)).toEqual({ openrouter: expect.closeTo(3.2), kie: expect.closeTo(1.275), apimart: expect.closeTo(1) }); // APIMart has no key here
+    expect(usd(veo)).toEqual({ openrouter: expect.closeTo(3.2), kie: expect.closeTo(1.275), apimart: expect.closeTo(1), revana: expect.closeTo(3.2) }); // APIMart and Revana have no key here
     // kie's Veo always has sound: with it off, OpenRouter runs it.
     const silent = quoteVideo(video("google/veo-3.1"), { prompt: "a fox", duration: 8, resolution: "1080p", audio: false }, ALL, NOW);
     expect(silent).toMatchObject({ provider: "openrouter", reason: "one-ready" });
@@ -71,7 +71,7 @@ describe("quoteVideo", () => {
     // 10 s at 1080p: $2.35 on fal and APIMart, $2.125 on kie.
     const q = quoteVideo(kling, { prompt: "a fox", duration: 10, resolution: "1080p", aspectRatio: "21:9" }, { fal: true, kie: true, apimart: true }, NOW);
     expect(q).toMatchObject({ provider: "kie", reason: "cheaper" });
-    expect(usd(q)).toEqual({ fal: expect.closeTo(2.35), kie: expect.closeTo(2.125), apimart: expect.closeTo(2.35) });
+    expect(usd(q)).toEqual({ fal: expect.closeTo(2.35), kie: expect.closeTo(2.125), apimart: expect.closeTo(2.35), revana: expect.closeTo(2.7) });
     const refs = quoteVideo(kling, { prompt: "a fox", duration: 5, resolution: "720p", references: true }, { fal: true, apimart: true }, NOW);
     expect(refs).toMatchObject({ provider: "apimart", reason: "one-ready" });
     expect(refs.quotes[0]).toMatchObject({ provider: "fal", refusal: "Takes no style references" });
@@ -82,7 +82,7 @@ describe("quoteVideo", () => {
     // 10 s at 1080p with sound: $1.12 on kie, $0.996 on APIMart.
     const q = quoteVideo(max, { prompt: "a fox", duration: 10, resolution: "1080p", audio: true }, { kie: true, apimart: true }, NOW);
     expect(q).toMatchObject({ provider: "apimart", reason: "cheaper" });
-    expect(usd(q)).toEqual({ kie: expect.closeTo(1.12), apimart: expect.closeTo(0.9956) });
+    expect(usd(q)).toEqual({ kie: expect.closeTo(1.12), apimart: expect.closeTo(0.9956), revana: expect.closeTo(1.3) });
     const noPrompt = quoteVideo(max, { prompt: "", duration: 5, firstFrame: true }, { kie: true, apimart: true }, NOW);
     expect(noPrompt).toMatchObject({ provider: "apimart", reason: "one-ready" });
     expect(noPrompt.quotes[0]).toMatchObject({ provider: "kie", refusal: "Needs a prompt" });

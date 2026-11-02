@@ -23,7 +23,7 @@ export function keysOf(settings: Pick<SettingsResponse, "keys"> | null | undefin
   return Object.fromEntries(PROVIDER_IDS.map((p) => [p, Boolean(settings?.keys[p])]));
 }
 
-function reasonFor(model: Pick<CatalogModel, "name" | "fal" | "kie" | "apimart" | "offOpenRouter">, provider: ProviderId, keys: ProviderKeys): string | undefined {
+function reasonFor(model: Pick<CatalogModel, "name" | "fal" | "kie" | "apimart" | "revana" | "offOpenRouter">, provider: ProviderId, keys: ProviderKeys): string | undefined {
   // First run (no key at all) on a model OpenRouter serves: just ask for the key.
   if (!Object.values(keys).some(Boolean) && provider === "openrouter") return undefined;
   return modelProviders(model).length === 1 ? `${model.name} runs on ${PROVIDER_NAME[provider]}.` : undefined;

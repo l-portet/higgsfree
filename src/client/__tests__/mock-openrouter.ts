@@ -70,6 +70,8 @@ export interface MockOpenRouter {
     kieUploads: number;
     apimartTasks: Record<string, { kind: string; polls: number }>;
     apimartUploads: number;
+    revanaGenerations: Record<string, { polls: number; image: boolean }>;
+    revanaUploads: number;
   };
   /** Calls to fal hosts (API, uploads, CDN), by path. */
   fal(path: string): Seen[];
@@ -77,6 +79,8 @@ export interface MockOpenRouter {
   kie(path: string): Seen[];
   /** Calls to APIMart hosts (API, file host), by path. */
   apimart(path: string): Seen[];
+  /** Calls to Revana hosts (API, file storage), by path. */
+  revana(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
 }
@@ -86,7 +90,7 @@ const json = (status: number, payload: unknown): Response => new Response(JSON.s
 /** Replace `fetch` for the current test (undone by `vi.unstubAllGlobals()` in the setup's afterEach). */
 export function installMockOpenRouter(): MockOpenRouter {
   const seen: Seen[] = [];
-  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0 };
+  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0, revanaGenerations: {}, revanaUploads: 0 };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
     const u = new URL(input instanceof Request ? input.url : String(input));
@@ -105,6 +109,7 @@ export function installMockOpenRouter(): MockOpenRouter {
     seen.push(entry);
     if (KIE_HOSTS.includes(u.hostname)) return kieRoute(u, entry, state);
     if (APIMART_HOSTS.includes(u.hostname)) return apimartRoute(u, entry, state);
+    if (REVANA_HOSTS.includes(u.hostname)) return revanaRoute(u, entry, state);
     if (u.hostname !== "openrouter.ai") return falRoute(u, entry, state);
     // The two catalogs are public: no key needed.
     if (url === "/api/v1/videos/models" || url === "/api/v1/images/models") {
@@ -147,7 +152,8 @@ export function installMockOpenRouter(): MockOpenRouter {
   return {
     seen,
     state,
-    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && !KIE_HOSTS.includes(s.host) && !APIMART_HOSTS.includes(s.host) && s.url === path),
+    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && !KIE_HOSTS.includes(s.host) && !APIMART_HOSTS.includes(s.host) && !REVANA_HOSTS.includes(s.host) && s.url === path),
+    revana: (path) => seen.filter((s) => REVANA_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     apimart: (path) => seen.filter((s) => APIMART_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     kie: (path) => seen.filter((s) => KIE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     calls: (url) => seen.filter((s) => s.url === url),
@@ -300,4 +306,57 @@ function apimartRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Resp
     return json(200, { code: 200, data: { id, status: "completed", progress: 100, cost: 0.42, credits_cost: 4.2, result } });
   }
   return json(404, { error: { message: `no APIMart route ${path}` } });
+}
+
+export const REVANA_KEY = "sr_live_test";
+const REVANA_HOSTS = ["api.revana.si", "files.r2.cloudflarestorage.com"];
+
+/**
+ * Revana: \`api.revana.si\` (generations, uploads, balance, result content) and an R2 host the uploads are PUT to.
+ * Errors are HTTP statuses with \`{ error: { code, message } }\`. A generation is \`running\` on its first poll and
+ * \`succeeded\` after; prompts containing REVANA_FAIL make it fail, REVANA_REJECT makes the submit a 422.
+ */
+function revanaRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
+  const path = u.pathname;
+  if (u.hostname === "files.r2.cloudflarestorage.com") {
+    // The presigned PUT: no key, the signed type header.
+    if (entry.method !== "PUT" || entry.auth) return json(403, { error: "bad upload" });
+    return new Response(null, { status: 200 });
+  }
+  if (entry.auth !== `Bearer ${REVANA_KEY}`) return json(401, { error: { code: "unauthorized", message: "Missing or invalid API key." } });
+  if (path === "/v1/balance") return json(200, { object: "balance", currency: "usd", available_usd: 9.5, held_usd: 0.5, balance_usd: 10 });
+  if (path === "/v1/uploads" && entry.method === "POST") {
+    state.revanaUploads++;
+    const n = state.revanaUploads;
+    return json(201, {
+      id: `upl_${n}`, object: "upload", url: `https://api.revana.si/v1/uploads/u/upl_${n}/input`, upload_method: "PUT",
+      upload_url: `https://files.r2.cloudflarestorage.com/u/upl_${n}?sig=x`, upload_headers: { "Content-Type": String(entry.body?.content_type), "Content-Length": String(entry.body?.bytes) },
+    });
+  }
+  if (path === "/v1/generations" && entry.method === "POST") {
+    const input = (entry.body?.input ?? {}) as Record<string, unknown>;
+    const prompt = String(input.prompt ?? "");
+    if (prompt.includes("REVANA_REJECT")) return json(422, { error: { code: "invalid_input", message: "This model does not take 21:9." } });
+    const id = prompt.includes("REVANA_FAIL") ? "gen_rv_fail" : `gen_rv_${Object.keys(state.revanaGenerations).length + 1}`;
+    // A picture takes no duration and no video.
+    state.revanaGenerations[id] = { polls: 0, image: !("duration" in input) && !("video_url" in input) };
+    return json(201, { id, object: "generation", model: entry.body?.model, status: "queued", output: null, quoted_usd: 0.5, cost_usd: null, attempts: 0, error: null });
+  }
+  const content = path.match(/^\/v1\/generations\/([^/]+)\/content$/);
+  if (content) {
+    const gen = state.revanaGenerations[decodeURIComponent(content[1] ?? "")];
+    if (!gen) return json(404, { error: { code: "not_found", message: "No generation with this id." } });
+    return new Response(new Blob([gen.image ? PNG_2X2 : MP4]), { status: 200, headers: { "content-type": gen.image ? "image/png" : "video/mp4" } });
+  }
+  const g = path.match(/^\/v1\/generations\/([^/]+)$/);
+  if (g) {
+    const id = decodeURIComponent(g[1] ?? "");
+    const gen = state.revanaGenerations[id];
+    if (!gen) return json(404, { error: { code: "not_found", message: "No generation with this id." } });
+    gen.polls++;
+    if (id === "gen_rv_fail") return json(200, { id, status: "failed", output: null, cost_usd: 0, error: { code: "content_policy", message: "The model refused the prompt.", retryable: false } });
+    if (gen.polls === 1) return json(200, { id, status: "running", output: null, cost_usd: null, error: null });
+    return json(200, { id, status: "succeeded", output: { urls: [`https://api.revana.si/v1/generations/${id}/content`] }, cost_usd: 0.42, error: null });
+  }
+  return json(404, { error: { message: `no Revana route ${path}` } });
 }

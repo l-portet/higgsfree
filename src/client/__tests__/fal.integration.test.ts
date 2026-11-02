@@ -58,7 +58,7 @@ const falCalls = (): string[] => mock.seen.filter((s) => s.host !== "openrouter.
 describe("who runs a model", () => {
   it("only an OpenRouter key: a fal-only model is refused with the reason, nothing is created", async () => {
     setStoredKey("test-key");
-    await expect(image({ model: "fal/z-image-turbo" })).rejects.toMatchObject({ status: 401, error: "Z-Image Turbo needs a fal, kie.ai or APIMart key. Add one in Settings to use it." });
+    await expect(image({ model: "fal/z-image-turbo" })).rejects.toMatchObject({ status: 401, error: "Z-Image Turbo needs a fal, kie.ai, APIMart or Revana key. Add one in Settings to use it." });
     expect((await api.listGenerations()).items).toHaveLength(0);
   });
 
@@ -261,7 +261,7 @@ describe("fal videos", () => {
     await expect(api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, references: [character] })).rejects.toMatchObject({ status: 400, error: expect.stringContaining("does not take style references") });
     await expect(api.generateVideo({ prompt: "p", model: "fal/kling-v4", duration: 5, references: [character] })).rejects.toMatchObject({
       status: 400,
-      error: "Kling 4.0 on fal does not take style references. Remove them, or add a kie.ai or APIMart key in Settings.",
+      error: "Kling 4.0 on fal does not take style references. Remove them, or add a kie.ai, APIMart or Revana key in Settings.",
     });
     await expect(api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, motionVideo: await uploadVideo() })).rejects.toMatchObject({ status: 400, error: "Kling 3.0 Pro does not take a reference video" });
   });

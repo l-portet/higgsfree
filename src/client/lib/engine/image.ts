@@ -119,7 +119,7 @@ async function taskImage(tp: TaskProvider, key: string, model: ImageModel, row: 
     if (t.state !== "done") continue;
     const out = t.urls[0];
     if (!out) throw new ApiClientError(502, `${tp.name} reported success but returned no image url`);
-    const bytes = new Uint8Array(await (await tp.download(out, signal)).arrayBuffer());
+    const bytes = new Uint8Array(await (await tp.download(out, signal, key)).arrayBuffer());
     return t.costUsd !== undefined ? { bytes, costUsd: t.costUsd } : { bytes };
   }
 }
