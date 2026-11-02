@@ -84,6 +84,8 @@ function playAccentIntro(): () => void {
 /** After the first completed generation in this profile, ask the browser to keep the library out of eviction. */
 function onCompleted(): void {
   if (!persistenceAsked()) void requestPersistence();
+  // A run was charged: the balances in the key button move.
+  void useSettings.getState().refreshBalances(true);
 }
 
 /**

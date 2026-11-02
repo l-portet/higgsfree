@@ -5,7 +5,10 @@ import { Logo } from "@/components/Logo";
 import { ASSETS_ICON, HEART_ICON, IMAGE_ICON, KeyIcon, tabIconStyle, VIDEO_ICON } from "@/components/icons/nav";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
+import type { ProviderId } from "@shared/types";
+import { totalBalance } from "@/lib/balances";
 import { formatUsd } from "@/lib/format";
+import { PROVIDER_IDS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 
@@ -35,24 +38,77 @@ function IconBox({ children }: { children: ReactNode }) {
   return <span className="inline-flex size-4 shrink-0 items-center justify-center">{children}</span>;
 }
 
-/** "Add key" with a grey dot until a key is set; then the remaining credits with an accent dot. Either way it opens the keys in Settings, every provider listed. */
+type Balances = ReturnType<typeof useSettings.getState>["balances"];
+
+/** One line per stored key: the provider, what is left (or why it could not be read), and the total under them. */
+function BalanceList({ balances, providers }: { balances: Balances; providers: ProviderId[] }) {
+  const total = totalBalance(balances);
+  return (
+    <div className="flex min-w-[208px] flex-col gap-1 py-0.5">
+      <span className="text-label">Balance</span>
+      {providers.map((p) => {
+        const entry = balances[p];
+        return (
+          <div key={p} className="flex items-baseline justify-between gap-4">
+            <span className="text-fg-muted">{PROVIDER_NAME[p]}</span>
+            {!entry ? (
+              <span className="text-fg-subtle">Checking…</span>
+            ) : entry.ok ? (
+              <span className="tabular-nums text-fg">
+                {entry.balance.usd === null ? "Unlimited" : formatUsd(entry.balance.usd)}
+                {entry.balance.credits !== undefined ? <span className="text-fg-subtle"> · {Math.floor(entry.balance.credits).toLocaleString("en-US")} cr</span> : null}
+              </span>
+            ) : (
+              <span className="max-w-[150px] truncate text-right text-fg-subtle" title={entry.error}>
+                {entry.error.includes("billing access") ? "Key can't read it" : "Couldn't read"}
+              </span>
+            )}
+          </div>
+        );
+      })}
+      {providers.length > 1 && total.read > 0 ? (
+        <div className="mt-0.5 flex items-baseline justify-between gap-4 border-t border-border pt-1.5">
+          <span className="text-fg-muted">Total</span>
+          <span className="font-medium tabular-nums text-fg">
+            {formatUsd(total.usd)}
+            {total.unlimited ? " + unlimited" : ""}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * "Add key" with a grey dot until a key is set; then what is left on every key together, with an accent dot. Hovering
+ * lists each provider's balance (read again when older than 30 s). Either way it opens the keys in Settings.
+ */
 function KeyBox() {
   const settings = useSettings((s) => s.settings);
-  const credits = useSettings((s) => s.credits);
+  const balances = useSettings((s) => s.balances);
+  const refreshBalances = useSettings((s) => s.refreshBalances);
   const openSettings = useUi((s) => s.openSettings);
-  const hasKey = Boolean(settings?.hasKey);
-  const label = hasKey ? (credits ? formatUsd(credits.remaining) : "Key") : "Add key";
-  const title = hasKey
-    ? credits
-      ? `${formatUsd(credits.remaining)} left on your OpenRouter key`
-      : "OpenRouter key set"
-    : "Add an API key";
+  const providers = PROVIDER_IDS.filter((p) => settings?.keys[p]);
+  const hasKey = providers.length > 0;
+  const total = totalBalance(balances);
+  const label = !hasKey ? "Add key" : total.read > 0 ? formatUsd(total.usd) : "Key";
+  const summary = hasKey
+    ? providers
+        .map((p) => {
+          const e = balances[p];
+          return `${PROVIDER_NAME[p]} ${e?.ok ? (e.balance.usd === null ? "unlimited" : formatUsd(e.balance.usd)) : "unknown"}`;
+        })
+        .join(", ")
+    : "";
+  const ariaLabel = hasKey ? `Balance${total.read > 0 ? ` ${formatUsd(total.usd)} in all` : ""}: ${summary}. Open keys` : "Add an API key";
   return (
-    <Tooltip content={title} side="bottom">
+    <Tooltip content={hasKey ? <BalanceList balances={balances} providers={providers} /> : "Add an API key"} side="bottom" align="end">
       <button
         type="button"
         onClick={() => openSettings("keys")}
-        aria-label={title}
+        onPointerEnter={() => void refreshBalances()}
+        onFocus={() => void refreshBalances()}
+        aria-label={ariaLabel}
         className={cn(BOX, "group gap-2 px-[17px] text-fg-muted transition-colors duration-150 hover:text-fg")}
       >
         <IconBox>
