@@ -123,8 +123,9 @@ export async function generateImage(body: ImageGenerateRequest): Promise<Generat
   return { generations: await submitImageBatch(body) };
 }
 
-export async function generateVideo(body: VideoGenerateRequest): Promise<GenerateResponse> {
-  return { generations: [await submitVideo(body)] };
+/** `onQueued`: the record exists (its card shows); the promise settles once the provider took the job. */
+export async function generateVideo(body: VideoGenerateRequest, onQueued?: (g: Generation) => void): Promise<GenerateResponse> {
+  return { generations: [await submitVideo(body, onQueued)] };
 }
 
 export function listGenerations(query: ListGenerationsQuery = {}): Promise<ListGenerationsResponse> {
