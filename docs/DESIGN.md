@@ -141,7 +141,13 @@ There is no page chrome: the app is four views under one floating nav, with one 
   `fg-muted` text on a 19 px line). Clicking one fills the composer and focuses it.
 - Feed: a grid of identical square cells (`minmax(260px, 1fr)` from `sm`, 160 below), newest first (`FeedGrid`).
   Every card keeps its cell in every state, so nothing resizes or reshuffles when a run completes: media cover the
-  cell (the lightbox shows the whole frame), pending cards show a shimmer skeleton with model name + elapsed timer,
+  cell (the lightbox shows the whole frame), pending image cards show a shimmer skeleton with model name + elapsed timer,
+  pending video cards the ripple loader (`RippleLoader`: a canvas grid of dots on a 9 px pitch, `fg-faint`, with rings
+  of brighter, larger `fg` dots spreading from the centre every 1.3 s, faded over the outer seventh of each side;
+  paused off screen, one still frame with reduced motion) over a bottom line, "Generating video" in `text-shimmer`,
+  "· model" in `fg-faint`, the elapsed time on the right. A video that finishes on screen opens with the reveal
+  (`animate-reveal`, 1.4 s: a feathered radial mask from the centre, blur 10 px to sharp) once its first frame is in,
+  the loader fading out behind it,
   and failed cards show as much of the provider error and prompt as the cell's height holds, with Retry and Details
   (the full text). The loading skeletons and the route fallback use the same cells. Assets and Favorites keep the
   masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) or, on a video, Edit video (→ the

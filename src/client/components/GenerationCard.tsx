@@ -1,4 +1,4 @@
-import { memo, useRef, useState, type DragEvent, type FocusEvent, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type DragEvent, type FocusEvent, type ReactNode } from "react";
 import { CircleAlert, Download, Heart, ImageUpscale, RefreshCw, RotateCcw, Trash2, Volume2, WandSparkles } from "lucide-react";
 import type { Generation } from "@shared/types";
 import { cn } from "@/lib/cn";
@@ -20,6 +20,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { endGenerationDrag, startGenerationDrag } from "@/components/favorites/dnd";
 import { KeepMenu } from "@/components/favorites/KeepMenu";
+import { RippleLoader } from "@/components/RippleLoader";
 
 /** Short params label: "2K · 1024×1536" for images, "5s · 1080p" for videos. */
 function paramsLabel(g: Generation): string {
@@ -81,6 +82,19 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
   const src = useMediaUrl(out?.id);
   const isVideo = g.type === "video";
   const failed = !pending && (g.status === "failed" || !out);
+  // A video that finishes while its card is on screen opens with the reveal: the loader stays until the first frame is in.
+  const wasPending = useRef(pending);
+  const [reveal, setReveal] = useState<"off" | "waiting" | "playing">("off");
+  useEffect(() => {
+    if (wasPending.current && !pending && isVideo && g.status === "completed" && !reduceMotion) setReveal("waiting");
+    wasPending.current = pending;
+  }, [pending, isVideo, g.status, reduceMotion]);
+  // A browser that never says the first frame is in (metadata-only preload): reveal anyway once the clip is on screen.
+  useEffect(() => {
+    if (reveal !== "waiting" || !near || !src) return;
+    const t = setTimeout(() => setReveal((r) => (r === "waiting" ? "playing" : r)), 2500);
+    return () => clearTimeout(t);
+  }, [reveal, near, src]);
   // Stay mounted while the delete dialog or the keep menu is up so focus has a button to return to on close.
   const showActions = active || coarse || actions.confirmDelete || keepOpen;
 
@@ -123,7 +137,27 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
 
   let body: ReactNode;
 
-  if (pending) {
+  if (pending && isVideo) {
+    body = (
+      <>
+        <RippleLoader />
+        <div className={cn("absolute inset-x-0 bottom-0 flex items-center gap-2 text-meta", cell ? "p-2" : "p-3")}>
+          <span className="min-w-0 truncate">
+            <span className="text-shimmer font-medium">Generating video</span>
+            <span className="text-fg-faint"> · {g.modelName}</span>
+          </span>
+          <span className="ml-auto shrink-0 tabular-nums text-fg-subtle" aria-live="off">
+            {formatElapsed(elapsed)}
+          </span>
+        </div>
+        <div className="absolute right-2 top-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100">
+          <IconButton label="Delete" size="sm" variant="overlay" onClick={() => actions.setConfirmDelete(true)}>
+            <Trash2 />
+          </IconButton>
+        </div>
+      </>
+    );
+  } else if (pending) {
     body = (
       <>
         <div className="skeleton absolute inset-0" />
@@ -197,6 +231,7 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
     const audio = isVideo && !isImageParams(g.params) && g.params.audio;
     body = (
       <>
+        {reveal !== "off" ? <RippleLoader className={reveal === "playing" ? "opacity-0 transition-opacity duration-[1400ms]" : undefined} /> : null}
         {isVideo ? (
           // `src` waits for the viewport and the object url; `metadata` then paints the first frame as the poster.
           <video
@@ -206,7 +241,9 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
             loop
             playsInline
             preload={near ? "metadata" : "none"}
-            className="absolute inset-0 size-full object-cover"
+            onLoadedData={() => setReveal((r) => (r === "waiting" ? "playing" : r))}
+            onAnimationEnd={() => setReveal("off")}
+            className={cn("absolute inset-0 size-full object-cover", reveal === "waiting" && "opacity-0", reveal === "playing" && "animate-reveal")}
           />
         ) : (
           // Hidden until the url is there so browsers don't paint the alt text in the box meanwhile.
