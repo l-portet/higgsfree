@@ -205,6 +205,35 @@ export async function download(url: string, signal?: AbortSignal, timeoutMs = 10
 // ---------- account ----------
 
 /** True when fal accepts the key (an authenticated pricing lookup). Throws 401 when it does not. */
+/** Thrown when the key works but may not read the account's billing (a key without `billing:usage:read`). */
+export const FAL_BALANCE_FORBIDDEN = "This fal key cannot read the balance (it needs billing access)";
+
+/**
+ * The account's credit balance in USD (`GET /v1/account/billing?expand=credits` → `credits.current_balance`). A key
+ * made for running models only may lack the billing permission: that is a 403 with `FAL_BALANCE_FORBIDDEN`, not a
+ * rejected key.
+ */
+export async function balance(key: string, signal?: AbortSignal): Promise<{ usd: number }> {
+  const url = assertFalOrigin(`${FAL_API}/v1/account/billing?expand=credits`);
+  const s = anySignal([AbortSignal.timeout(15_000), signal]);
+  let res: Response;
+  let body: unknown;
+  try {
+    res = await fetch(url, { headers: { Authorization: `Key ${key}` }, signal: s });
+    body = await readBody(res);
+  } catch (err) {
+    const e = abortedError(s, err);
+    throw e.status === 0 ? new ApiClientError(0, "fal unreachable", e.provider) : e;
+  }
+  if (res.status === 401) throw new ApiClientError(401, FAL_KEY_REJECTED, body);
+  if (res.status === 403) throw new ApiClientError(403, FAL_BALANCE_FORBIDDEN, body);
+  if (!res.ok) throw new ApiClientError(res.status, falMessage(body) ?? `fal returned HTTP ${res.status}`, body);
+  const credits = body && typeof body === "object" ? (body as { credits?: { current_balance?: unknown } }).credits : undefined;
+  const usd = typeof credits?.current_balance === "number" ? credits.current_balance : Number(credits?.current_balance);
+  if (!Number.isFinite(usd)) throw new ApiClientError(502, "fal returned no balance", body);
+  return { usd };
+}
+
 export async function testKey(key: string): Promise<void> {
   await request<object>(`${FAL_API}/v1/models/pricing?endpoint_id=fal-ai/flux/schnell`, { key, timeoutMs: 15_000 });
 }

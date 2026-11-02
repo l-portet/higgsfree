@@ -109,8 +109,12 @@ There is no page chrome: the app is four views under one floating nav, with one 
     A colour-rewriting browser extension dropped the `color` that a `currentColor` SVG relies on, leaving the
     active icon the label's white and out of the accent intro; `background-color` comes through. Forced-colours
     mode paints them `CanvasText`.
-  - **Key box**: key icon, "Add key", 6 px dot (`fg-disabled`) until a key is set (opens the key dialog); then the
-    remaining credits (`$12.34`) and an accent dot (opens Settings on the OpenRouter section).
+  - **Key box**: key icon, "Add key", 6 px dot (`fg-disabled`) until any key is set; then what is left on every
+    key together (`$52.47`) and an accent dot. Either way it opens Settings on the keys. Hovering shows each stored
+    key's balance (label "Balance", one row per provider: name in `fg-muted`, amount right-aligned and tabular,
+    kie.ai's credits after it in `fg-subtle`, "Unlimited" for an unlimited APIMart key, "Key can't read it" for a
+    fal key without billing access, "Couldn't read" otherwise), then a Total row under a hairline. Balances are read
+    on load, when a key changes, on hover (cached 30 s) and after each finished run (`lib/balances.ts`).
 - **Content**: max-width 1400 px, 24 px page padding, 72 px top padding to clear the nav, bottom padding equal to the
   composer's measured height (`--composer-h`) + 16 px.
 - **Composer**: fixed bottom centre, `max-w-[940px]`, `rounded-dock` (24), `surface`, `border`, `shadow-float`, 13 px

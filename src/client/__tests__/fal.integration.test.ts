@@ -293,9 +293,9 @@ describe("fal videos", () => {
 });
 
 describe("fal key and video uploads", () => {
-  it("tests the fal key with an authenticated pricing lookup", async () => {
+  it("tests the fal key by reading its balance (or, without billing access, with a pricing lookup)", async () => {
     await expect(api.testProviderKey("fal")).rejects.toMatchObject({ status: 400 });
-    expect(await api.testProviderKey("fal", FAL_KEY)).toEqual({ ok: true });
+    expect(await api.testProviderKey("fal", FAL_KEY)).toEqual({ ok: true, balanceUsd: 24.5 });
     await expect(api.testProviderKey("fal", "wrong")).rejects.toMatchObject({ status: 401, error: "Invalid fal key" });
     const saved = await api.updateSettings({ keys: { fal: "abcdef12-3456-7890:secretsecretsecret" } });
     expect(saved.keys).toEqual({ fal: "abcdef12-…cret" });

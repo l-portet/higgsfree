@@ -72,6 +72,7 @@ export interface MockOpenRouter {
     apimartUploads: number;
     revanaGenerations: Record<string, { polls: number; image: boolean }>;
     revanaUploads: number;
+    falBillingForbidden?: boolean;
   };
   /** Calls to fal hosts (API, uploads, CDN), by path. */
   fal(path: string): Seen[];
@@ -185,6 +186,11 @@ function falRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response
   const path = u.pathname;
   const keyed = ["fal.run", "queue.fal.run", "rest.fal.ai", "api.fal.ai"].includes(u.hostname);
   if (keyed && entry.auth !== `Key ${FAL_KEY}`) return json(401, { detail: "Invalid key" });
+  if (u.hostname === "api.fal.ai" && path === "/v1/account/billing") {
+    // \`state.falBillingForbidden\`: a key made for running models only, without billing access.
+    if (state.falBillingForbidden) return json(403, { error: { type: "authorization_error", message: "Missing permission billing:usage:read" } });
+    return json(200, u.searchParams.get("expand") === "credits" ? { username: "me", credits: { current_balance: 24.5, currency: "USD" } } : { username: "me" });
+  }
   if (u.hostname === "api.fal.ai" && path === "/v1/models/pricing") {
     return json(200, { prices: [{ endpoint_id: "fal-ai/flux/schnell", unit_price: 0.003, unit: "image", currency: "USD" }], next_cursor: null, has_more: false });
   }

@@ -46,9 +46,10 @@ import { revokeAllMediaUrls } from "./media-urls";
 import { chatText, listLiveModels, nativeImage } from "./openrouter";
 import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DEFAULT_PREVIEW_CONFIG, MAX_RECREATE_VIDEO_BYTES, storyboardLayout, type PreviewConfig, type RewriteContext } from "./prompt-editor";
 import * as apimart from "./apimart";
+import { allBalances, invalidateBalances, type BalanceEntry } from "./balances";
 import * as revana from "./revana";
 import * as kie from "./kie";
-import { isProviderId, PROVIDER_NAME } from "./providers";
+import { isProviderId, PROVIDER_IDS, PROVIDER_NAME } from "./providers";
 import { getProviderKey, getStoredFalKey, getStoredKey, requireApiKey, setProviderKey, setStoredKey, settingsResponse } from "./settings";
 import { isQuotaError, quotaMessage } from "./storage-health";
 import { detectVideo, OPENROUTER_VIDEO_MIME } from "./video-meta";
@@ -99,12 +100,32 @@ export async function testProviderKey(provider: Exclude<ProviderId, "openrouter"
     if (provider === "kie") return { ok: true, credits: (await kie.testKey(key)).credits };
     if (provider === "apimart") return { ok: true, balanceUsd: (await apimart.testKey(key)).balanceUsd };
     if (provider === "revana") return { ok: true, balanceUsd: (await revana.testKey(key)).balanceUsd };
+    // The balance when the key may read it; a key made for running models only is still a working key.
+    try {
+      return { ok: true, balanceUsd: (await fal.balance(key)).usd };
+    } catch (err) {
+      if (!(err instanceof ApiClientError && err.status === 403)) throw err;
+    }
     await fal.testKey(key);
     return { ok: true };
   } catch (err) {
     if (err instanceof ApiClientError && err.status === 401) throw new ApiClientError(401, `Invalid ${name} key`, err.provider);
     throw err;
   }
+}
+
+/** What is left on each stored key (`fresh`: skip the 30 s cache, after a run). */
+export async function getBalances(fresh = false): Promise<Partial<Record<ProviderId, BalanceEntry>>> {
+  if (fresh) {
+    invalidateBalances();
+    invalidateCredits();
+  }
+  const keys: Partial<Record<ProviderId, string>> = {};
+  for (const p of PROVIDER_IDS) {
+    const key = getProviderKey(p);
+    if (key) keys[p] = key;
+  }
+  return allBalances(keys);
 }
 
 export async function getCredits(): Promise<CreditsResponse> {
