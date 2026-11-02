@@ -3,7 +3,7 @@
  * renders nothing for unknown providers so callers can fall back. Marks are monochrome (`currentColor`) and `aria-hidden`; the surrounding tile owns
  * the accessible name. Path data and licensing: ./marks.ts and ./LICENSES.md.
  */
-import { PROVIDER_MARKS, hasProviderLogo } from "./marks";
+import { EVENODD_MARKS, PROVIDER_MARKS, hasProviderLogo } from "./marks";
 
 export interface ProviderMarkProps {
   /** Pixel size of the square glyph (default 18). */
@@ -15,7 +15,7 @@ export interface ProviderLogoProps extends ProviderMarkProps {
   provider: string;
 }
 
-function Mark({ d, size = 18, className }: ProviderMarkProps & { d: string }) {
+function Mark({ d, evenOdd, size = 18, className }: ProviderMarkProps & { d: string; evenOdd?: boolean }) {
   return (
     <svg
       width={size}
@@ -26,7 +26,7 @@ function Mark({ d, size = 18, className }: ProviderMarkProps & { d: string }) {
       focusable="false"
       className={className}
     >
-      <path d={d} />
+      <path d={d} fillRule={evenOdd ? "evenodd" : undefined} />
     </svg>
   );
 }
@@ -34,5 +34,5 @@ function Mark({ d, size = 18, className }: ProviderMarkProps & { d: string }) {
 /** Logo for a provider slug, or `null` when there is none. */
 export function ProviderLogo({ provider, ...props }: ProviderLogoProps) {
   const d = hasProviderLogo(provider) ? PROVIDER_MARKS[provider] : undefined;
-  return d ? <Mark d={d} {...props} /> : null;
+  return d ? <Mark d={d} evenOdd={EVENODD_MARKS.has(provider)} {...props} /> : null;
 }
