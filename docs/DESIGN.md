@@ -152,8 +152,17 @@ There is no page chrome: the app is four views under one floating nav, with one 
   masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) or, on a video, Edit video (→ the
   composer on the last editor used, with this clip attached; same WandSparkles glyph) · Reuse prompt
   · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
-- Composer chips: [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds reference images (up to the
-  largest count any model takes; the picker dims models that cannot take what is attached).
+- **Mode switch** (both composers, the first chip, `ModeSwitch`): a segmented [Create | Edit | Upscale], 36 px like
+  the chips, `rounded-control` on `surface-2` with a `border-strong` edge; the active segment is `surface-3` with a
+  1 px `border-strong` ring and `fg` text, the others `fg-muted`. Arrow keys move between them (a radio group). The
+  model picker next to it lists only the mode's models (`lib/modes.ts`), and each mode remembers its last model.
+  A model can be in two modes: an image model that takes a source image creates and edits; a video model that takes
+  reference videos (Seedance 2.x, Wan 3.0 / Prime, Kling 4.0) creates and edits from a reference. Motion control is
+  in Create, in its own picker group. Animate switches to Create, Edit video to Edit, Upscale to Upscale.
+- Composer chips: [Create | Edit | Upscale] [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
+  reference images (up to the largest count any model takes; the picker dims models that cannot take what is
+  attached). Image Edit is the same bar with an image required ("Add an image to edit") and the placeholder "Say what
+  to change: swap, add, remove, restyle…".
 
 ## Video view (`/video`)
 - Same empty block ("Your video runs land here") with three example shots.
@@ -178,7 +187,12 @@ There is no page chrome: the app is four views under one floating nav, with one 
   video"; dropped images fill the character, dropped videos the reference. One chip replaces duration, aspect
   ratio, resolution and Sound: [Follow video ˅] / [Follow image ˅], with the reference video's limit (30 s / 10 s)
   in the menu. The clip length follows the reference video, so there is no estimate. The prompt is optional.
-- Video editing (`caps.videoEdit`; the picker lists editors in their own group, "Edit a video", under Featured): `+`
+- Video Edit lists two picker groups: **Editors** (`caps.videoEdit`: the clip changed, its length kept) and **From a
+  reference** (models with reference videos: the clip goes as reference video 1 and a new clip is made, so aspect
+  ratio, duration (with a "match the video" option), resolution, Sound and count stay; the clip must fit the model's
+  reference limit and a kie.ai key is needed, said in a danger note otherwise). A first switch to Edit lands on the
+  default editor.
+- Video editing (`caps.videoEdit`; in the Edit mode's "Editors" group): `+`
   offers one item, "Video to edit" (Film icon), with the model's limits in the caption ("Takes clips up to 15 s."); a
   dropped video fills it, images are refused. The clip shows in the attachment strip tagged SOURCE. The chips are the
   model, a static length chip once the video's length is known ([⏱ 6s], what the edit will last), resolution when
