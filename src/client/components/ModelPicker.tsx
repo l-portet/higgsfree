@@ -5,12 +5,13 @@ import { cn } from "@/lib/cn";
 import { NO_AUTOFILL } from "@/lib/no-autofill";
 import { formatRelative } from "@/lib/format";
 import { durationRange, maxResolution, providerLabel } from "@/lib/models";
-import { editsByReference, inMode, type ComposerMode } from "@/lib/modes";
+import { COMPOSER_MODES, editsByReference, inMode, modelModes, type ComposerMode } from "@/lib/modes";
 import { useModels } from "@/store/models";
 import { Badge } from "@/components/ui/Badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ProviderTile } from "@/components/ProviderTile";
+import { ModeTabs } from "@/components/composer/ModeSwitch";
 
 type CatalogModel = ImageModel | VideoModel;
 
@@ -24,6 +25,11 @@ interface CommonProps {
   onOpenChange?: (open: boolean) => void;
   /** The composer's mode: only its models are listed (all of them without one). */
   mode?: ComposerMode;
+  /**
+   * With a mode: Create / Edit / Upscale tabs above the list switch it (the picker stays open), and a search looks in
+   * every mode (a model picked from another one switches to it).
+   */
+  onModeChange?: (mode: ComposerMode) => void;
 }
 
 /** Discriminated on `kind` so `onChange` / `disabledReason` receive the right model type without casts. */
@@ -62,11 +68,13 @@ interface RowProps {
   highlighted: boolean;
   disabledReason: string | null;
   unavailable: boolean;
+  /** The mode a search result from another mode is in ("Upscale"). */
+  modeTag?: string;
   onHover: () => void;
   onSelect: () => void;
 }
 
-function ModelRow({ id, model, selected, highlighted, disabledReason, unavailable, onHover, onSelect }: RowProps) {
+function ModelRow({ id, model, selected, highlighted, disabledReason, unavailable, modeTag, onHover, onSelect }: RowProps) {
   const disabled = Boolean(disabledReason);
   const tooltip = disabledReason ?? (unavailable ? UNAVAILABLE_REASON : null);
   const badge = model.badges[0];
@@ -98,6 +106,7 @@ function ModelRow({ id, model, selected, highlighted, disabledReason, unavailabl
             {model.name}
           </span>
           {badge ? <Badge variant={badge} /> : null}
+          {modeTag ? <MiniChip>{modeTag}</MiniChip> : null}
           {unavailable ? (
             <span className="size-1.5 shrink-0 rounded-full border border-fg-faint" aria-hidden="true" />
           ) : null}
@@ -139,7 +148,7 @@ function ModelRow({ id, model, selected, highlighted, disabledReason, unavailabl
 }
 
 export function ModelPicker(props: ModelPickerProps) {
-  const { kind, value, children, align = "start", side = "top", open: controlledOpen, onOpenChange, mode } = props;
+  const { kind, value, children, align = "start", side = "top", open: controlledOpen, onOpenChange, mode, onModeChange } = props;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = (next: boolean) => {
@@ -161,7 +170,8 @@ export function ModelPicker(props: ModelPickerProps) {
   const terms = useMemo(() => query.trim().toLowerCase().split(/\s+/).filter(Boolean), [query]);
 
   const groups = useMemo(() => {
-    if (terms.length) return [{ label: "Results", items: models.filter((m) => matches(m, terms)) }];
+    // With mode tabs, a search looks in every mode.
+    if (terms.length) return [{ label: "Results", items: (onModeChange ? catalog : models).filter((m) => matches(m, terms)) }];
     const out: { label: string; items: CatalogModel[] }[] = [];
     const push = (label: string, items: CatalogModel[]) => {
       if (items.length) out.push({ label, items });
@@ -187,7 +197,7 @@ export function ModelPicker(props: ModelPickerProps) {
     push(kind === "video" ? "Upscale a video" : "Upscale an image", upscalers);
     push("All models", models.filter((m) => !m.featured && !grouped(m)));
     return out;
-  }, [models, terms, mode, kind]);
+  }, [models, catalog, terms, mode, kind, onModeChange]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const indexOf = (m: CatalogModel) => flat.indexOf(m);
@@ -201,6 +211,13 @@ export function ModelPicker(props: ModelPickerProps) {
     setHighlighted(idx >= 0 ? flat.findIndex((m) => m.id === value) : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Another mode's list: highlight the model it runs (the composer has just switched to it).
+  useEffect(() => {
+    if (!open || terms.length) return;
+    setHighlighted(Math.max(0, flat.findIndex((m) => m.id === value)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, value]);
 
   // Highlight the first result while searching.
   useEffect(() => {
@@ -277,6 +294,11 @@ export function ModelPicker(props: ModelPickerProps) {
           inputRef.current?.focus();
         }}
       >
+        {mode && onModeChange ? (
+          <div className="border-b border-border p-1.5">
+            <ModeTabs value={mode} onChange={onModeChange} label={`${kind === "image" ? "Image" : "Video"} mode`} />
+          </div>
+        ) : null}
         {/* Borderless search: the divider under it is the only chrome. */}
         <div className="relative border-b border-border">
           <Search
@@ -325,6 +347,7 @@ export function ModelPicker(props: ModelPickerProps) {
                     disabledReason={reasonFor(m)}
                     // OpenRouter's listing says nothing about models only fal serves.
                     unavailable={live ? !m.offOpenRouter && !live.available.includes(m.id) : false}
+                    modeTag={mode && !inMode(m, mode) ? COMPOSER_MODES.find((x) => x.value === modelModes(m)[0])?.label : undefined}
                     onHover={() => setHighlighted(idx)}
                     onSelect={() => select(m)}
                   />

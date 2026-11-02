@@ -32,7 +32,6 @@ import { CostEstimate, ProviderPicker } from "./CostEstimate";
 import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
-import { ChipSlash, CHIP_SEGMENT, ModeModelChip, ModeSwitch } from "./ModeSwitch";
 
 const STORAGE_KEY = "higgsfree.image.prompt-bar";
 const MAX_COUNT = 4;
@@ -472,13 +471,17 @@ export function ImageComposer() {
       }
       chips={
         <>
-          <ModeModelChip>
-            <ModeSwitch value={mode} onChange={(m) => switchMode(m)} label="Image mode" />
-            <ChipSlash />
-            <ModelPicker kind="image" mode={mode} value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
-              <ModelChip model={model} reason={modelReason(model)} className={cn(CHIP_SEGMENT, "min-w-0")} />
-            </ModelPicker>
-          </ModeModelChip>
+          {/* The mode lives in the picker: tabs above the list. A model picked from a search in another mode switches to it. */}
+          <ModelPicker
+            kind="image"
+            mode={mode}
+            onModeChange={(m) => switchMode(m)}
+            value={model.id}
+            onChange={(m) => (inMode(m, mode) ? pickModel(m.id) : switchMode(modelModes(m)[0] ?? "create", m.id))}
+            disabledReason={modelReason}
+          >
+            <ModelChip model={model} reason={modelReason(model)} mode={mode} />
+          </ModelPicker>
 
           {upscaleMode ? (
             <>
