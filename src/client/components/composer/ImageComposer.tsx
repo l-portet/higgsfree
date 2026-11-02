@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Clipboar
 import { Check, Gem, ImageUpscale, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { ImageAspectRatio, ImageGenerateRequest, ImageModel, ImageSize, ProviderId } from "@shared/types";
-import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_UPSCALE_MODEL } from "@shared/models";
+import { DEFAULT_IMAGE_MODEL } from "@shared/models";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -14,6 +14,7 @@ import { dragHasFiles, imageFilesFromClipboard, imageFilesFromDataTransfer, pick
 import { formatUsd, pluralize, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { isImageAspectRatio, isImageSize } from "@/lib/models";
+import { inMode, isComposerMode, modelForMode, modelModes, type ComposerMode } from "@/lib/modes";
 import { readJson, writeJson } from "@/lib/storage";
 import { useGenerations } from "@/store/generations";
 import { useModels } from "@/store/models";
@@ -31,6 +32,7 @@ import { CostEstimate, ProviderPicker } from "./CostEstimate";
 import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
+import { ModeSwitch } from "./ModeSwitch";
 
 const STORAGE_KEY = "higgsfree.image.prompt-bar";
 const MAX_COUNT = 4;
@@ -44,6 +46,9 @@ interface Persisted {
   size?: ImageSize;
   count?: number;
   prompt?: string;
+  /** Create, Edit or Upscale, and the model last picked in each. */
+  mode?: ComposerMode;
+  modeModels?: Partial<Record<ComposerMode, string>>;
 }
 
 const SIZE_META: Record<ImageSize, { hint: string; pro?: boolean }> = {
@@ -62,9 +67,18 @@ function restore(models: ImageModel[]) {
   const p = readJson<Record<string, unknown>>(STORAGE_KEY, {});
   // The last model picked here comes back; the app's default otherwise.
   const pickedModel = p.pickedModel === true && typeof p.model === "string" && models.some((m) => m.id === p.model);
+  const model = pickedModel ? (p.model as string) : DEFAULT_IMAGE_MODEL;
+  // Saved before the modes existed: the mode the saved model is listed in.
+  const saved = models.find((m) => m.id === model);
+  const mode: ComposerMode = isComposerMode(p.mode) ? p.mode : saved ? (modelModes(saved)[0] ?? "create") : "create";
+  const rawModes = typeof p.modeModels === "object" && p.modeModels !== null ? (p.modeModels as Record<string, unknown>) : {};
+  const modeModels: Partial<Record<ComposerMode, string>> = {};
+  for (const k of ["create", "edit", "upscale"] as const) if (typeof rawModes[k] === "string") modeModels[k] = rawModes[k];
   return {
     pickedModel,
-    model: pickedModel ? (p.model as string) : DEFAULT_IMAGE_MODEL,
+    model,
+    mode,
+    modeModels,
     aspectRatio: isImageAspectRatio(p.aspectRatio) ? p.aspectRatio : ("1:1" as ImageAspectRatio),
     size: isImageSize(p.size) ? p.size : ("1K" as ImageSize),
     count: clampCount(p.count),
@@ -85,6 +99,9 @@ export function ImageComposer() {
   const initial = useMemo(() => restore(models), [models]);
   const [pickedModel, setPickedModel] = useState(initial.pickedModel);
   const [modelId, setModelId] = useState<string>(initial.model);
+  const [mode, setMode] = useState<ComposerMode>(initial.mode);
+  /** The model last picked in each mode: switching back to a mode brings it back. */
+  const [modeModels, setModeModels] = useState<Partial<Record<ComposerMode, string>>>(initial.modeModels);
   const [aspectRatio, setAspectRatio] = useState<ImageAspectRatio>(initial.aspectRatio);
   const [size, setSize] = useState<ImageSize>(initial.size);
   const [count, setCount] = useState<number>(initial.count);
@@ -103,18 +120,35 @@ export function ImageComposer() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reasonId = useId();
 
-  const model: ImageModel | undefined = useMemo(
-    () => models.find((m) => m.id === modelId) ?? models.find((m) => m.id === DEFAULT_IMAGE_MODEL) ?? models[0],
-    [models, modelId],
-  );
+  // The picked model when the mode lists it, else the mode's default.
+  const model: ImageModel | undefined = useMemo(() => modelForMode(models, mode, modelId), [models, mode, modelId]);
 
   const pickModel = (id: string) => {
     setPickedModel(true);
     setModelId(id);
+    setModeModels((mm) => ({ ...mm, [mode]: id }));
+  };
+
+  /** Another mode: its last model, or the one picked now if that mode lists it too, or its default. */
+  const switchMode = (next: ComposerMode, id?: string) => {
+    if (next !== mode) {
+      setMode(next);
+      setPinned(undefined);
+    }
+    const target = id ?? modeModels[next] ?? (model && inMode(model, next) ? model.id : undefined);
+    const chosen = modelForMode(models, next, target);
+    if (chosen) {
+      // Saved as picked, so a reload comes back on this mode's model.
+      setModelId(chosen.id);
+      setPickedModel(true);
+      setModeModels((mm) => ({ ...mm, [next]: chosen.id }));
+    }
   };
 
   /** An upscaler: the prompt becomes a drop zone for the one image it takes; ratio, quality and count go. */
-  const upscaleMode = Boolean(model?.caps.upscale);
+  const upscaleMode = mode === "upscale";
+  /** Editing: the attached image is the one to change, so one is required and the prompt says what to change. */
+  const editMode = mode === "edit";
 
   /** Attach limit: the most any catalog model accepts, so you can attach first and switch model after. */
   const maxRefs = useMemo(() => models.reduce((n, m) => Math.max(n, m.caps.maxReferenceImages), 0), [models]);
@@ -130,8 +164,8 @@ export function ImageComposer() {
 
   // Persist the last-used controls.
   useEffect(() => {
-    writeJson(STORAGE_KEY, { model: modelId, pickedModel, aspectRatio, size, count, prompt } satisfies Persisted);
-  }, [modelId, pickedModel, aspectRatio, size, count, prompt]);
+    writeJson(STORAGE_KEY, { model: modelId, pickedModel, aspectRatio, size, count, prompt, mode, modeModels } satisfies Persisted);
+  }, [modelId, pickedModel, aspectRatio, size, count, prompt, mode, modeModels]);
 
   const addFiles = useCallback(
     async (files: File[]) => {
@@ -163,16 +197,18 @@ export function ImageComposer() {
     const id = useUi.getState().consumePendingUpscale("image");
     if (!id) return;
     setSource(frameFromMedia(id));
-    if (!model?.caps.upscale) pickModel(DEFAULT_IMAGE_UPSCALE_MODEL);
+    switchMode("upscale");
     toast.success("Image added", { description: "Pick the scale, then Generate." });
-  }, [pendingUpscale, model]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingUpscale]);
 
   // "Reuse prompt" / example prompt hand-off.
   useEffect(() => {
     if (!draft || draft.type !== "image") return;
     useUi.getState().consumeDraft("image");
     const target = draft.model ? models.find((m) => m.id === draft.model) : undefined;
-    if (target) pickModel(target.id);
+    // Into a mode that lists the model: the current one when it does (a model that creates and edits stays where it is).
+    if (target) switchMode(inMode(target, mode) ? mode : (modelModes(target)[0] ?? "create"), target.id);
     // An upscale run: its image goes back in the drop zone, at the same scale.
     if (target?.caps.upscale) {
       const id = draft.referenceImages?.[0];
@@ -187,6 +223,7 @@ export function ImageComposer() {
     }
     if (draft.referenceImages?.length) setRefs(draft.referenceImages.map((id) => frameFromMedia(id)));
     requestAnimationFrame(() => textareaRef.current?.focus());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, models]);
 
   const refCount = refs.length;
@@ -215,8 +252,12 @@ export function ImageComposer() {
       ? !source
         ? "Add an image to upscale"
         : null
-      : !trimmed
-          ? "Enter a prompt"
+      : editMode && refCount === 0
+        ? "Add an image to edit"
+        : !trimmed
+          ? editMode
+            ? "Say what to change"
+            : "Enter a prompt"
           : (modelReason(model) ?? (refCount === 0 && !model.caps.textToImage ? `${model.name} needs a reference image. Add one with +` : null));
 
   // The price on the provider that runs it (the cheapest that can take the request): OpenRouter's from
@@ -322,7 +363,9 @@ export function ImageComposer() {
   const modelMax = model.caps.maxReferenceImages;
   const addTooltip = upscaleMode
     ? "Choose the image to upscale"
-    : modelMax > 0
+    : editMode
+      ? `Add the image to edit${modelMax > 1 ? ` (and up to ${modelMax - 1} more as references)` : ""}`
+      : modelMax > 0
       ? `Add reference images (up to ${modelMax} for ${model.name})`
       : `${model.name} doesn't use reference images. Attach some, then switch model.`;
   const factors = model.caps.upscale?.factors ?? [];
@@ -371,17 +414,17 @@ export function ImageComposer() {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       onPaste={onFormPaste}
-      aria-label={upscaleMode ? "Image upscale" : "Image prompt"}
+      aria-label={upscaleMode ? "Image upscale" : editMode ? "Image edit" : "Image prompt"}
       dragging={dragging}
       notice={notice ? <ComposerNotice message={notice.message} action={notice.action} onAction={notice.onAction} /> : null}
       addControl={
         <Tooltip content={addTooltip} side="top">
-          <AddButton onClick={() => void pick()} aria-label={upscaleMode ? "Choose image" : "Add reference image"}>
+          <AddButton onClick={() => void pick()} aria-label={upscaleMode ? "Choose image" : editMode ? "Add image to edit" : "Add reference image"}>
             <Plus size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
           </AddButton>
         </Tooltip>
       }
-      attachments={upscaleMode ? null : <AttachmentStrip items={refs} onRemove={removeRef} label="Reference images" />}
+      attachments={upscaleMode ? null : <AttachmentStrip items={refs} onRemove={removeRef} label={editMode ? "Image to edit" : "Reference images"} />}
       textarea={
         upscaleMode ? (
           <UpscaleDropZone
@@ -399,7 +442,7 @@ export function ImageComposer() {
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
-          placeholder="Describe the image: subject, style, light, lens…"
+          placeholder={editMode ? (refCount ? "Say what to change: swap, add, remove, restyle…" : "Add an image with +, then say what to change…") : "Describe the image: subject, style, light, lens…"}
           aria-label="Prompt"
           maxLength={8000}
           minRows={1}
@@ -411,7 +454,8 @@ export function ImageComposer() {
       }
       chips={
         <>
-          <ModelPicker kind="image" value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
+          <ModeSwitch value={mode} onChange={(m) => switchMode(m)} label="Image mode" />
+          <ModelPicker kind="image" mode={mode} value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
             <ModelChip model={model} reason={modelReason(model)} />
           </ModelPicker>
 

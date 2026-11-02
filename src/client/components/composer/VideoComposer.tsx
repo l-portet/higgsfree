@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Clipboar
 import { AudioLines, Check, CircleAlert, Clock, Film, Gem, ImageIcon, ImagePlus, Images, ImageUpscale, Music, Plus, Sparkles, SquareArrowRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { Generation, MotionOrientation, ProviderId, VideoAspectRatio, VideoGenerateRequest, VideoModel, VideoResolution } from "@shared/types";
-import { DEFAULT_VIDEO_EDIT_MODEL, DEFAULT_VIDEO_MODEL, DEFAULT_VIDEO_UPSCALE_MODEL, editedLength, snapDuration } from "@shared/models";
+import { DEFAULT_VIDEO_MODEL, editedLength, snapDuration } from "@shared/models";
 import * as api from "@/lib/api";
 import { ApiClientError, describeApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -12,6 +12,7 @@ import { formatSeconds, formatUsd, ratioLabel } from "@/lib/format";
 import { frameFromMedia, frameInput, loadFrame, type Frame } from "@/lib/frames";
 import { ownerGenerationId } from "@/lib/media-ids";
 import { editSourceHint, isVideoAspectRatio, isVideoResolution } from "@/lib/models";
+import { editsByReference, isComposerMode, modelForMode, modelModes, type ComposerMode } from "@/lib/modes";
 import { readJson, writeJson } from "@/lib/storage";
 import { uid } from "@/lib/uid";
 import { sourceVideoProblem } from "@/lib/validate";
@@ -38,6 +39,7 @@ import { PromptEditorDialog } from "./PromptEditorDialog";
 import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
+import { ModeSwitch } from "./ModeSwitch";
 
 const STORAGE_KEY = "higgsfree.video.panel";
 const MAX_REFS = 4;
@@ -56,8 +58,9 @@ interface Persisted {
   prompt?: string;
   /** Motion control: whose orientation the character keeps. */
   orientation?: MotionOrientation;
-  /** The last video editor picked here: "Edit video" on a clip comes back to it. */
-  editModel?: string;
+  /** Create, Edit or Upscale, and the model last picked in each. */
+  mode?: ComposerMode;
+  modeModels?: Partial<Record<ComposerMode, string>>;
 }
 
 /** Motion control's two orientations, with fal's cap on the reference video for each. */
@@ -88,7 +91,15 @@ function restore() {
     count: clampCount(p.count),
     prompt: typeof p.prompt === "string" ? p.prompt : "",
     orientation: (p.orientation === "image" ? "image" : "video") as MotionOrientation,
-    editModel: typeof p.editModel === "string" && p.editModel.length > 0 ? p.editModel : DEFAULT_VIDEO_EDIT_MODEL,
+    mode: isComposerMode(p.mode) ? p.mode : undefined,
+    modeModels: ((): Partial<Record<ComposerMode, string>> => {
+      const raw = typeof p.modeModels === "object" && p.modeModels !== null ? (p.modeModels as Record<string, unknown>) : {};
+      const out: Partial<Record<ComposerMode, string>> = {};
+      for (const k of ["create", "edit", "upscale"] as const) if (typeof raw[k] === "string") out[k] = raw[k];
+      // Saved before the modes existed: the last editor picked.
+      if (!out.edit && typeof p.editModel === "string" && p.editModel.length > 0) out.edit = p.editModel;
+      return out;
+    })(),
   };
 }
 
@@ -168,7 +179,10 @@ export function VideoComposer() {
   /** The reference clip whose length the duration follows (its `VideoClip.id`), if any. */
   const [matchId, setMatchId] = useState<string | null>(null);
   const [orientation, setOrientation] = useState<MotionOrientation>(initial.orientation);
-  const [editModelId, setEditModelId] = useState<string>(initial.editModel);
+  /** Unset until the catalog says which mode the saved model is in (saved before the modes existed). */
+  const [savedMode, setMode] = useState<ComposerMode | undefined>(initial.mode);
+  /** The model last picked in each mode: switching back to a mode brings it back. */
+  const [modeModels, setModeModels] = useState<Partial<Record<ComposerMode, string>>>(initial.modeModels);
   /** The provider picked by hand next to Generate; unset, the cheapest runs it. Ignored while it cannot take the request. */
   const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
   /** Upscalers: the scale (for those that offer several). */
@@ -186,16 +200,20 @@ export function VideoComposer() {
 
   const { first: firstFrame, last: lastFrame, refs } = frames;
 
-  const model: VideoModel | undefined = useMemo(
-    () => models.find((m) => m.id === modelId) ?? models.find((m) => m.id === DEFAULT_VIDEO_MODEL) ?? models[0],
-    [models, modelId],
-  );
+  const savedModel = models.find((m) => m.id === modelId);
+  const mode: ComposerMode = savedMode ?? (savedModel ? (modelModes(savedModel)[0] ?? "create") : "create");
+  // The picked model when the mode lists it, else the mode's default.
+  const model: VideoModel | undefined = useMemo(() => modelForMode(models, mode, modelId), [models, mode, modelId]);
   /** Motion control: a character image (the first frame) and a reference video instead of frames and references. */
-  const motionMode = Boolean(model?.caps.motionControl);
-  /** Video editing: one video and a prompt saying what to change; nothing else is sent. */
-  const editMode = Boolean(model?.caps.videoEdit);
+  const motionMode = mode === "create" && Boolean(model?.caps.motionControl);
+  /** Edit and Upscale: the composer is about one clip, the video dropped in; frames and references are not sent. */
+  const clipMode = mode !== "create";
+  /** A dedicated editor or an upscaler: one video and (for an editor) a prompt saying what to change; nothing else is sent. */
+  const editMode = clipMode && Boolean(model?.caps.videoEdit);
+  /** Editing with a model that takes reference videos: the clip goes as reference video 1, and the clip settings stay. */
+  const refEdit = mode === "edit" && !editMode;
   /** Upscaling (an editor too: one video in, its length kept): no prompt, so the prompt becomes a drop zone for the video. */
-  const upscaleMode = Boolean(model?.caps.upscale);
+  const upscaleMode = mode === "upscale";
   const sentFactor = model?.caps.upscale ? upscaleFactor(model, factor) : undefined;
   /** How many runs one Generate starts: an upscale is one. */
   const runs = upscaleMode ? 1 : count;
@@ -203,6 +221,23 @@ export function VideoComposer() {
   const pickModel = (id: string) => {
     setPickedModel(true);
     setModelId(id);
+    setModeModels((mm) => ({ ...mm, [mode]: id }));
+  };
+
+  /**
+   * Another mode: its last model, or its default (a first Edit lands on a dedicated editor, not on the model creating
+   * now, which would only edit from a reference). `id` picks one.
+   */
+  const switchMode = (next: ComposerMode, id?: string) => {
+    if (next !== mode) setPinned(undefined);
+    setMode(next);
+    const target = id ?? modeModels[next];
+    const chosen = modelForMode(models, next, target);
+    if (!chosen) return;
+    // Saved as picked, so a reload comes back on this mode's model.
+    setModelId(chosen.id);
+    setPickedModel(true);
+    setModeModels((mm) => ({ ...mm, [next]: chosen.id }));
   };
 
   // Snap duration / aspect ratio / resolution to what the selected model supports. Motion control
@@ -211,11 +246,7 @@ export function VideoComposer() {
   useEffect(() => {
     if (!model || model.caps.motionControl) return;
     setResolution((r) => (r && model.resolutions.includes(r) ? r : (model.defaultResolution ?? model.resolutions[0])));
-    if (model.caps.videoEdit) {
-      // "Edit video" comes back to the last editor picked, not to an upscaler.
-      if (!model.caps.upscale) setEditModelId(model.id);
-      return;
-    }
+    if (model.caps.videoEdit) return;
     setDuration((d) => snapDuration(model, Number.isFinite(d) ? d : model.defaultDuration));
     setAspectRatio((ar) =>
       model.aspectRatios.includes(ar) ? ar : model.aspectRatios.includes("16:9") ? "16:9" : (model.aspectRatios[0] ?? "16:9"),
@@ -224,8 +255,8 @@ export function VideoComposer() {
 
   // Persist the last-used controls.
   useEffect(() => {
-    writeJson(STORAGE_KEY, { model: modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation, editModel: editModelId } satisfies Persisted);
-  }, [modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation, editModelId]);
+    writeJson(STORAGE_KEY, { model: modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation, mode, modeModels } satisfies Persisted);
+  }, [modelId, pickedModel, duration, aspectRatio, resolution, sound, count, prompt, orientation, mode, modeModels]);
 
   // "Animate this image" hand-off from a card / the lightbox. An editor takes no frame: back to the default model.
   useEffect(() => {
@@ -233,10 +264,11 @@ export function VideoComposer() {
     const mediaId = useUi.getState().consumePendingFirstFrame();
     if (!mediaId) return;
     setFrames((f) => ({ ...f, first: frameFromMedia(mediaId) }));
-    if (editMode) pickModel(DEFAULT_VIDEO_MODEL);
+    if (clipMode) switchMode("create");
     toast.success(motionMode ? "Character image added" : "First frame added");
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [pendingFirstFrame, motionMode, editMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFirstFrame, motionMode, clipMode]);
 
   // "Edit this video" hand-off from a card / the lightbox: onto the last editor used here (or the default one).
   useEffect(() => {
@@ -244,10 +276,11 @@ export function VideoComposer() {
     const mediaId = useUi.getState().consumePendingSourceVideo();
     if (!mediaId) return;
     setClip(clipFromMedia(mediaId, "video to edit"));
-    if (!editMode || upscaleMode) pickModel(models.some((m) => m.id === editModelId && m.caps.videoEdit && !m.caps.upscale) ? editModelId : DEFAULT_VIDEO_EDIT_MODEL);
+    switchMode("edit");
     toast.success("Video added", { description: "Say what to change, then Generate." });
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [pendingSourceVideo, editMode, upscaleMode, editModelId, models]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSourceVideo]);
 
   // "Upscale" hand-off from a card / the lightbox: onto an upscaler, unless one is picked already.
   useEffect(() => {
@@ -255,16 +288,23 @@ export function VideoComposer() {
     const mediaId = useUi.getState().consumePendingUpscale("video");
     if (!mediaId) return;
     setClip(clipFromMedia(mediaId));
-    if (!upscaleMode) pickModel(DEFAULT_VIDEO_UPSCALE_MODEL);
+    switchMode("upscale");
     toast.success("Video added", { description: "Pick the scale, then Generate." });
-  }, [pendingUpscale, upscaleMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingUpscale]);
 
   // "Reuse prompt" / example prompt hand-off.
   useEffect(() => {
     if (!draft || draft.type !== "video") return;
     useUi.getState().consumeDraft("video");
     setPrompt(draft.prompt);
-    if (draft.model && models.some((m) => m.id === draft.model)) pickModel(draft.model);
+    // Into a mode that lists the model: an edit or upscale run's own, else the current one when it lists it.
+    const target = draft.model ? models.find((m) => m.id === draft.model) : undefined;
+    if (target) {
+      const modes = modelModes(target);
+      const next: ComposerMode = draft.sourceVideo && modes.includes("edit") ? (modes.includes("upscale") ? "upscale" : "edit") : modes.includes(mode) ? mode : (modes[0] ?? "create");
+      switchMode(next, target.id);
+    }
     const params = draft.params && !("size" in draft.params) ? draft.params : undefined;
     // A motion-control or edit run's duration is its input video's length (0 until it finished): not a setting to bring back.
     const videoDraft = Boolean(draft.motionVideo || draft.sourceVideo) || params?.orientation !== undefined;
@@ -288,15 +328,16 @@ export function VideoComposer() {
     if (draft.motionVideo) setClip(clipFromMedia(draft.motionVideo));
     else if (draft.sourceVideo) setClip(clipFromMedia(draft.sourceVideo, "video to edit"));
     requestAnimationFrame(() => textareaRef.current?.focus());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, models]);
 
   // ---------- frames ----------
 
-  const showLast = !motionMode && !editMode && Boolean(model?.caps.lastFrame);
+  const showLast = !motionMode && !clipMode && Boolean(model?.caps.lastFrame);
   // Style references are sent unless the model is known to reject `input_references`.
-  const showRefs = !motionMode && !editMode && model?.caps.references !== false;
+  const showRefs = !motionMode && !clipMode && model?.caps.references !== false;
   // Reference videos and audio, for the models that take them.
-  const mediaRefs = !motionMode && !editMode ? model?.caps.mediaReferences : undefined;
+  const mediaRefs = !motionMode && !clipMode ? model?.caps.mediaReferences : undefined;
   const refVideos = mediaRefs ? refMedia.videos.slice(0, mediaRefs.videos) : [];
   const refAudios = mediaRefs ? refMedia.audios.slice(0, mediaRefs.audios) : [];
 
@@ -358,7 +399,7 @@ export function VideoComposer() {
    */
   const addSmart = useCallback(
     async (files: File[], videos: File[] = [], audios: File[] = []) => {
-      if (editMode) {
+      if (clipMode) {
         const [video, ...moreVideos] = videos;
         if (files.length || moreVideos.length) toast.error(`${model?.name ?? "Video editing"} takes one video to ${upscaleMode ? "upscale" : "edit"}`);
         if (video) await addClip(video);
@@ -396,7 +437,7 @@ export function VideoComposer() {
         else toast.error(`${model?.name ?? "This model"} takes a first frame${showLast ? " and a last frame" : ""} only`);
       }
     },
-    [addClip, addRefMedia, addTo, editMode, upscaleMode, firstFrame, lastFrame, mediaRefs, model?.name, motionMode, refMedia, showLast, showRefs],
+    [addClip, addRefMedia, addTo, clipMode, upscaleMode, firstFrame, lastFrame, mediaRefs, model?.name, motionMode, refMedia, showLast, showRefs],
   );
 
   const pickFor = async (slot: Slot) => {
@@ -427,7 +468,7 @@ export function VideoComposer() {
     }));
   };
 
-  const attachments: Attachment[] = editMode
+  const attachments: Attachment[] = clipMode
     ? clip
       ? [{ id: clip.id, mediaId: clip.mediaId, name: clip.name, tag: "Source", kind: "video" as const }]
       : []
@@ -446,11 +487,14 @@ export function VideoComposer() {
 
   // ---------- duration matching a reference clip ----------
 
+  // Editing from a reference: the clip itself is the one reference video, and the duration can follow it.
+  const refEditClips = refEdit && clip ? [clip] : [];
   const durationMatches: DurationMatch[] = [
+    ...refEditClips.map((v): DurationMatch => ({ id: v.id, label: "Video", kind: "video", sec: v.durationSec })),
     ...refVideos.map((v, i): DurationMatch => ({ id: v.id, label: `Video ${i + 1}`, kind: "video", sec: v.durationSec })),
     ...refAudios.map((a, i): DurationMatch => ({ id: a.id, label: `Audio ${i + 1}`, kind: "audio", sec: a.durationSec })),
   ];
-  const matchedClip = matchId ? [...refVideos, ...refAudios].find((c) => c.id === matchId) : undefined;
+  const matchedClip = matchId ? [...refEditClips, ...refVideos, ...refAudios].find((c) => c.id === matchId) : undefined;
   const matchedSec = matchedClip?.durationSec;
   // Follow the clip: a new model (other durations) or a replaced clip re-matches; a removed clip ends it.
   useEffect(() => {
@@ -464,7 +508,7 @@ export function VideoComposer() {
   // Video editing: the attached video's length or size is outside the model's limits (when known).
   const editProblem = editMode && model && clip ? sourceVideoProblem(model, clip.durationSec, clip.bytes) : undefined;
   // Reference videos / audio: their lengths together, against the model's cap (when known).
-  const refVideoSec = totalSec(refVideos);
+  const refVideoSec = totalSec(refEdit ? refEditClips : refVideos);
   const refAudioSec = totalSec(refAudios);
   const refMediaProblem = ((): string | undefined => {
     if (!mediaRefs || !(refVideos.length || refAudios.length)) return undefined;
@@ -475,9 +519,17 @@ export function VideoComposer() {
     if (refAudioSec !== undefined && refAudioSec > mediaRefs.maxSec + 0.05) return `The reference audio runs ${formatSeconds(refAudioSec)}. ${name} takes up to ${mediaRefs.maxSec} s in all.`;
     return undefined;
   })();
+  // Editing from a reference: the same limits, on the one clip.
+  const refEditProblem = ((): string | undefined => {
+    const caps = refEdit ? model?.caps.mediaReferences : undefined;
+    if (!caps || !model) return undefined;
+    if (!keyed.split(",").includes("kie")) return `Editing from a reference runs on kie.ai. Add a kie.ai key in Settings to use ${model.name}, or pick an editor.`;
+    if (clip?.durationSec !== undefined && clip.durationSec > caps.maxSec + 0.05) return `The video runs ${formatSeconds(clip.durationSec)}. ${model.name} takes up to ${caps.maxSec} s as a reference.`;
+    return undefined;
+  })();
 
   // Image-to-video exactly when a frame is attached (a last frame counts only for models that take one).
-  const frameAttached = Boolean(firstFrame || (showLast && lastFrame));
+  const frameAttached = !clipMode && Boolean(firstFrame || (showLast && lastFrame));
   const i2v = frameAttached;
   const trimmed = prompt.trim();
   // Generate stays clickable without a key: it opens the key dialog for the model's provider.
@@ -488,11 +540,13 @@ export function VideoComposer() {
     (m: VideoModel): string | null => {
       // Motion control takes the attached image as its character, video editing a video: neither needs anything picked.
       if (m.caps.motionControl || m.caps.videoEdit) return null;
+      // Editing from a reference sends the clip as a reference video, which only kie.ai takes.
+      if (clipMode) return editsByReference(m) && !keyed.split(",").includes("kie") ? "Editing from a reference runs on kie.ai: add a kie.ai key" : null;
       if (i2v && !m.caps.imageToVideo) return `${m.name} doesn't support image-to-video`;
       if (!i2v && !m.caps.textToVideo) return `${m.name} needs a first frame. Add one with +`;
       return null;
     },
-    [i2v],
+    [i2v, clipMode, keyed],
   );
 
   const disabledReason: string | null = !model
@@ -505,6 +559,12 @@ export function VideoComposer() {
         : !trimmed && !upscaleMode
           ? "Say what to change"
           : (editProblem ?? null)
+      : refEdit
+        ? !clip
+          ? "Add a video to edit"
+          : !trimmed
+            ? "Say what to change"
+            : (refEditProblem ?? null)
       : motionMode
           ? !firstFrame
             ? "Add a character image"
@@ -516,10 +576,10 @@ export function VideoComposer() {
   // Each provider's price for this request (OpenRouter's from the catalog, fal's list prices for the endpoint the
   // inputs pick), and who runs it: the cheaper one that can, as the engine decides. Motion control and editing
   // are priced by the input video's length, once it is known.
-  const hasFirst = Boolean(firstFrame);
+  const hasFirst = !clipMode && Boolean(firstFrame);
   const hasLast = showLast && Boolean(lastFrame);
   const hasRefs = showRefs && refs.length > 0;
-  const hasRefVideos = refVideos.length > 0;
+  const hasRefVideos = refEdit ? refEditClips.length > 0 : refVideos.length > 0;
   const hasRefAudios = refAudios.length > 0;
   const hasMediaRefs = hasRefVideos || hasRefAudios;
   const clipSec = clip?.durationSec;
@@ -528,11 +588,11 @@ export function VideoComposer() {
       model
         ? quoteVideo(
             model,
-            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: clipSec, upscale: sentFactor, videoWidth: clip?.width, videoHeight: clip?.height },
+            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: refEdit ? undefined : clipSec, upscale: sentFactor, videoWidth: clip?.width, videoHeight: clip?.height },
             Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
           )
         : undefined,
-    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, clipSec, sentFactor, clip?.width, clip?.height, keyed],
+    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, refEdit, clipSec, sentFactor, clip?.width, clip?.height, keyed],
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);
@@ -553,6 +613,13 @@ export function VideoComposer() {
       req = { prompt: upscaleMode ? "" : trimmed, model: model.id, duration: 5, sourceVideo: clip.mediaId };
       if (resolution && model.resolutions.includes(resolution)) req.resolution = resolution;
       if (sentFactor) req.upscale = sentFactor;
+    } else if (refEdit) {
+      if (!clip) return;
+      // A model that takes reference videos: the clip is reference video 1, and the clip settings apply as for any run.
+      req = { prompt: trimmed, model: model.id, duration, referenceVideos: [clip.mediaId] };
+      if (resolution && model.resolutions.includes(resolution)) req.resolution = resolution;
+      req.aspectRatio = aspectRatio;
+      if (model.caps.audio) req.audio = sound;
     } else if (motionMode) {
       if (!firstFrame || !clip) return;
       // `duration` is required by the type and ignored: the clip follows the reference video.
@@ -663,7 +730,7 @@ export function VideoComposer() {
   // Video editing: how long the edit will be, once the source's length is known (a model may keep only its start).
   const editSec = editMode && clipSec !== undefined ? editedLength(model, clipSec) : undefined;
   const editCut = editSec !== undefined && clipSec !== undefined && editSec < clipSec - 0.05;
-  const editHint = editMode ? editSourceHint(model) : undefined;
+  const editHint = editMode ? editSourceHint(model) : refEdit && model.caps.mediaReferences ? `Up to ${model.caps.mediaReferences.maxSec} s. ${model.name} makes a new clip guided by it.` : undefined;
   const factors = model.caps.upscale?.factors ?? [];
 
   // An upscaler's scales: the size each gives, and its price where it would run.
@@ -758,16 +825,16 @@ export function VideoComposer() {
         ) : (
         <Popover open={addOpen} onOpenChange={setAddOpen}>
           <Tooltip
-            content={editMode ? "Add the video to edit" : motionMode ? "Add a character image or a reference video" : mediaRefs ? "Add a frame, or a reference image, video or audio" : "Add a first frame, last frame or style reference"}
+            content={clipMode ? "Add the video to edit" : motionMode ? "Add a character image or a reference video" : mediaRefs ? "Add a frame, or a reference image, video or audio" : "Add a first frame, last frame or style reference"}
             side="top"
           >
             <PopoverTrigger asChild>
-              <AddButton aria-label={editMode ? "Add video" : motionMode ? "Add image or video" : mediaRefs ? "Add image, video or audio" : "Add image"}>
+              <AddButton aria-label={clipMode ? "Add video" : motionMode ? "Add image or video" : mediaRefs ? "Add image, video or audio" : "Add image"}>
                 <Plus size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
               </AddButton>
             </PopoverTrigger>
           </Tooltip>
-          {editMode ? (
+          {clipMode ? (
             <PopoverContent side="top" align="start" className="w-[232px]">
               <PopoverLabel>Video editing</PopoverLabel>
               <PopoverItem onClick={() => void pickClip()}>
@@ -834,7 +901,7 @@ export function VideoComposer() {
         )
       }
       attachments={
-        upscaleMode ? null : <AttachmentStrip items={attachments} onRemove={removeAttachment} label={editMode ? "Attached video" : motionMode || hasMediaRefs ? "Attached inputs" : "Attached images"} />
+        upscaleMode ? null : <AttachmentStrip items={attachments} onRemove={removeAttachment} label={clipMode ? "Attached video" : motionMode || hasMediaRefs ? "Attached inputs" : "Attached images"} />
       }
       textarea={
         upscaleMode ? (
@@ -858,7 +925,7 @@ export function VideoComposer() {
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           placeholder={
-            editMode
+            clipMode
               ? "Say what to change: swap, add, remove, restyle…"
               : motionMode
                 ? "Describe the scene or style (optional)…"
@@ -889,6 +956,11 @@ export function VideoComposer() {
             <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
             {refMediaProblem}
           </p>
+        ) : refEditProblem ? (
+          <p className="flex items-center gap-1.5 text-caption" role="note">
+            <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
+            {refEditProblem}
+          </p>
         ) : editProblem ? (
           <p className="flex items-center gap-1.5 text-caption" role="note">
             <CircleAlert size={12} className="shrink-0 text-danger" aria-hidden="true" />
@@ -916,7 +988,8 @@ export function VideoComposer() {
       }
       chips={
         <>
-          <ModelPicker kind="video" value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
+          <ModeSwitch value={mode} onChange={(m) => switchMode(m)} label="Video mode" />
+          <ModelPicker kind="video" mode={mode} value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
             <ModelChip model={model} reason={modelReason(model)} />
           </ModelPicker>
 
@@ -1045,12 +1118,12 @@ export function VideoComposer() {
         modelName: model.name,
         duration: motionMode || editMode ? undefined : duration,
         aspectRatio: motionMode || editMode ? undefined : aspectRatio,
-        startsFromImage: !editMode && Boolean(firstFrame),
+        startsFromImage: !clipMode && Boolean(firstFrame),
         motionControl: motionMode,
-        videoEdit: editMode,
+        videoEdit: clipMode,
       }}
       aspectRatio={motionMode || editMode ? undefined : aspectRatio}
-      firstFrame={firstFrame && !editMode ? frameInput(firstFrame) : undefined}
+      firstFrame={firstFrame && !clipMode ? frameInput(firstFrame) : undefined}
       onUse={(p) => {
         setPrompt(p);
         requestAnimationFrame(() => textareaRef.current?.focus());

@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { NO_AUTOFILL } from "@/lib/no-autofill";
 import { formatRelative } from "@/lib/format";
 import { durationRange, maxResolution, providerLabel } from "@/lib/models";
+import { editsByReference, inMode, type ComposerMode } from "@/lib/modes";
 import { useModels } from "@/store/models";
 import { Badge } from "@/components/ui/Badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover";
@@ -21,6 +22,8 @@ interface CommonProps {
   side?: "top" | "bottom" | "left" | "right";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** The composer's mode: only its models are listed (all of them without one). */
+  mode?: ComposerMode;
 }
 
 /** Discriminated on `kind` so `onChange` / `disabledReason` receive the right model type without casts. */
@@ -136,7 +139,7 @@ function ModelRow({ id, model, selected, highlighted, disabledReason, unavailabl
 }
 
 export function ModelPicker(props: ModelPickerProps) {
-  const { kind, value, children, align = "start", side = "top", open: controlledOpen, onOpenChange } = props;
+  const { kind, value, children, align = "start", side = "top", open: controlledOpen, onOpenChange, mode } = props;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = (next: boolean) => {
@@ -146,7 +149,8 @@ export function ModelPicker(props: ModelPickerProps) {
 
   const imageModels = useModels((s) => s.image);
   const videoModels = useModels((s) => s.video);
-  const models: CatalogModel[] = kind === "image" ? imageModels : videoModels;
+  const catalog: CatalogModel[] = kind === "image" ? imageModels : videoModels;
+  const models = useMemo(() => (mode ? catalog.filter((m) => inMode(m, mode)) : catalog), [catalog, mode]);
   const live = useModels((s) => s.live);
   const [query, setQuery] = useState("");
   const [highlighted, setHighlighted] = useState(-1);
@@ -158,19 +162,32 @@ export function ModelPicker(props: ModelPickerProps) {
 
   const groups = useMemo(() => {
     if (terms.length) return [{ label: "Results", items: models.filter((m) => matches(m, terms)) }];
-    // Video editors (a video in, the same video changed out) and upscalers get their own groups under the featured models.
-    const upscalers = models.filter((m) => m.caps.upscale);
-    const editors = models.filter((m) => m.kind === "video" && m.caps.videoEdit && !m.caps.upscale);
-    const grouped = (m: CatalogModel) => editors.includes(m) || upscalers.includes(m);
-    const featured = models.filter((m) => m.featured && !grouped(m));
-    const rest = models.filter((m) => !m.featured && !grouped(m));
     const out: { label: string; items: CatalogModel[] }[] = [];
-    if (featured.length) out.push({ label: "Featured", items: featured });
-    if (editors.length) out.push({ label: "Edit a video", items: editors });
-    if (upscalers.length) out.push({ label: models[0]?.kind === "video" ? "Upscale a video" : "Upscale an image", items: upscalers });
-    if (rest.length) out.push({ label: "All models", items: rest });
+    const push = (label: string, items: CatalogModel[]) => {
+      if (items.length) out.push({ label, items });
+    };
+    if (mode === "upscale") {
+      push(kind === "video" ? "Upscale a video" : "Upscale an image", models);
+      return out;
+    }
+    if (mode === "edit" && kind === "video") {
+      // Dedicated editors change the clip and keep its length; the others make a new clip with it as a reference.
+      push("Editors", models.filter((m) => m.kind === "video" && !editsByReference(m)));
+      push("From a reference", models.filter((m) => m.kind === "video" && editsByReference(m)));
+      return out;
+    }
+    // Without a mode: editors and upscalers get their own groups under the featured models. Motion control too.
+    const upscalers = mode ? [] : models.filter((m) => m.caps.upscale);
+    const editors = mode ? [] : models.filter((m) => m.kind === "video" && m.caps.videoEdit && !m.caps.upscale);
+    const motion = models.filter((m) => m.kind === "video" && m.caps.motionControl);
+    const grouped = (m: CatalogModel) => editors.includes(m) || upscalers.includes(m) || motion.includes(m);
+    push("Featured", models.filter((m) => m.featured && !grouped(m)));
+    push("Motion control", motion);
+    push("Edit a video", editors);
+    push(kind === "video" ? "Upscale a video" : "Upscale an image", upscalers);
+    push("All models", models.filter((m) => !m.featured && !grouped(m)));
     return out;
-  }, [models, terms]);
+  }, [models, terms, mode, kind]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const indexOf = (m: CatalogModel) => flat.indexOf(m);
