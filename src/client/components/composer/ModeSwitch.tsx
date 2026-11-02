@@ -1,56 +1,55 @@
-import { useRef, type KeyboardEvent } from "react";
-import { cn } from "@/lib/cn";
+import { useState, type ReactNode } from "react";
+import { Check, ImageUpscale, PenLine, WandSparkles } from "lucide-react";
 import { COMPOSER_MODES, type ComposerMode } from "@/lib/modes";
+import { Chip } from "@/components/ui/Chip";
+import { Popover, PopoverContent, PopoverItem, PopoverLabel, PopoverTrigger } from "@/components/ui/Popover";
+
+const MODE_ICON: Record<ComposerMode, ReactNode> = {
+  create: <WandSparkles />,
+  edit: <PenLine />,
+  upscale: <ImageUpscale />,
+};
+
+const MODE_HINT: Record<ComposerMode, string> = {
+  create: "From a prompt",
+  edit: "Change one you have",
+  upscale: "Sharper, larger",
+};
 
 /**
- * Create / Edit / Upscale, left of the model chip: a segmented control the height of a chip. The model picker next to
- * it lists the mode's models. Arrow keys move between the three, as in any radio group.
+ * Create / Edit / Upscale, left of the model chip: a chip that opens a short list, like the other options. The model
+ * picker next to it lists the mode's models.
  */
 export function ModeSwitch({ value, onChange, label }: { value: ComposerMode; onChange: (mode: ComposerMode) => void; label: string }) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-    if (!step) return;
-    e.preventDefault();
-    const i = COMPOSER_MODES.findIndex((m) => m.value === value);
-    const next = (i + step + COMPOSER_MODES.length) % COMPOSER_MODES.length;
-    const mode = COMPOSER_MODES[next];
-    if (!mode) return;
-    onChange(mode.value);
-    refs.current[next]?.focus();
-  };
-
+  const [open, setOpen] = useState(false);
+  const current = COMPOSER_MODES.find((m) => m.value === value) ?? COMPOSER_MODES[0];
   return (
-    <div
-      role="radiogroup"
-      aria-label={label}
-      onKeyDown={onKeyDown}
-      className="inline-flex h-9 shrink-0 items-center gap-0.5 rounded-control border border-border-strong bg-surface-2 p-[3px]"
-    >
-      {COMPOSER_MODES.map((m, i) => {
-        const on = m.value === value;
-        return (
-          <button
-            key={m.value}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            tabIndex={on ? 0 : -1}
-            onClick={() => onChange(m.value)}
-            className={cn(
-              "h-full select-none rounded-[7px] px-2.5 text-[13px] font-medium tracking-[-0.01em]",
-              "transition-[background-color,color,box-shadow] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              on ? "bg-surface-3 text-fg shadow-[0_0_0_1px_var(--color-border-strong)]" : "text-fg-muted hover:text-fg",
-            )}
-          >
-            {m.label}
-          </button>
-        );
-      })}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Chip icon={MODE_ICON[value]} label={current?.label ?? "Create"} chevron strong aria-label={`${label}: ${current?.label ?? "Create"}`} />
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-[220px]">
+        <div role="listbox" aria-label={label}>
+          <PopoverLabel>Mode</PopoverLabel>
+          {COMPOSER_MODES.map((m) => (
+            <PopoverItem
+              key={m.value}
+              selected={m.value === value}
+              onClick={() => {
+                onChange(m.value);
+                setOpen(false);
+              }}
+            >
+              <span className="inline-flex text-fg-muted [&_svg]:size-[15px]" aria-hidden="true">
+                {MODE_ICON[m.value]}
+              </span>
+              <span className="flex-1">{m.label}</span>
+              <span className="text-caption">{MODE_HINT[m.value]}</span>
+              {m.value === value ? <Check size={14} className="text-accent" aria-hidden="true" /> : null}
+            </PopoverItem>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
