@@ -134,7 +134,8 @@ export interface VideoReference {
 
 export interface VideoBody {
   model: string;
-  prompt: string;
+  /** Absent only for an upscale without one (FLUX Video Upscale takes an optional prompt). */
+  prompt?: string;
   /** Absent for video editing: the clip keeps the source's length. */
   duration?: number;
   aspect_ratio?: VideoAspectRatio;
@@ -143,6 +144,9 @@ export interface VideoBody {
   input_references?: (InputReference | VideoReference)[];
   /** Native audio track on/off; only meaningful for models with `caps.audio` (OpenRouter defaults to on). */
   generate_audio?: boolean;
+  /** Upscalers (FLUX Video Upscale): the scale, and 0 (faithful) or 1 (creative detail). */
+  upscale_factor?: number;
+  creativity?: number;
 }
 
 export interface VideoRequestParams {
@@ -199,6 +203,13 @@ export function buildVideoPayload(model: VideoModel, req: VideoRequestParams, fr
  * sent: the clip keeps the source's length and framing, and OpenRouter lists no options for editors (an
  * unlisted field is refused).
  */
-export function buildVideoEditPayload(model: VideoModel, prompt: string, sourceUrl: string): VideoBody {
-  return { model: model.id, prompt, input_references: [{ type: "video_url", video_url: { url: sourceUrl } }] };
+export function buildVideoEditPayload(model: VideoModel, prompt: string, sourceUrl: string, upscale?: { factor?: number; creative?: boolean }): VideoBody {
+  const body: VideoBody = { model: model.id, input_references: [{ type: "video_url", video_url: { url: sourceUrl } }] };
+  if (prompt || !model.caps.upscale) body.prompt = prompt;
+  // An upscaler: the scale, and its creative mode when it has one (sent either way, so faithful is never left to a default).
+  if (model.caps.upscale) {
+    if (upscale?.factor) body.upscale_factor = upscale.factor;
+    if (model.caps.upscale.creative) body.creativity = upscale?.creative ? 1 : 0;
+  }
+  return body;
 }

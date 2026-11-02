@@ -35,14 +35,15 @@ export interface FalImageParams {
   prompt: string;
   aspectRatio: ImageAspectRatio;
   size: ImageSize;
-  /** Upscalers: the scale. */
+  /** Upscalers: the scale, and the creative mode. */
   upscale?: number;
+  creative?: boolean;
 }
 
 export function buildFalImagePayload(model: ImageModel, req: FalImageParams, referenceUrls: string[]): FalPayload {
   const route = model.fal;
   if (!route) throw badRequest(`${model.name} is not available on fal`);
-  if (model.caps.upscale) return falUpscaleImage(model, route, referenceUrls[0], req.upscale);
+  if (model.caps.upscale) return falUpscaleImage(model, route, referenceUrls[0], req.upscale, req.creative);
   const edit = referenceUrls.length > 0;
   const endpoint = edit ? route.edit : route.textToImage;
   if (!endpoint) throw badRequest(edit ? `${model.name} on fal does not take reference images` : `${model.name} needs at least one reference image`);
@@ -69,8 +70,9 @@ export interface FalVideoParams {
   resolution?: VideoResolution;
   audio?: boolean;
   orientation?: MotionOrientation;
-  /** Upscalers: the scale. */
+  /** Upscalers: the scale, and the creative mode. */
   upscale?: number;
+  creative?: boolean;
 }
 
 export interface FalVideoMedia {

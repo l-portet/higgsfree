@@ -88,7 +88,8 @@ describe("buildVideoModel", () => {
 
   it("hides what the app cannot drive and names discovered models without the vendor prefix", () => {
     expect(buildVideoModel(videoSpec("black-forest-labs/flux-video-edit")).hidden).toBe(true); // an editor the app has no entry for
-    expect(buildVideoModel(videoSpec("black-forest-labs/flux-video-upscale"), findVideoModel("black-forest-labs/flux-video-upscale")).hidden).toBe(true);
+    // A curated upscaler is offered, not hidden.
+    expect(buildVideoModel(videoSpec("black-forest-labs/flux-video-upscale"), findVideoModel("black-forest-labs/flux-video-upscale")).hidden).toBeFalsy();
     expect(buildVideoModel(videoSpec("heygen/avatar-iv"), findVideoModel("heygen/avatar-iv")).hidden).toBe(true);
     const lite = buildVideoModel(videoSpec("x-ai/grok-imagine-video-1.5-lite"));
     expect(lite).toMatchObject({ name: "Grok Imagine Video 1.5 Lite", provider: "x-ai", discovered: true });

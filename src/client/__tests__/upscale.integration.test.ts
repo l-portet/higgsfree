@@ -9,7 +9,7 @@ import { cancelAllJobs } from "@/lib/engine";
 import { limits, timing } from "@/lib/engine/constants";
 import { subscribeEvents } from "@/lib/live";
 import { resetLiveModels } from "@/lib/openrouter";
-import { setProviderKey, setStoredFalKey } from "@/lib/settings";
+import { setProviderKey, setStoredFalKey, setStoredKey } from "@/lib/settings";
 import { FAL_KEY, installMockOpenRouter, KIE_KEY, MP4, PNG_2X2, PNG_DATA_URL, sleep, waitFor, type MockOpenRouter } from "./mock-openrouter";
 
 let mock: MockOpenRouter;
@@ -61,6 +61,25 @@ describe("image upscalers", () => {
     expect((await api.getGeneration(g.id)).params).not.toHaveProperty("upscale");
   });
 
+  it("Topaz's creative mode runs on its generative endpoint, on fal only (kie.ai has none)", async () => {
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const g = await upscaleImage({ referenceImages: [await uploadImage()], upscale: 2, creative: true });
+    expect(g).toMatchObject({ provider: "fal", params: { upscale: 2, creative: true } });
+    await waitFor(completed(g.id));
+    expect(mock.fal("/topaz/upscale/image/generative")[0]?.body).toEqual({ image_url: PNG_DATA_URL, upscale_factor: 2 });
+    expect(mock.kie("/api/v1/jobs/createTask")).toHaveLength(0);
+  });
+
+  it("SeedVR2 on fal: the image and the scale; it has no creative mode", async () => {
+    setStoredFalKey(FAL_KEY);
+    const id = await uploadImage();
+    const g = await upscaleImage({ model: "bytedance/seedvr2-upscale", referenceImages: [id], upscale: 4 });
+    await waitFor(completed(g.id));
+    expect(mock.fal("/fal-ai/seedvr/upscale/image")[0]?.body).toEqual({ image_url: PNG_DATA_URL, upscale_factor: 4 });
+    await expect(upscaleImage({ model: "bytedance/seedvr2-upscale", referenceImages: [id], creative: true })).rejects.toMatchObject({ status: 400, error: "SeedVR2 Upscale has no creative mode" });
+  });
+
   it("refuses no image, two images, a batch and a scale the model does not offer", async () => {
     setStoredFalKey(FAL_KEY);
     const id = await uploadImage();
@@ -96,6 +115,36 @@ describe("video upscalers", () => {
     expect(g).toMatchObject({ provider: "fal", params: { resolution: "2K" } });
     expect(mock.fal("/fal-ai/bytedance-upscaler/upscale/video")[0]?.body).toEqual({ video_url: "https://v3b.fal.media/files/ref-1.mp4", target_resolution: "2k" });
     await waitFor(completed(g.id));
+  });
+
+  it("Topaz Starlight (the creative mode) on fal, asking for H.264 so every browser plays the clip", async () => {
+    setStoredFalKey(FAL_KEY);
+    const source = await uploadVideo();
+    const g = (await api.generateVideo({ prompt: "", model: "topaz/upscale-video", duration: 5, sourceVideo: source, upscale: 2, creative: true })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g).toMatchObject({ provider: "fal", params: { upscale: 2, creative: true } });
+    expect(mock.fal("/topaz/upscale/video/generative")[0]?.body).toEqual({ H264_output: true, video_url: "https://v3b.fal.media/files/ref-1.mp4", upscale_factor: 2 });
+    await waitFor(completed(g.id));
+  });
+
+  it("FLUX Video Upscale on OpenRouter: the clip inline, the scale and the creativity (0 or 1)", async () => {
+    setStoredKey("test-key");
+    const source = await uploadVideo();
+    const g = (await api.generateVideo({ prompt: "", model: "black-forest-labs/flux-video-upscale", duration: 5, sourceVideo: source, upscale: 1.5 })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g).toMatchObject({ provider: "openrouter", params: { upscale: 1.5 } });
+    expect(mock.last("/api/v1/videos")?.body).toMatchObject({ model: "black-forest-labs/flux-video-upscale", upscale_factor: 1.5, creativity: 0, input_references: [{ type: "video_url" }] });
+    expect(mock.last("/api/v1/videos")?.body).not.toHaveProperty("prompt");
+    await waitFor(completed(g.id));
+  });
+
+  it("FLUX Video Upscale on fal: the creative mode is its `creativity` field", async () => {
+    setStoredFalKey(FAL_KEY);
+    const source = await uploadVideo();
+    const g = (await api.generateVideo({ prompt: "", model: "black-forest-labs/flux-video-upscale", duration: 5, sourceVideo: source, upscale: 3, creative: true })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g.provider).toBe("fal");
+    expect(mock.fal("/blackforestlabs/flux-video-upscale")[0]?.body).toEqual({ video_url: "https://v3b.fal.media/files/ref-1.mp4", creativity: 1, upscale_factor: 3 });
   });
 
   it("refuses no video, other inputs, a scale on a resolution model and a resolution on a scale model", async () => {

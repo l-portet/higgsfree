@@ -26,12 +26,12 @@ function paramsLabel(g: Generation): string {
   if (isImageParams(g.params)) {
     const dims = formatDims(g.output?.width, g.output?.height);
     // An upscale: its scale rather than a quality it never had.
-    return [g.params.upscale ? `${g.params.upscale}x` : g.params.size, dims].filter(Boolean).join(" · ");
+    return [g.params.upscale ? `${g.params.upscale}x` : g.params.size, g.params.creative ? "creative" : undefined, dims].filter(Boolean).join(" · ");
   }
   const p = g.params;
   const seconds = g.output?.durationSec ?? p.duration;
   // Motion control, video editing and upscaling: the length follows the input video and is known only once the clip is back.
-  return [seconds > 0 ? formatSeconds(seconds) : undefined, p.upscale ? `${p.upscale}x` : undefined, p.resolution].filter(Boolean).join(" · ");
+  return [seconds > 0 ? formatSeconds(seconds) : undefined, p.upscale ? `${p.upscale}x` : undefined, p.creative ? "creative" : undefined, p.resolution].filter(Boolean).join(" · ");
 }
 
 export interface GenerationCardProps {

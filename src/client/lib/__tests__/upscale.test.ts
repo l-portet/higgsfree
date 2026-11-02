@@ -45,6 +45,24 @@ describe("upscale prices", () => {
     expect(upscaleImageUsd("kie", CRISP, undefined, {})).toBeCloseTo(0.0025);
   });
 
+  it("creative modes and the new upscalers", () => {
+    // Topaz Wonder: per started 8 MP of output. 1024 x 1024 at 4x is 16.8 MP: three steps.
+    expect(upscaleImageUsd("fal", TOPAZ, 4, { width: 1024, height: 1024 }, true)).toBeCloseTo(0.24);
+    // SeedVR2: $0.001 per output megapixel.
+    expect(upscaleImageUsd("fal", image("bytedance/seedvr2-upscale"), 2, { width: 1000, height: 1000 })).toBeCloseTo(0.004);
+    // Topaz Starlight: $0.12/s up to 1080p out, $0.26 above.
+    expect(upscaleVideoUsd("fal", TOPAZ_VIDEO, { upscale: 2, creative: true }, 10, { width: 960, height: 540 })).toBeCloseTo(1.2);
+    expect(upscaleVideoUsd("fal", TOPAZ_VIDEO, { upscale: 2, creative: true }, 10, { width: 1920, height: 1080 })).toBeCloseTo(2.6);
+    // FLUX on fal: 1080p, 2K and 4K tiers by the output's short side, precise or creative.
+    const flux = video("black-forest-labs/flux-video-upscale");
+    expect(upscaleVideoUsd("fal", flux, { upscale: 2 }, 10, { width: 960, height: 540 })).toBeCloseTo(0.84);
+    expect(upscaleVideoUsd("fal", flux, { upscale: 2, creative: true }, 10, { width: 1280, height: 720 })).toBeCloseTo(2.1);
+    // FLUX on OpenRouter: 3.5 cents per output megapixel-second (1920 x 1080 out is 2.07 MP).
+    expect(upscaleVideoUsd("openrouter", flux, { upscale: 2 }, 10, { width: 960, height: 540 })).toBeCloseTo(0.035 * 2.0736 * 10);
+    // SeedVR2 video: $0.001 per output megapixel per frame, at 30 fps.
+    expect(upscaleVideoUsd("fal", video("bytedance/seedvr2-video-upscale"), { upscale: 2 }, 5, { width: 960, height: 540 })).toBeCloseTo(0.001 * 2.0736 * 30 * 5);
+  });
+
   it("videos: per second, by the output's resolution (Topaz on fal), the scale (kie.ai) or the target (ByteDance)", () => {
     // 1280 x 720 at 2x: a 1440 short side, fal's 4K rate.
     expect(upscaleVideoUsd("fal", TOPAZ_VIDEO, { upscale: 2 }, 10, { width: 1280, height: 720 })).toBeCloseTo(0.6);

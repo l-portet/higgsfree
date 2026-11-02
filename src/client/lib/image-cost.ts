@@ -24,6 +24,8 @@ export interface ImageQuoteRequest {
   references: number;
   /** Upscalers: the scale, and the image's size when known (fal's Topaz bills by the output's). */
   upscale?: number;
+  /** Upscalers with a creative mode: it is on. */
+  creative?: boolean;
   inputWidth?: number;
   inputHeight?: number;
 }
@@ -55,11 +57,11 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
     case "openrouter":
       return usd(estimateImageCost(model, req.size, req.count));
     case "fal": {
-      const why = refusal(() => buildFalImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
+      const why = refusal(() => buildFalImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale, creative: req.creative }, refs));
       return why ? { refusal: why } : usd(estimateFalImageCost(model, req, req.count, withRefs, { width: req.inputWidth, height: req.inputHeight }));
     }
     case "kie": {
-      const why = refusal(() => buildKieImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
+      const why = refusal(() => buildKieImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale, creative: req.creative }, refs));
       return why ? { refusal: why } : usd(estimateKieImageCost(model, req, req.count, withRefs));
     }
     case "apimart": {

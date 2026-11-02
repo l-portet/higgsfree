@@ -46,12 +46,13 @@ export async function submitImageBatch(req: ImageGenerateRequest): Promise<Gener
   await assertInputsExist({ referenceImages: refIds });
   // Upscalers: the scale sent, and the image's size (fal's Topaz bills by the output's).
   const factor = model.caps.upscale ? upscaleFactor(model, req.upscale) : undefined;
+  const creative = Boolean(req.creative && model.caps.upscale?.creative);
   const input = model.caps.upscale && refIds[0] ? await storedImageSize(refIds[0]) : {};
   // The provider picked in the composer, else the cheapest, that can take the request (`quoteImage`); when none with a
   // key can, the key-based choice stands and its refusal says why.
   const quote = quoteImage(
     model,
-    { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length, upscale: factor, inputWidth: input.width, inputHeight: input.height },
+    { aspectRatio: req.aspectRatio, size: req.size, count: req.count, references: refIds.length, upscale: factor, creative, inputWidth: input.width, inputHeight: input.height },
     storedKeys(),
   );
   const chosen = pinQuote(quote, req.provider).provider;
@@ -60,7 +61,7 @@ export async function submitImageBatch(req: ImageGenerateRequest): Promise<Gener
 
   const ts = new Date().toISOString();
   const batchId = newBatchId();
-  const params: ImageParams = { aspectRatio: req.aspectRatio, size: req.size, ...(factor ? { upscale: factor } : {}) };
+  const params: ImageParams = { aspectRatio: req.aspectRatio, size: req.size, ...(factor ? { upscale: factor } : {}), ...(creative ? { creative } : {}) };
   const rows: StoredGeneration[] = [];
   for (let i = 0; i < req.count; i++) {
     const g: Generation = {
@@ -92,7 +93,7 @@ async function falImageBytes(key: string, model: ImageModel, row: StoredGenerati
   const params = row.params as ImageParams;
   // An endpoint that takes PNG only (Recraft Crisp) gets the image redrawn as one.
   const refs = model.fal?.upscale?.png ? await Promise.all(refDataUrls.map(pngDataUrl)) : refDataUrls;
-  const { endpoint, input } = buildFalImagePayload(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size, upscale: params.upscale }, refs);
+  const { endpoint, input } = buildFalImagePayload(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size, upscale: params.upscale, creative: params.creative }, refs);
   // Generators answer with a list, upscalers with the one image.
   const res = await fal.run<{ images?: { url?: string }[]; image?: { url?: string } }>(key, endpoint, input, signal);
   const url = res.images?.[0]?.url ?? res.image?.url;
@@ -104,7 +105,7 @@ async function falImageBytes(key: string, model: ImageModel, row: StoredGenerati
 async function taskImage(tp: TaskProvider, key: string, model: ImageModel, row: StoredGeneration, refDataUrls: string[], signal: AbortSignal): Promise<{ bytes: Uint8Array<ArrayBuffer>; costUsd?: number }> {
   const params = row.params as ImageParams;
   const refs = await Promise.all(refDataUrls.map((u) => tp.uploadImage(key, u, signal)));
-  const url = tp.taskUrl(await tp.image(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size, upscale: params.upscale }, refs).submit(key, signal));
+  const url = tp.taskUrl(await tp.image(model, { prompt: row.prompt, aspectRatio: params.aspectRatio, size: params.size, upscale: params.upscale, creative: params.creative }, refs).submit(key, signal));
   for (;;) {
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, timing.pollIntervalMs);

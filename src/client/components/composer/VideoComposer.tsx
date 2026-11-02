@@ -187,6 +187,8 @@ export function VideoComposer() {
   const [pinned, setPinned] = useState<ProviderId | undefined>(undefined);
   /** Upscalers: the scale (for those that offer several). */
   const [factor, setFactor] = useState<number>(2);
+  /** Upscalers with a creative mode: it is on. */
+  const [creative, setCreative] = useState(false);
   const [factorOpen, setFactorOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -215,6 +217,7 @@ export function VideoComposer() {
   /** Upscaling (an editor too: one video in, its length kept): no prompt, so the prompt becomes a drop zone for the video. */
   const upscaleMode = mode === "upscale";
   const sentFactor = model?.caps.upscale ? upscaleFactor(model, factor) : undefined;
+  const sentCreative = upscaleMode && Boolean(model?.caps.upscale?.creative) && creative;
   /** How many runs one Generate starts: an upscale is one. */
   const runs = upscaleMode ? 1 : count;
 
@@ -315,6 +318,7 @@ export function VideoComposer() {
       if (params.audio !== undefined) setSound(params.audio);
     } else if (params?.resolution) setResolution(params.resolution);
     if (params?.upscale) setFactor(params.upscale);
+    if (params) setCreative(Boolean(params.creative));
     const orient = draft.orientation ?? params?.orientation;
     if (orient) setOrientation(orient);
     setFrames((f) => ({
@@ -588,11 +592,11 @@ export function VideoComposer() {
       model
         ? quoteVideo(
             model,
-            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: refEdit ? undefined : clipSec, upscale: sentFactor, videoWidth: clip?.width, videoHeight: clip?.height },
+            { prompt: trimmed, duration: d, resolution: r, aspectRatio, audio: model.caps.audio ? sound : undefined, firstFrame: hasFirst, lastFrame: hasLast, references: hasRefs, referenceVideos: hasRefVideos, referenceAudios: hasRefAudios, referenceVideoSec: hasRefVideos ? refVideoSec : undefined, videoSec: refEdit ? undefined : clipSec, upscale: sentFactor, creative: sentCreative, videoWidth: clip?.width, videoHeight: clip?.height },
             Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
           )
         : undefined,
-    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, refEdit, clipSec, sentFactor, clip?.width, clip?.height, keyed],
+    [model, trimmed, aspectRatio, sound, hasFirst, hasLast, hasRefs, hasRefVideos, hasRefAudios, refVideoSec, refEdit, clipSec, sentFactor, sentCreative, clip?.width, clip?.height, keyed],
   );
   const estimateAt = useCallback((d: number, r: VideoResolution | undefined) => {
     const q = quoteAt(d, r);
@@ -613,6 +617,7 @@ export function VideoComposer() {
       req = { prompt: upscaleMode ? "" : trimmed, model: model.id, duration: 5, sourceVideo: clip.mediaId };
       if (resolution && model.resolutions.includes(resolution)) req.resolution = resolution;
       if (sentFactor) req.upscale = sentFactor;
+      if (sentCreative) req.creative = true;
     } else if (refEdit) {
       if (!clip) return;
       // A model that takes reference videos: the clip is reference video 1, and the clip settings apply as for any run.
@@ -746,11 +751,11 @@ export function VideoComposer() {
             {factors.map((f) => {
               const q = quoteVideo(
                 model,
-                { duration: 5, videoSec: clipSec, upscale: f, videoWidth: clip?.width, videoHeight: clip?.height },
+                { duration: 5, videoSec: clipSec, upscale: f, creative: sentCreative, videoWidth: clip?.width, videoHeight: clip?.height },
                 Object.fromEntries(PROVIDER_IDS.map((p) => [p, keyed.split(",").includes(p)])),
               );
               const usd = shownQuote(pinQuote(q, pinned))?.usd;
-              const out = clip?.width && clip.height ? `${clip.width * f} × ${clip.height * f}` : "";
+              const out = clip?.width && clip.height ? `${Math.round(clip.width * f)} × ${Math.round(clip.height * f)}` : "";
               return (
                 <PopoverItem
                   key={f}
@@ -771,6 +776,19 @@ export function VideoComposer() {
         </PopoverContent>
       </Popover>
     ) : null;
+
+  // An upscaler's creative mode (generative detail instead of a faithful upscale), for the ones that have it.
+  const creativeChip = model.caps.upscale?.creative ? (
+    <Chip
+      icon={<Sparkles />}
+      label="Creative"
+      tone="accent"
+      active={creative}
+      aria-pressed={creative}
+      onClick={() => setCreative((c) => !c)}
+      title={creative ? "Creative: rebuilds detail, may change small things" : "Faithful: sharper, nothing new added"}
+    />
+  ) : null;
 
   const resolutionChip = noRes ? null : singleRes ? (
     <StaticChip icon={<Gem size={15} />} label={resolution ?? "Auto"} title={`${resolution ?? "Default"} is the only resolution for ${model.name}`} />
@@ -1002,6 +1020,7 @@ export function VideoComposer() {
                 <StaticChip icon={<Clock size={15} />} label={formatSeconds(editSec)} title={upscaleMode ? "The upscale is as long as the video" : "The edit is as long as the video"} />
               ) : null}
               {scaleChip}
+              {creativeChip}
               {resolutionChip}
             </>
           ) : motionMode ? (

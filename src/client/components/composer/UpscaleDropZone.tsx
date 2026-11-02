@@ -88,5 +88,5 @@ export function UpscaleDropZone({
 export function sizeChange(width: number | undefined, height: number | undefined, factor: number | undefined): string {
   if (!width || !height) return "";
   const from = `${width} × ${height}`;
-  return factor ? `${from} → ${width * factor} × ${height * factor}` : from;
+  return factor ? `${from} → ${Math.round(width * factor)} × ${Math.round(height * factor)}` : from;
 }

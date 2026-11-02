@@ -25,6 +25,7 @@ import { newGenerationId, outputMediaId } from "../media-ids";
 import { parseMp4MetaFromRanges } from "../mp4-meta";
 import * as or from "../openrouter";
 import { buildVideoEditPayload, buildVideoPayload } from "../payloads";
+import { upscaleFactor } from "../upscale";
 import { getStoredKey } from "../settings";
 import { isQuotaError } from "../storage-health";
 import { sourceVideoProblem, validateVideoRequest } from "../validate";
@@ -193,6 +194,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
       referenceVideoSec: refVideoSec,
       videoSec: sourceSec,
       upscale: req.upscale,
+      creative: req.creative,
       videoWidth: source?.width,
       videoHeight: source?.height,
     }, req.provider) ?? keyed;
@@ -219,7 +221,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
     const { motionVideo, sourceVideo } = inputs;
     const payload = buildFalVideoPayload(
       model,
-      { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, orientation: req.orientation, upscale: req.upscale },
+      { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, orientation: req.orientation, upscale: req.upscale, creative: req.creative },
       { ...frames, ...(motionVideo ? { motionVideo: "pending-upload" } : {}), ...(sourceVideo ? { sourceVideo: "pending-upload" } : {}) },
     );
     // Both go in `video_url`: the reference video's movement, or the video being edited.
@@ -244,7 +246,7 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
     const tp = TASK_PROVIDERS[provider];
     const refDataUrls = await inputDataUrls(inputs.referenceImages ?? []);
     const sourceVideo = inputs.sourceVideo;
-    const params = { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, upscale: req.upscale };
+    const params = { prompt, duration: req.duration, aspectRatio: req.aspectRatio, resolution: req.resolution, audio: req.audio, upscale: req.upscale, creative: req.creative };
     // Checked now with placeholders (a refusal is a 400 before anything exists), sent at submit with the uploaded urls.
     const placeholder = "https://pending-upload";
     const planned = tp.video(model, params, {
@@ -292,10 +294,16 @@ async function prepareVideo(req: VideoGenerateRequest): Promise<PreparedVideo> {
 
   if (inputs.sourceVideo) {
     // Inlined as a data URL, like frames: OpenRouter has no upload, and the browser no public url to give it.
-    const body = buildVideoEditPayload(model, prompt, await inputVideoDataUrl(inputs.sourceVideo));
+    // An upscaler (FLUX Video Upscale): its scale and creative mode too, stored with the run.
+    const factor = model.caps.upscale ? upscaleFactor(model, req.upscale) : undefined;
+    const creative = Boolean(req.creative && model.caps.upscale?.creative);
+    const body = buildVideoEditPayload(model, prompt, await inputVideoDataUrl(inputs.sourceVideo), { factor, creative });
+    const params: VideoParams = { duration: 0 };
+    if (factor) params.upscale = factor;
+    if (creative) params.creative = true;
     return {
-      id, provider, model, prompt, inputs, params: { duration: 0 },
-      summary: "edit (source video inline)",
+      id, provider, model, prompt, inputs, params,
+      summary: model.caps.upscale ? `upscale x${factor ?? "-"}${creative ? " creative" : ""} (source video inline)` : "edit (source video inline)",
       submit: async (signal) => {
         const submitted = await or.submitVideo(key, body, { signal });
         return { jobId: submitted.id, pollingUrl: submitted.pollingUrl };

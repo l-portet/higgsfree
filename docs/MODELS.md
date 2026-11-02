@@ -370,6 +370,9 @@ picked like any model (the picker lists them under "Upscale an image" / "Upscale
 **Upscale** on a finished image or clip (card or lightbox) hands it to its composer on Topaz. Picked, an
 upscaler turns the prompt into a drop zone for its input (drop, paste for images, or click to choose);
 the chips become the scale (2x / 4x) or, for ByteDance, the target resolution. One run per Generate.
+Upscalers with a creative mode (`caps.upscale.creative`: Topaz, FLUX Video Upscale) add a **Creative** toggle
+(accent chip, Sparkles): off is a faithful upscale, on rebuilds detail (Topaz's generative Wonder and Starlight
+endpoints; FLUX's `creativity: 1`). kie.ai has no creative mode, so a creative run goes to fal (or OpenRouter).
 
 Video upscalers are editors too (`caps.videoEdit`): the video goes up the same way as one to edit and
 the clip keeps its length. Their requests and prices live in `src/client/lib/upscale.ts`, not in the
@@ -382,6 +385,13 @@ fal / kie.ai price tables: Topaz on fal bills by the output's size, so its estim
 | **Recraft Crisp Upscale** <sub>FAST</sub> | `recraft/crisp-upscale` | fal, kie.ai | `fal-ai/recraft/upscale/crisp` · `recraft/crisp-upscale` | none (PNG only on fal: the app converts) | fal $0.004; kie.ai $0.0025 |
 | **Topaz Video Upscale** <sub>PRO</sub> | `topaz/upscale-video` | fal, kie.ai | `topaz/upscale/video/precision` · `topaz/video-upscale` | 2x / 4x | fal $0.01 / $0.02 / $0.06 per s (output up to 720p / 1080p / above); kie.ai $0.04/s (2x), $0.07/s (4x) |
 | **ByteDance Video Upscaler** <sub>FAST</sub> | `bytedance/video-upscaler` | fal | `fal-ai/bytedance-upscaler/upscale/video` | 1080p / 2K / 4K (`target_resolution`, default 4K) | $0.0072 / $0.0144 / $0.0288 per s |
+| **SeedVR2 Upscale** <sub>FAST</sub> | `bytedance/seedvr2-upscale` | fal | `fal-ai/seedvr/upscale/image` | 2x / 4x | $0.001 per MP out |
+| **SeedVR2 Video Upscale** <sub>FAST</sub> | `bytedance/seedvr2-video-upscale` | fal | `fal-ai/seedvr/upscale/video` | 2x / 4x | $0.001 per MP out per frame (estimated at 30 fps) |
+| **FLUX Video Upscale** <sub>NEW</sub> | `black-forest-labs/flux-video-upscale` | OpenRouter, fal | `blackforestlabs/flux-video-upscale` | 1.5x / 2x / 3x, Creative (`creativity` 0 / 1); clips up to 20 s, 50 MB | OpenRouter $0.035 per MP-second out ($0.05 creative); fal $0.084 / $0.15 / $0.33 per s at 1080p / 2K / 4K out ($0.12 / $0.21 / $0.474 creative) |
+
+Topaz's Creative mode: images on `topaz/upscale/image/generative` (Wonder 3, $0.08 per started 8 MP out), video on
+`topaz/upscale/video/generative` (Starlight Precise 2.6, $0.12/s up to 1080p out, $0.26/s above). Topaz video asks
+fal for H.264 (`H264_output`); fal's default, H.265, does not play in every browser.
 
 kie.ai lists Topaz images as "2K" and "4K" tiers; the app reads them as the 2x and 4x scales. None is
 verified end to end yet.
