@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Check, ImageUpscale, PenLine, WandSparkles } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { COMPOSER_MODES, type ComposerMode } from "@/lib/modes";
 import { Chip } from "@/components/ui/Chip";
 import { Popover, PopoverContent, PopoverItem, PopoverLabel, PopoverTrigger } from "@/components/ui/Popover";
@@ -16,17 +17,39 @@ const MODE_HINT: Record<ComposerMode, string> = {
   upscale: "Sharper, larger",
 };
 
+/** A half of `ModeModelChip`: the chip's look without its own border, filling the group's height. */
+export const CHIP_SEGMENT = "h-full rounded-[9px] border-0 bg-transparent px-2.5";
+
 /**
- * Create / Edit / Upscale, left of the model chip: a chip that opens a short list, like the other options. The model
- * picker next to it lists the mode's models.
+ * Create / Edit / Upscale, and the model, in one chip: "Create v / (mark) Seedance 2.5 v". Each half opens its own list
+ * (`ModeSwitch`, then the model picker, which lists the mode's models). One chip instead of two keeps the options on
+ * one row.
  */
+export function ModeModelChip({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("inline-flex h-9 min-w-0 max-w-full items-center rounded-control border border-border-strong bg-surface-2", className)}>
+      {children}
+    </div>
+  );
+}
+
+/** The slash between the two halves. */
+export function ChipSlash() {
+  return (
+    <span aria-hidden="true" className="select-none px-px text-[13px] text-fg-faint">
+      /
+    </span>
+  );
+}
+
+/** The mode half of `ModeModelChip`: opens a short list of the three modes. */
 export function ModeSwitch({ value, onChange, label }: { value: ComposerMode; onChange: (mode: ComposerMode) => void; label: string }) {
   const [open, setOpen] = useState(false);
   const current = COMPOSER_MODES.find((m) => m.value === value) ?? COMPOSER_MODES[0];
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Chip icon={MODE_ICON[value]} label={current?.label ?? "Create"} chevron strong aria-label={`${label}: ${current?.label ?? "Create"}`} />
+        <Chip label={current?.label ?? "Create"} chevron strong aria-label={`${label}: ${current?.label ?? "Create"}`} className={cn(CHIP_SEGMENT, "shrink-0")} />
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-[220px]">
         <div role="listbox" aria-label={label}>

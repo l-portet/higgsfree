@@ -156,14 +156,17 @@ There is no page chrome: the app is four views under one floating nav, with one 
   masonry (each card at its real ratio). Hover overlay: Keep (heart) · Download · Animate (→ Video with this image as first frame) or, on a video, Edit video (→ the
   composer on the last editor used, with this clip attached; same WandSparkles glyph) · Reuse prompt
   · Delete, plus one truncating info badge `"{model} · {params} · {cost}"`. A kept card shows a small accent heart badge.
-- **Mode switch** (both composers, the first chip, `ModeSwitch`): a select like the other chips, [✦ Create ˅] with
-  the mode's icon (WandSparkles, PenLine, ImageUpscale) in `fg`, opening a short list (label "Mode"; each row its
-  icon, name, a caption: "From a prompt", "Change one you have", "Sharper, larger"; the accent check on the current).
-  The model picker next to it lists only the mode's models (`lib/modes.ts`), and each mode remembers its last model.
-  A model can be in two modes: an image model that takes a source image creates and edits; a video model that takes
-  reference videos (Seedance 2.x, Wan 3.0 / Prime, Kling 4.0) creates and edits from a reference. Motion control is
-  in Create, in its own picker group. Animate switches to Create, Edit video to Edit, Upscale to Upscale.
-- Composer chips: [✦ Create ˅] [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
+- **Mode and model chip** (both composers, the first chip, `ModeModelChip`): one chip split in two,
+  [Create ˅ / ⟨mark⟩ Nano Banana Pro ˅], so the options keep to one row. One `border-strong` outline on `surface-2`;
+  each half is a borderless 34 px segment (`CHIP_SEGMENT`, 9 px radius) that lights `surface-3` on hover or while
+  open, with a `fg-faint` slash between. The left half (`ModeSwitch`) opens a short list (label "Mode"; each row its
+  icon, WandSparkles, PenLine or ImageUpscale, the name and a caption: "From a prompt", "Change one you have",
+  "Sharper, larger"; the accent check on the current). The right half opens the model picker, which lists only the
+  mode's models (`lib/modes.ts`); each mode remembers its last model. A model can be in two modes: an image model that
+  takes a source image creates and edits; a video model that takes reference videos (Seedance 2.x, Wan 3.0 / Prime,
+  Kling 4.0) creates and edits from a reference. Motion control is in Create, in its own picker group. Animate
+  switches to Create, Edit video to Edit, Upscale to Upscale.
+- Composer chips: [Create ˅ / ⟨provider mark⟩ Nano Banana Pro ˅] [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
   reference images (up to the largest count any model takes; the picker dims models that cannot take what is
   attached). Image Edit is the same bar with an image required ("Add an image to edit") and the placeholder "Say what
   to change: swap, add, remove, restyle…".

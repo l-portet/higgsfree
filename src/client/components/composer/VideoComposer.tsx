@@ -39,7 +39,7 @@ import { PromptEditorDialog } from "./PromptEditorDialog";
 import { sizeChange, UpscaleDropZone } from "./UpscaleDropZone";
 import { useKeyGate } from "./useKeyGate";
 import { ModelChip } from "./ModelChip";
-import { ModeSwitch } from "./ModeSwitch";
+import { ChipSlash, CHIP_SEGMENT, ModeModelChip, ModeSwitch } from "./ModeSwitch";
 
 const STORAGE_KEY = "higgsfree.video.panel";
 const MAX_REFS = 4;
@@ -988,10 +988,13 @@ export function VideoComposer() {
       }
       chips={
         <>
-          <ModeSwitch value={mode} onChange={(m) => switchMode(m)} label="Video mode" />
-          <ModelPicker kind="video" mode={mode} value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
-            <ModelChip model={model} reason={modelReason(model)} />
-          </ModelPicker>
+          <ModeModelChip>
+            <ModeSwitch value={mode} onChange={(m) => switchMode(m)} label="Video mode" />
+            <ChipSlash />
+            <ModelPicker kind="video" mode={mode} value={model.id} onChange={(m) => pickModel(m.id)} disabledReason={modelReason}>
+              <ModelChip model={model} reason={modelReason(model)} className={cn(CHIP_SEGMENT, "min-w-0")} />
+            </ModelPicker>
+          </ModeModelChip>
 
           {editMode ? (
             <>
