@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { iconButtonClasses } from "@/components/ui/iconButtonClasses";
-import { Spinner } from "@/components/ui/Spinner";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { endGenerationDrag, startGenerationDrag } from "@/components/favorites/dnd";
 import { KeepMenu } from "@/components/favorites/KeepMenu";
@@ -82,13 +81,13 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
   const src = useMediaUrl(out?.id);
   const isVideo = g.type === "video";
   const failed = !pending && (g.status === "failed" || !out);
-  // A video that finishes while its card is on screen opens with the reveal: the loader stays until the first frame is in.
+  // A run that finishes while its card is on screen opens with the reveal: the loader stays until the image or first frame is in.
   const wasPending = useRef(pending);
   const [reveal, setReveal] = useState<"off" | "waiting" | "playing">("off");
   useEffect(() => {
-    if (wasPending.current && !pending && isVideo && g.status === "completed" && !reduceMotion) setReveal("waiting");
+    if (wasPending.current && !pending && g.status === "completed" && !reduceMotion) setReveal("waiting");
     wasPending.current = pending;
-  }, [pending, isVideo, g.status, reduceMotion]);
+  }, [pending, g.status, reduceMotion]);
   // A browser that never says the first frame is in (metadata-only preload): reveal anyway once the clip is on screen.
   useEffect(() => {
     if (reveal !== "waiting" || !near || !src) return;
@@ -137,35 +136,16 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
 
   let body: ReactNode;
 
-  if (pending && isVideo) {
+  if (pending) {
     body = (
       <>
         <RippleLoader />
         <div className={cn("absolute inset-x-0 bottom-0 flex items-center gap-2 text-meta", cell ? "p-2" : "p-3")}>
           <span className="min-w-0 truncate">
-            <span className="text-shimmer font-medium">Generating video</span>
+            <span className="text-shimmer font-medium">{isVideo ? "Generating video" : "Generating image"}</span>
             <span className="text-fg-faint"> · {g.modelName}</span>
           </span>
           <span className="ml-auto shrink-0 tabular-nums text-fg-subtle" aria-live="off">
-            {formatElapsed(elapsed)}
-          </span>
-        </div>
-        <div className="absolute right-2 top-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100">
-          <IconButton label="Delete" size="sm" variant="overlay" onClick={() => actions.setConfirmDelete(true)}>
-            <Trash2 />
-          </IconButton>
-        </div>
-      </>
-    );
-  } else if (pending) {
-    body = (
-      <>
-        <div className="skeleton absolute inset-0" />
-        <div className={cn("absolute inset-0 flex flex-col items-center justify-center text-center", cell ? "gap-1 p-2" : "gap-1.5 p-4")}>
-          <Spinner size={18} className="mb-1 text-fg-muted" />
-          <span className="max-w-full truncate text-meta font-medium text-fg">{g.modelName}</span>
-          <span className="text-meta tabular-nums" aria-live="off">
-            {isVideo ? "Rendering · " : ""}
             {formatElapsed(elapsed)}
           </span>
         </div>
@@ -254,7 +234,9 @@ export const GenerationCard = memo(function GenerationCard({ generation: g, onOp
             height={out.height}
             loading="lazy"
             decoding="async"
-            className={cn("absolute inset-0 size-full object-cover", !src && "invisible")}
+            onLoad={() => setReveal((r) => (r === "waiting" ? "playing" : r))}
+            onAnimationEnd={() => setReveal("off")}
+            className={cn("absolute inset-0 size-full object-cover", !src && "invisible", reveal === "waiting" && "opacity-0", reveal === "playing" && "animate-reveal")}
             draggable={false}
           />
         )}
