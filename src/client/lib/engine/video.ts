@@ -429,7 +429,7 @@ async function pollTask(tp: TaskProvider, key: string, job: VideoJob, signal: Ab
   if (t.state === "done") {
     const url = t.urls[0];
     if (!url) return { kind: "failed", error: `${tp.name} reported success but returned no video url` };
-    const out: PollOutcome = { kind: "done", download: () => tp.download(url, signal) };
+    const out: PollOutcome = { kind: "done", download: () => tp.download(url, signal, key) };
     if (t.costUsd !== undefined) out.costUsd = t.costUsd;
     return out;
   }

@@ -1,6 +1,6 @@
 /**
  * What a video costs on each provider that offers its model, and who runs it: the cheapest of OpenRouter,
- * fal, kie.ai and APIMart that can take the request (`routeQuotes`, the same rule as images). The composer shows the
+ * fal, kie.ai, APIMart and Revana that can take the request (`routeQuotes`, the same rule as images). The composer shows the
  * comparison next to Generate and the engine routes the run with the same rule, so the two always agree.
  */
 import type { ProviderId, VideoAspectRatio, VideoModel, VideoResolution } from "@shared/types";
@@ -9,6 +9,7 @@ import { estimateFalVideoCost, falVideoPayloadFor } from "./fal-pricing";
 import { apimartVideoPayloadFor, estimateApimartVideoCost } from "./apimart-pricing";
 import { estimateKieVideoCost, kieVideoPayloadFor } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
+import { estimateRevanaVideoCost, revanaVideoPayloadFor } from "./revana-pricing";
 
 /** The parts of a video request that set its price, or whether a provider takes it. */
 export interface VideoQuoteRequest {
@@ -95,6 +96,8 @@ function priceOn(provider: ProviderId, model: VideoModel, req: VideoQuoteRequest
       return quoted(() => kieVideoPayloadFor(model, req), () => estimateKieVideoCost(model, req));
     case "apimart":
       return quoted(() => apimartVideoPayloadFor(model, req), () => estimateApimartVideoCost(model, req));
+    case "revana":
+      return quoted(() => revanaVideoPayloadFor(model, req), () => estimateRevanaVideoCost(model, req));
   }
 }
 

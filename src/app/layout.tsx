@@ -37,13 +37,15 @@ const GA_CONNECT = "https://*.google-analytics.com https://*.analytics.google.co
 
 /**
  * Production only (Next dev needs eval and websockets). The keys live in this browser, so the one
- * thing worth locking down is where a script on this origin may send data: OpenRouter, fal, kie.ai, APIMart
+ * thing worth locking down is where a script on this origin may send data: OpenRouter, fal, kie.ai, APIMart, Revana
  * (their API hosts, upload targets and the CDNs their results come from), plus the Google Analytics
  * endpoints, and nothing else.
  */
 const FAL_ORIGINS = "https://fal.run https://queue.fal.run https://rest.fal.ai https://api.fal.ai https://fal.media https://*.fal.media https://storage.googleapis.com";
 const KIE_ORIGINS = "https://api.kie.ai https://kieai.redpandaai.co https://*.aiquickdraw.com";
 const APIMART_ORIGINS = "https://api.apimart.ai https://upload.apimart.ai";
+// Revana's API, and the Cloudflare R2 storage its uploads go to and its results redirect to.
+const REVANA_ORIGINS = "https://api.revana.si https://*.r2.cloudflarestorage.com";
 const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
 const CSP = [
   "default-src 'self'",
@@ -52,7 +54,7 @@ const CSP = [
   `img-src 'self' blob: data: ${GA_CONNECT}`,
   "media-src 'self' blob:",
   "font-src 'self'",
-  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${APIMART_ORIGINS} ${GA_CONNECT}`,
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${APIMART_ORIGINS} ${REVANA_ORIGINS} ${GA_CONNECT}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

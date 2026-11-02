@@ -200,7 +200,7 @@ function KeysLink({ provider }: { provider: KeyedProvider }) {
   );
 }
 
-/** The fal, kie.ai and APIMart keys. */
+/** The fal, kie.ai, APIMart and Revana keys. */
 export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
   return (
     <>
@@ -232,6 +232,17 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
           <>
             APIMart runs many of these models at its own prices (Veo 3.1, Seedance, Wan, Kling 3.0, PixVerse, Nano Banana Pro, GPT Image 2…): with a key, a
             run goes there whenever it is the cheapest. Get one at <KeysLink provider="apimart" />.
+          </>
+        }
+        offHint="No key yet. Runs go to the other providers until one is saved here."
+      />
+      <ProviderKeyCard
+        provider="revana"
+        settings={settings}
+        description={
+          <>
+            Revana runs many of these models through one key at its own prices (Seedance, Veo 3.1, Kling 3.0 and 4.0, Wan, MiniMax H3, Nano Banana Pro,
+            GPT Image 2…): with a key, a run goes there whenever it is the cheapest. Get one at <KeysLink provider="revana" />.
           </>
         }
         offHint="No key yet. Runs go to the other providers until one is saved here."

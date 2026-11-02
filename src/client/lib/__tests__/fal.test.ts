@@ -22,10 +22,10 @@ describe("provider choice", () => {
   const both = { openrouter: true, fal: true };
   it("lists who serves a model", () => {
     expect(modelProviders(image("krea/krea-2-large"))).toEqual(["openrouter"]);
-    expect(modelProviders(image("google/gemini-3-pro-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(modelProviders(image("google/gemini-3-pro-image"))).toEqual(["openrouter", "fal", "kie", "apimart", "revana"]);
     expect(modelProviders(video("fal/kling-v3-pro-motion-control"))).toEqual(["fal"]);
-    expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart"]);
-    expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart"]);
+    expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart", "revana"]);
+    expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart", "revana"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -40,7 +40,7 @@ describe("provider choice", () => {
     expect(providerNotice(motion, { openrouter: true, fal: false })).toBe("Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it.");
     expect(providerNotice(image("krea/krea-2-large"), { openrouter: false, fal: true })).toBe("Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.");
     expect(providerNotice(video("kwaivgi/kling-v3.0-pro"), { openrouter: false, fal: false })).toBe("Kling 3.0 Pro needs an OpenRouter, fal, kie.ai or APIMart key. Add one in Settings to use it.");
-    expect(providerNotice(video("fal/vidu-q4"), { openrouter: true })).toBe("Vidu Q4 needs a fal, kie.ai or APIMart key. Add one in Settings to use it.");
+    expect(providerNotice(video("fal/vidu-q4"), { openrouter: true })).toBe("Vidu Q4 needs a fal, kie.ai, APIMart or Revana key. Add one in Settings to use it.");
     expect(chooseProvider(video("fal/vidu-q4"), { kie: true }).provider).toBe("kie");
     expect(providerNotice(motion, both)).toBeUndefined();
   });

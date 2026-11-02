@@ -280,6 +280,11 @@ what each run cost.
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | | |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | | |
 
+### Revana
+
+With a Revana key, 36 of these models also run on Revana ([REVANA.md](REVANA.md)), at the prices of its public
+list (`REVANA_MODELS`), and a run goes there whenever it is the cheapest. Revana records what each run cost.
+
 ### APIMart
 
 With an APIMart key, these also run on APIMart ([APIMART.md](APIMART.md)), at its Gold-tier prices
@@ -491,7 +496,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
 | `kie` | How kie.ai serves the model (`KieImageRoute`): its `family` (which builder maps the fields), the createTask `model`, an `editModel` used with references, a `tier`. See [KIE.md](KIE.md#image-fields-buildkieimagepayload). |
 | `apimart` | How APIMart serves the model (`ApimartImageRoute`): its `family` and APIMart's `model` id. See [APIMART.md](APIMART.md#image-fields-buildapimartimagepayload). |
-| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`), and is never looked up in OpenRouter's catalogs. |
+| `revana` | How Revana serves the model (`RevanaRoute`): Revana's `model` id. See [REVANA.md](REVANA.md). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`), and is never looked up in OpenRouter's catalogs. |
 
 ### `VideoModel` fields
 

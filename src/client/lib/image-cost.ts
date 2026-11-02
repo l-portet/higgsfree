@@ -12,6 +12,8 @@ import { estimateFalImageCost } from "./fal-pricing";
 import { buildKieImagePayload } from "./kie-payloads";
 import { estimateKieImageCost } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
+import { buildRevanaImagePayload } from "./revana-payloads";
+import { estimateRevanaImageCost } from "./revana-pricing";
 import { routeQuotes, type ProviderQuote, type QuoteReason } from "./video-cost";
 
 export interface ImageQuoteRequest {
@@ -63,6 +65,10 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
     case "apimart": {
       const why = refusal(() => buildApimartImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
       return why ? { refusal: why } : usd(estimateApimartImageCost(model, req, req.count, withRefs));
+    }
+    case "revana": {
+      const why = refusal(() => buildRevanaImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale }, refs));
+      return why ? { refusal: why } : usd(estimateRevanaImageCost(model, req, req.count, withRefs));
     }
   }
 }

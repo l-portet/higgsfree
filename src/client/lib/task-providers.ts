@@ -1,5 +1,5 @@
 /**
- * kie.ai and APIMart run every image and video as a task: inputs uploaded first (both take inputs by url),
+ * kie.ai, APIMart and Revana run every image and video as a task: inputs uploaded first (both take inputs by url),
  * a submit that returns a task id, a task url polled until the result urls are there, a download without
  * the key. This is the one shape the engine drives them through.
  */
@@ -8,9 +8,11 @@ import * as apimart from "./apimart";
 import { buildApimartImagePayload, buildApimartVideoPayload } from "./apimart-payloads";
 import { badRequest } from "./errors";
 import * as kie from "./kie";
+import * as revana from "./revana";
+import { buildRevanaImagePayload, buildRevanaVideoPayload } from "./revana-payloads";
 import { buildKieImagePayload, buildKieVideoPayload, type KieImageParams, type KieVideoMedia, type KieVideoParams } from "./kie-payloads";
 
-export type TaskProviderId = "kie" | "apimart";
+export type TaskProviderId = "kie" | "apimart" | "revana";
 
 /** A task's state, the same for both: `pending` keeps polling (`raw` is the provider's word for it). */
 export interface TaskStatus {
@@ -39,13 +41,15 @@ export interface TaskProvider {
   image(model: ImageModel, req: KieImageParams, referenceUrls: string[]): TaskRequest;
   taskUrl(id: string): string;
   status(key: string, url: string, signal?: AbortSignal): Promise<TaskStatus>;
-  download(url: string, signal?: AbortSignal): Promise<Blob>;
+  /** `key`: for a provider whose result links need it (Revana's `/content`). */
+  download(url: string, signal?: AbortSignal, key?: string): Promise<Blob>;
   /** The error a url off the provider's own hosts raises (it ends the job). */
   isOriginError(err: unknown): boolean;
 }
 
 const KIE_PENDING = new Set(["waiting", "queuing", "generating"]);
 const APIMART_PENDING = new Set(["pending", "submitted", "processing", "in_progress", "queued", "running"]);
+const REVANA_PENDING = new Set(["queued", "running"]);
 
 export const TASK_PROVIDERS: Record<TaskProviderId, TaskProvider> = {
   kie: {
@@ -74,7 +78,7 @@ export const TASK_PROVIDERS: Record<TaskProviderId, TaskProvider> = {
       if (state === "pending" && !KIE_PENDING.has(t.state)) out.raw = `unknown:${t.state}`;
       return out;
     },
-    download: kie.download,
+    download: (url, signal) => kie.download(url, signal),
     isOriginError: (err) => err instanceof kie.KieOriginError,
   },
   apimart: {
@@ -103,11 +107,40 @@ export const TASK_PROVIDERS: Record<TaskProviderId, TaskProvider> = {
       if (state === "pending" && !APIMART_PENDING.has(t.status)) out.raw = `unknown:${t.status}`;
       return out;
     },
-    download: apimart.download,
+    download: (url, signal) => apimart.download(url, signal),
     isOriginError: (err) => err instanceof apimart.ApimartOriginError,
+  },
+  revana: {
+    name: "Revana",
+    uploadImage: revana.uploadImage,
+    uploadVideo: revana.upload,
+    video(model, req, media) {
+      const p = buildRevanaVideoPayload(model, req, media);
+      return {
+        params: p.params,
+        summary: `model=${p.model} duration=${p.params.duration}s res=${p.params.resolution ?? "-"} ar=${p.params.aspectRatio ?? "-"} audio=${p.params.audio ?? "-"}`,
+        submit: (key, signal) => revana.submit(key, p.model, p.input, signal),
+      };
+    },
+    image(model, req, refs) {
+      const p = buildRevanaImagePayload(model, req, refs);
+      return { summary: `model=${p.model}`, submit: (key, signal) => revana.submit(key, p.model, p.input, signal) };
+    },
+    taskUrl: revana.taskUrl,
+    async status(key, url, signal) {
+      const g = await revana.generation(key, url, signal);
+      const state = g.status === "succeeded" ? "done" : g.status === "failed" ? "failed" : "pending";
+      const out: TaskStatus = { state, raw: g.status, urls: g.urls };
+      if (g.costUsd !== undefined) out.costUsd = g.costUsd;
+      if (g.error) out.error = g.error;
+      if (state === "pending" && !REVANA_PENDING.has(g.status)) out.raw = `unknown:${g.status}`;
+      return out;
+    },
+    download: (url, signal, key) => revana.download(url, signal, key),
+    isOriginError: (err) => err instanceof revana.RevanaOriginError,
   },
 };
 
 export function isTaskProvider(provider: string): provider is TaskProviderId {
-  return provider === "kie" || provider === "apimart";
+  return provider === "kie" || provider === "apimart" || provider === "revana";
 }

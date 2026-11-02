@@ -1,14 +1,14 @@
 /**
- * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, or several. A run goes to the cheapest with a key
+ * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, Revana, or several. A run goes to the cheapest with a key
  * that takes it (`routeQuotes` in `video-cost.ts`), or to the one picked in the composer. A model whose providers have
  * no key cannot run; the composer says why.
  */
 import type { CatalogModel, ProviderId } from "@shared/types";
 
 /** Every provider, in the order they are listed (OpenRouter first). */
-export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart"];
+export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart", "revana"];
 
-export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart" };
+export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart", revana: "Revana" };
 
 /** Where to get a key, the host it is sent to, and what one looks like. */
 export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; placeholder: string }> = {
@@ -16,6 +16,7 @@ export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; plac
   fal: { url: "https://fal.ai/dashboard/keys", host: "fal.ai", placeholder: "key-id:key-secret" },
   kie: { url: "https://kie.ai/api-key", host: "kie.ai", placeholder: "Your kie.ai API key" },
   apimart: { url: "https://apimart.ai/keys", host: "apimart.ai", placeholder: "sk-…" },
+  revana: { url: "https://revana.si/signup", host: "api.revana.si", placeholder: "sr_live_…" },
 };
 
 export function isProviderId(v: unknown): v is ProviderId {
@@ -26,12 +27,13 @@ export function isProviderId(v: unknown): v is ProviderId {
 export type ProviderKeys = Partial<Record<ProviderId, boolean>>;
 
 /** Providers that serve the model, OpenRouter first. */
-export function modelProviders(m: Pick<CatalogModel, "fal" | "kie" | "apimart" | "offOpenRouter">): ProviderId[] {
+export function modelProviders(m: Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "offOpenRouter">): ProviderId[] {
   const out: ProviderId[] = [];
   if (!m.offOpenRouter) out.push("openrouter");
   if (m.fal) out.push("fal");
   if (m.kie) out.push("kie");
   if (m.apimart) out.push("apimart");
+  if (m.revana) out.push("revana");
   return out;
 }
 
@@ -42,7 +44,7 @@ export interface ProviderChoice {
   missing: ProviderId[];
 }
 
-type Routed = Pick<CatalogModel, "fal" | "kie" | "apimart" | "offOpenRouter">;
+type Routed = Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "offOpenRouter">;
 
 /** The first provider of the model with a key (before prices are known), or the ones whose key would let it run. */
 export function chooseProvider(m: Routed, keys: ProviderKeys): ProviderChoice {
