@@ -166,7 +166,7 @@ There is no page chrome: the app is four views under one floating nav, with one 
   takes a source image creates and edits; a video model that takes reference videos (Seedance 2.x, Wan 3.0 / Prime,
   Kling 4.0) creates and edits from a reference. Motion control is in Create, in its own picker group. Animate
   switches to Create, Edit video to Edit, Upscale to Upscale.
-- Composer chips: [Create ˅ / ⟨provider mark⟩ Nano Banana Pro ˅] [⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
+- Composer chips: [Create ˅ / ⟨provider mark⟩ Nano Banana Pro ˅] [▭ 1:1] [◇ 1K] [− 1/4 +]. `+` adds
   reference images (up to the largest count any model takes; the picker dims models that cannot take what is
   attached). Image Edit is the same bar with an image required ("Add an image to edit") and the placeholder "Say what
   to change: swap, add, remove, restyle…".
