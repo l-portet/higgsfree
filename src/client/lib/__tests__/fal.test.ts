@@ -26,6 +26,7 @@ describe("provider choice", () => {
     expect(modelProviders(video("fal/kling-v3-pro-motion-control"))).toEqual(["fal"]);
     expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart", "revana"]);
     expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart", "revana"]);
+    expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "apimart"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -69,6 +70,19 @@ describe("buildFalImagePayload", () => {
     });
     expect(() => buildFalImagePayload(image("fal/qwen-image-edit-2511"), { prompt: "p", aspectRatio: "auto", size: "1K" }, [])).toThrow("needs at least one reference image");
     expect(() => buildFalImagePayload(image("fal/flux-dev"), { prompt: "p", aspectRatio: "auto", size: "1K" }, ["data:a"])).toThrow("does not take reference images");
+  });
+
+  it("GPT Image 2.6 Flare: a preset or an explicit size, references as `image_urls` on the edit endpoint", () => {
+    const flare = image("openai/gpt-image-2.6-flare");
+    expect(buildFalImagePayload(flare, { prompt: "p", aspectRatio: "16:9", size: "1K" }, [])).toEqual({
+      endpoint: "openai/gpt-image-2.6/flare/text-to-image",
+      input: { prompt: "p", image_size: "landscape_16_9" },
+    });
+    expect(buildFalImagePayload(flare, { prompt: "p", aspectRatio: "21:9", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: { width: 1536, height: 640 } });
+    expect(buildFalImagePayload(flare, { prompt: "p", aspectRatio: "auto", size: "1K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "openai/gpt-image-2.6/flare/edit",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"] },
+    });
   });
 });
 

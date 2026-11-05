@@ -79,7 +79,7 @@ upload page's example shows `{ url }` objects).
 | Family | Models | Fields |
 |---|---|---|
 | `gemini` | Nano Banana Pro, 2, 2 Lite, Nano Banana → `gemini-3-pro-image-preview`, `gemini-3.1-flash-image-preview`, `gemini-3.1-flash-lite-image-ext`, `gemini-2.5-flash-image-preview` | `size` (the ratio, `auto` allowed), `resolution` 1K / 2K / 4K, up to 14 references |
-| `gpt-image-2` | GPT Image 2, 2.6 → `gpt-image-2`, `gpt-image-2.6` | `size`, `resolution` `1k` / `2k` / `4k`, up to 15 references (2.6 takes 16; the app sends 8 at most) |
+| `gpt-image-2` | GPT Image 2, 2.6, 2.6 Flare → `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare` | `size`, `resolution` `1k` / `2k` / `4k`, up to 15 references (2.6 and 2.6 Flare take 16; the app sends 8 at most) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux-kontext-pro` | `size`, `output_format: "png"`, up to 4 references |
 | `z-image` | Z-Image Turbo → `z-image-turbo` | `size` (`auto` becomes 1:1), `resolution: "1K"`, `prompt_extend: false` (it doubles the price) |
 
@@ -89,6 +89,13 @@ leaves out) and text to image and edits in one model, so it shares the `gpt-imag
 (`auto` by default), `output_format` and `background` are not sent: APIMart's defaults apply. Neither
 APIMart's price catalog nor the model page priced it on 30 Oct 2026: it has no estimate rather than a guessed
 one, and the price test lists it as unpriced.
+
+GPT Image 2.6 Flare (`gpt-image-2.6-flare`) is also on OpenRouter and fal. APIMart's GPT-Image-2.6 page (read
+5 Nov 2026) names it, beside Sunburst (not listed), with the same fields: `size` (the ratio, 21:9 included,
+`auto` by default), `resolution`, up to 16 `image_urls`, so it shares the `gpt-image-2` builder. `quality`
+(`auto` by default), `complexity`, `output_format` and `background` are not sent. The page is marked an
+integration preview ("not yet live"), so a run may be refused until it opens. APIMart's price catalog bills
+it per million tokens with no per-image price: no estimate, and the price test lists it as unpriced.
 
 ## Cost estimates
 
@@ -100,8 +107,9 @@ PixVerse), per clip (Veo, 8 s; Gemini Omni Flash 1.1 by length), or per image (b
 (`list-pricing.ts`) prices the payload the run would send.
 
 The exceptions are Gemini Omni Flash 1.2 (`gemini-omni-1.2-flash`) and GPT Image 2.6 (`gpt-image-2.6`), which
-neither the catalog nor their model pages priced on 30 Oct 2026: they have no estimate rather than a guessed one,
-and the test lists them as unpriced.
+neither the catalog nor their model pages priced on 30 Oct 2026, and GPT Image 2.6 Flare (`gpt-image-2.6-flare`),
+which the catalog bills in tokens only (5 Nov 2026): they have no estimate rather than a guessed one, and the
+test lists them as unpriced.
 
 ## Known gaps
 
@@ -114,4 +122,5 @@ and the test lists them as unpriced.
   composer is a placeholder), and APIMart lists no price for it yet; the recorded cost is still right.
 - **Veo is 8 s only** on the models used here (APIMart's per-second "official" Veo channels are not wired).
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
-- **GPT Image 2.6 has no price to show.** APIMart lists none yet; the recorded cost is still right.
+- **GPT Image 2.6 and 2.6 Flare have no price to show.** APIMart lists none for 2.6 and bills Flare in tokens; the
+  recorded cost is still right.

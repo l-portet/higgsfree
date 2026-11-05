@@ -21,11 +21,17 @@ const LATER = new Date("2026-12-01T12:00:00Z");
 describe("fal prices", () => {
   it("cover every endpoint the catalog routes to, at every size and resolution it offers, and nothing else", () => {
     const routed = new Set<string>();
+    // fal bills these in tokens and gives no per-size figure for them (read 5 Nov 2026): no estimate rather than a guessed one.
+    const unpriced = new Set(["openai/gpt-image-2.6/flare/text-to-image", "openai/gpt-image-2.6/flare/edit"]);
     // Upscalers are priced in `upscale.ts` (by the output's size, or a flat rate), not from `FAL_PRICES`.
     for (const m of IMAGE_MODELS.filter((i) => !i.caps.upscale)) {
       for (const e of [m.fal?.textToImage, m.fal?.edit]) {
         if (!e) continue;
         routed.add(e);
+        if (unpriced.has(e)) {
+          expect(FAL_PRICES[e], `${e} is listed as unpriced`).toBeUndefined();
+          continue;
+        }
         const p = FAL_PRICES[e];
         expect(p, `${e} has no price`).toBeDefined();
         if (p?.unit === "image" && typeof p.usd !== "number") for (const s of m.sizes) expect(p.usd[s], `${e} at ${s}`).toBeDefined();
