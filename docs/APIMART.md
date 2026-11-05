@@ -82,6 +82,7 @@ upload page's example shows `{ url }` objects).
 | `gpt-image-2` | GPT Image 2, 2.6, 2.6 Flare, 2.6 Sunburst → `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` | `size`, `resolution` `1k` / `2k` / `4k`, up to 15 references (2.6, 2.6 Flare and 2.6 Sunburst take 16; the app sends 8 at most) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux-kontext-pro` | `size`, `output_format: "png"`, up to 4 references |
 | `z-image` | Z-Image Turbo → `z-image-turbo` | `size` (`auto` becomes 1:1), `resolution: "1K"`, `prompt_extend: false` (it doubles the price) |
+| `seedream` | Seedream 5.5 → `seedream-5.5` | `size` (the ratio, `auto` allowed), `resolution` `1K` / `2K`, up to 10 references (the app sends 8 at most) |
 
 GPT Image 2.6 (`gpt-image-2.6`) runs on APIMart only. Its model page (read 30 Oct 2026) lists GPT Image 2's
 fields, with ratios `auto`, 1:1, 3:2, 2:3, 16:9, 9:16, 4:3, 3:4, 4:5, 5:4 (no 21:9, which its catalog entry
@@ -97,6 +98,18 @@ included, `auto` by default), `resolution`, up to 16 `image_urls`, so they share
 catalog bills them per million tokens with no per-image price: no estimate, and the price test lists them as
 unpriced.
 
+Seedream 5.5 (`seedream-5.5`) runs on APIMart only. Its model page (`apimart.ai/model/seedream-5-5`, read 5 Nov
+2026) is the only source: it links no reference page of its own on `docs.apimart.ai`. Text to image and edits are
+one model, with `size` (the ratio, `auto` allowed), `resolution` (uppercase, as in the page's examples) and up to
+10 `image_urls`; `n` takes only 1. The app lists 1K and 2K: APIMart's 1.5K is not an `ImageSize` and there is no
+4K. It also leaves out the ratios 2:1 and 1:2 (the app has no such option) and `size` as a tier or in pixels.
+Not sent, so APIMart's defaults apply: `output_format` (`jpeg`), `background` (`opaque`; `transparent` needs one
+input with an alpha channel and PNG output), `layer_decomposition` (`false`; it splits one reference into a base
+image and transparent layers, with `size` only `auto`, 1K, 1.5K or 2K, no `resolution` and an optional prompt),
+`optimize_prompt_options`, `watermark` (`false`) and `nsfw_check` (`false`). Neither APIMart's price catalog nor
+the model page priced it on 5 Nov 2026: it has no estimate rather than a guessed one, and the price test lists
+it as unpriced.
+
 ## Cost estimates
 
 `APIMART_PRICES` (`src/shared/apimart-prices.ts`) has APIMart's price in USD for every model a route sends to,
@@ -107,9 +120,10 @@ PixVerse), per clip (Veo, 8 s; Gemini Omni Flash 1.1 by length), or per image (b
 (`list-pricing.ts`) prices the payload the run would send.
 
 The exceptions are Gemini Omni Flash 1.2 (`gemini-omni-1.2-flash`) and GPT Image 2.6 (`gpt-image-2.6`), which
-neither the catalog nor their model pages priced on 30 Oct 2026, and GPT Image 2.6 Flare (`gpt-image-2.6-flare`)
-and Sunburst (`gpt-image-2.6-sunburst`), which the catalog bills in tokens only (5 Nov 2026): they have no
-estimate rather than a guessed one, and the test lists them as unpriced.
+neither the catalog nor their model pages priced on 30 Oct 2026, Seedream 5.5 (`seedream-5.5`), which neither
+priced on 5 Nov 2026, and GPT Image 2.6 Flare (`gpt-image-2.6-flare`) and Sunburst (`gpt-image-2.6-sunburst`),
+which the catalog bills in tokens only (5 Nov 2026): they have no estimate rather than a guessed one, and the
+test lists them as unpriced.
 
 ## Known gaps
 
@@ -124,3 +138,5 @@ estimate rather than a guessed one, and the test lists them as unpriced.
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
 - **GPT Image 2.6, 2.6 Flare and 2.6 Sunburst have no price to show.** APIMart lists none for 2.6 and bills Flare
   and Sunburst in tokens; the recorded cost is still right.
+- **Seedream 5.5 has no price to show, and text to image and edits only.** APIMart lists no price for it yet; the
+  recorded cost is still right. Transparent backgrounds and layer decomposition are not wired.

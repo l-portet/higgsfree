@@ -383,7 +383,7 @@ export interface ApimartImageRoute {
   model: string;
 }
 
-export type ApimartImageFamily = "gemini" | "gpt-image-2" | "flux-kontext" | "z-image";
+export type ApimartImageFamily = "gemini" | "gpt-image-2" | "flux-kontext" | "z-image" | "seedream";
 
 export interface ModelsResponse {
   image: ImageModel[];

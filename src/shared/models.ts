@@ -232,6 +232,29 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "bytedance/seedream-5.5",
+    name: "Seedream 5.5",
+    provider: "bytedance",
+    description: "ByteDance's flagship image model, strong on precise edits and transparency",
+    endpoint: "fal",
+    featured: false,
+    badges: ["new"],
+    // APIMart takes 10 references; the app sends 8 at most.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    // APIMart's ratios but 2:1 and 1:2, which the app has no option for.
+    aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"],
+    // APIMart also takes 1.5K, which `ImageSize` cannot say, and no 4K.
+    sizes: ["1K", "2K"],
+    // APIMart lists no price for it yet (5 Nov 2026): no estimate rather than a guessed one.
+    estCostUsd: {},
+    supportsImageSize: true,
+    verified: false,
+    // Not on OpenRouter, fal nor kie.ai yet.
+    offOpenRouter: true,
+    apimart: { family: "seedream", model: "seedream-5.5" },
+  },
+  {
+    kind: "image",
     id: "krea/krea-2-large",
     name: "Krea 2 Large",
     provider: "krea",
