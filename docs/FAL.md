@@ -256,9 +256,9 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
 
 - `FAL_PRICES` (`src/shared/fal-prices.ts`) has a price for every endpoint a route names, read from the
   endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026; a test checks it covers every
-  endpoint, size and resolution the catalog offers. The exception is GPT Image 2.6 Flare: its pages
-  (5 Nov 2026) give token rates only, with no per-size figure, so it has no estimate on fal and the test
-  lists its two endpoints as unpriced. fal's pricing API needs a key and gives one unit
+  endpoint, size and resolution the catalog offers. The exceptions are GPT Image 2.6 Flare and Sunburst: their
+  pages (5 Nov 2026) give token rates only, with no per-size figure, so they have no estimate on fal and the
+  test lists their four endpoints as unpriced. fal's pricing API needs a key and gives one unit
   price per endpoint, without the tiers below, so the app does not read it.
 - A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on
   Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4 and FLUX.3 Max), per image (by size, or by the

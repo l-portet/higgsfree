@@ -14,7 +14,7 @@ import { IMAGES_SIZE_BY_ASPECT } from "../payloads";
 const VISIBLE_VIDEO = VIDEO_MODELS.filter((m) => !m.hidden);
 const HIDDEN_VIDEO = VIDEO_MODELS.filter((m) => m.hidden);
 // On OpenRouter but billed in tokens there, with no per-image price (read 5 Nov 2026): no estimate rather than a guessed one.
-const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare"]);
+const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare", "openai/gpt-image-2.6-sunburst"]);
 
 describe("catalog shape", () => {
   it("has unique slugs and unique display names across image + video", () => {
