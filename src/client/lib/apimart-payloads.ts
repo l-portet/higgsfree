@@ -255,7 +255,7 @@ export interface ApimartImageParams {
 
 const IMAGE_LIMITS: Record<ApimartImageRoute["family"], { aspects: ImageAspectRatio[]; maxRefs: number }> = {
   gemini: { aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"], maxRefs: 14 },
-  // GPT Image 2.6 too: its catalog entry leaves out 21:9, and it takes 16 references (the app sends 8 at most).
+  // GPT Image 2.6 and 2.6 Flare too: 2.6's catalog entry leaves out 21:9, and both take 16 references (the app sends 8 at most).
   "gpt-image-2": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"], maxRefs: 15 },
   "flux-kontext": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"], maxRefs: 4 },
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3"], maxRefs: 0 },

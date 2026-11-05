@@ -165,8 +165,9 @@ none), since a partial one would drop models, and do not ask again for 60 s (`LI
 failed refresh must never break the picker: the curated catalog always renders.
 
 ## Native images API
-Discovered image models (anything in `/api/v1/images/models` without a curated entry) use
-`POST /api/v1/images` with `{ model, prompt, aspect_ratio?, resolution?, input_references? }`:
+Discovered image models (anything in `/api/v1/images/models` without a curated entry) and curated
+`endpoint: "native"` ones (GPT Image 2.6 Flare) use `POST /api/v1/images` with
+`{ model, prompt, aspect_ratio?, resolution?, input_references? }`:
 - `aspect_ratio` only when the user did not pick `auto` and the model lists it.
 - `resolution` (1K / 2K / 4K) only when the catalog lists `resolution` for the model.
 - `input_references: [{ type: "image_url", image_url: { url: dataUrl } }]` for reference images.

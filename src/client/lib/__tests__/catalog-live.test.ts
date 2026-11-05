@@ -108,6 +108,27 @@ describe("buildImageModel", () => {
     expect(buildImageModel(imageSpec("krea/krea-2-large"), krea)).toBe(krea);
   });
 
+  it("a curated native model takes the catalog's options and keeps its name, badges and other providers' routes", () => {
+    const flare = findImageModel("openai/gpt-image-2.6-flare");
+    if (!flare) throw new Error("catalog changed");
+    const m = buildImageModel(imageSpec("openai/gpt-image-2.6-flare"), flare);
+    expect(m).toMatchObject({
+      endpoint: "native",
+      name: "GPT Image 2.6 Flare",
+      badges: ["new", "fast"],
+      verified: false,
+      sizes: ["1K"],
+      supportsImageSize: false,
+      caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+      estCostUsd: {},
+      fal: flare.fal,
+      apimart: flare.apimart,
+    });
+    expect(m?.discovered).toBeUndefined();
+    // The curated ratios are OpenRouter's, so the picker does not change when the catalog arrives.
+    expect(new Set(m?.aspectRatios)).toEqual(new Set(flare.aspectRatios));
+  });
+
   it("builds a native model from the catalog: ratios, sizes, reference limits", () => {
     const m = buildImageModel(imageSpec("bytedance-seed/seedream-5-0-pro"));
     expect(m).toMatchObject({
