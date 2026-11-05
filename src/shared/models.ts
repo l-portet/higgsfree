@@ -188,6 +188,28 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "openai/gpt-image-2.6-flare",
+    name: "GPT Image 2.6 Flare",
+    provider: "openai",
+    description: "OpenAI's fast 2.6 image model, for quick iteration",
+    // OpenRouter's native images API: the live catalog replaces the ratios, sizes and reference count below.
+    endpoint: "native",
+    featured: false,
+    badges: ["new", "fast"],
+    // OpenRouter, fal and APIMart take 16 references; the app sends 8 at most.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"],
+    // OpenRouter lists no `resolution` for it (only `quality`, left at its default).
+    sizes: ["1K"],
+    // Billed in tokens on OpenRouter, fal and APIMart, none with a per-image price (5 Nov 2026): no estimate rather than a guessed one.
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    fal: { textToImage: "openai/gpt-image-2.6/flare/text-to-image", edit: "openai/gpt-image-2.6/flare/edit", refs: "image_urls", aspect: "image_size" },
+    apimart: { family: "gpt-image-2", model: "gpt-image-2.6-flare" },
+  },
+  {
+    kind: "image",
     id: "krea/krea-2-large",
     name: "Krea 2 Large",
     provider: "krea",

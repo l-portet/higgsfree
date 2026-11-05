@@ -13,6 +13,8 @@ import { IMAGES_SIZE_BY_ASPECT } from "../payloads";
 
 const VISIBLE_VIDEO = VIDEO_MODELS.filter((m) => !m.hidden);
 const HIDDEN_VIDEO = VIDEO_MODELS.filter((m) => m.hidden);
+// On OpenRouter but billed in tokens there, with no per-image price (read 5 Nov 2026): no estimate rather than a guessed one.
+const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare"]);
 
 describe("catalog shape", () => {
   it("has unique slugs and unique display names across image + video", () => {
@@ -44,7 +46,8 @@ describe("image models", () => {
     expect(new Set(m.aspectRatios).size).toBe(m.aspectRatios.length);
     for (const ar of m.aspectRatios) expect(IMAGE_ASPECT_RATIOS, `${m.id} lists unknown aspect ratio ${ar}`).toContain(ar);
     // fal publishes prices only to a signed-in key, so fal-only models carry no estimate.
-    for (const size of m.offOpenRouter ? [] : m.sizes) {
+    if (UNPRICED_IMAGE.has(m.id)) expect(m.estCostUsd, `${m.id} is listed as unpriced`).toEqual({});
+    for (const size of m.offOpenRouter || UNPRICED_IMAGE.has(m.id) ? [] : m.sizes) {
       expect(m.estCostUsd, `${m.id} has no estCostUsd for size ${size}`).toHaveProperty(size);
       const cost = m.estCostUsd[size];
       expect(typeof cost).toBe("number");

@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 20 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models)) and 49 video models, of which 47 are offered
+Curated today: 21 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models)) and 49 video models, of which 47 are offered
 (17 fal-only, 2 [on kie.ai or APIMart only](#kieai-and-apimart-only), 7 of the 47 are
 [video editors](#video-editing)) and 2 are hidden.
 
@@ -35,7 +35,8 @@ Curated today: 20 image models (8 of them fal-only, 1 [on APIMart only](#apimart
 ## Image models
 
 `chat` = `POST /api/v1/chat/completions` with `modalities: ["image","text"]` and `image_config`;
-`images` = `POST /api/v1/images/generations`. "all 11" aspect ratios = `auto`, 1:1, 3:4, 4:3, 2:3,
+`images` = `POST /api/v1/images/generations`; `native` = `POST /api/v1/images`, with the options
+OpenRouter's image catalog lists. "all 11" aspect ratios = `auto`, 1:1, 3:4, 4:3, 2:3,
 3:2, 9:16, 16:9, 5:4, 4:5, 21:9. `*` = the model ignores `image_config.image_size`
 (`supportsImageSize: false`); output is whatever the provider's default is, listed as 1K.
 
@@ -49,9 +50,17 @@ Curated today: 20 image models (8 of them fal-only, 1 [on APIMart only](#apimart
 | **GPT-5 Image** | `openai/gpt-5-image` | `chat` | ✓ | ✓ (4) | 1K * | all 11 | 1K $0.10 | – |
 | **GPT-5 Image Mini** <sub>FAST</sub> | `openai/gpt-5-image-mini` | `chat` | ✓ | ✓ (4) | 1K * | all 11 | 1K $0.03 | – |
 | **GPT Image 2** <sub>PRO</sub> | `openai/gpt-image-2` | `images` | ✓ | ✓ (1) | 1K * | 1:1, 2:3, 3:2 | 1K $0.17 | ✓ |
+| **GPT Image 2.6 Flare** <sub>NEW</sub> <sub>FAST</sub> | `openai/gpt-image-2.6-flare` | `native` | ✓ | ✓ (8) | 1K * | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | none ¹ | – |
 | **Krea 2 Large** | `krea/krea-2-large` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.06 | ✓ |
 | **Krea 2 Medium** | `krea/krea-2-medium` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.04 | – |
 | **Krea 2 Turbo** <sub>FAST</sub> | `krea/krea-2-medium-turbo` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.02 | – |
+
+¹ OpenAI's speed-focused GPT Image 2.6 (4 Nov 2026; Sunburst, the detail-focused one, is not listed), on
+OpenRouter, fal and APIMart ([models on both](#models-on-both)). It is the one curated `native` model: its
+ratios, sizes and reference count come from OpenRouter's image catalog once it arrives (the values here are
+the catalog's on 5 Nov 2026: no `resolution`, 16 references, which the app caps at 8). `quality` (auto to
+max) and `background` are left at OpenRouter's defaults. All three providers bill it in tokens and give no
+per-image price, so there is no estimate; the cost of each run is recorded.
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
@@ -59,7 +68,8 @@ model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
 
 Not on OpenRouter: the [fal-only image models](#fal-only-image-models), and GPT Image 2.6, which runs on
-APIMart only (see [APIMart-only image models](#apimart-only-image-models)).
+APIMart only (see [APIMart-only image models](#apimart-only-image-models)); GPT Image 2.6 Flare, above, is a
+separate model.
 
 Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
 
@@ -147,7 +157,8 @@ verified yet.
 Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint (`FAL_PRICES` in
 `src/shared/fal-prices.ts`, read from each endpoint's page on 15 Oct 2026), not the catalog's
 OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
-times OpenRouter's rate on fal). fal reports no cost with a result, so runs on fal record none.
+times OpenRouter's rate on fal). GPT Image 2.6 Flare has no fal price: fal bills it in tokens and gives no
+per-size figure for it. fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -231,7 +242,7 @@ the ratio (`auto` by default), `resolution` `1k` / `2k` / `4k`, references as `i
 takes 16 references, the app sends 8 at most. Not sent: `quality` (auto / low / medium / high, APIMart
 picks), `n` (up to 4; the app makes one call per image), `output_format` and `background`
 (transparent). APIMart lists no price for it yet, so there is no estimate; the cost of each run is
-recorded.
+recorded. GPT Image 2.6 Flare, a separate model, is on OpenRouter too (see [Image models](#image-models)).
 
 ### kie.ai and APIMart only
 
@@ -297,7 +308,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
 | MiniMax H3, H3 Max, Hailuo 2.3 | `MiniMax-H3`, `MiniMax-H3-Max`, `MiniMax-Hailuo-2.3` | Nano Banana 2 Lite | `gemini-3.1-flash-lite-image-ext` |
 | Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
-| Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here) | `gpt-image-2`, `gpt-image-2.6` |
+| Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
 
@@ -317,6 +328,10 @@ fal's fields. Style references are never sent to fal.
   `aspect_ratio`, `resolution` 1K / 2K.
 - **GPT Image 2**: `openai/gpt-image-2` · `openai/gpt-image-2/edit`; `image_urls`, `image_size`
   (1:1 `square_hd`, 2:3 832×1216, 3:2 1216×832).
+- **GPT Image 2.6 Flare**: `openai/gpt-image-2.6/flare/text-to-image` · `openai/gpt-image-2.6/flare/edit`;
+  `image_urls` (fal takes 16), `image_size` (fal's presets for 1:1, 4:3, 3:4, 16:9, 9:16; 2:3 832×1216,
+  3:2 1216×832, 21:9 1536×640). `quality` and `reasoning_effort` are left at fal's defaults (both `high`). No
+  price (see above).
 - **Seedance 2.5**: `bytedance/seedance-2.5/us/text-to-video` · `…/image-to-video`; `duration` as a
   string, `aspect_ratio` (not with a frame), `resolution` 480p / 720p, `end_image_url`,
   `generate_audio`. These are fal's US-hosted endpoints, the only ones it lists since Oct 2026
@@ -422,7 +437,10 @@ and `minimum_cents_per_generation` as `minCostUsd`). Every other listed model is
 | `hidden` | `true` when the catalog lists no duration (upscaling, avatars, editors without a curated entry). |
 
 **Image.** Curated models keep their verified routes and options (`chat` and `images` do not take
-the catalog's fields one to one), and stay listed as they are when OpenRouter stops listing them. Every other model in `/api/v1/images/models` is discovered and
+the catalog's fields one to one), and stay listed as they are when OpenRouter stops listing them. A
+curated `native` model (GPT Image 2.6 Flare) is the exception: it takes the catalog's options as a
+discovered model does, keeps its name, badges, description and its other providers' routes, and leaves the
+picker if OpenRouter stops listing it. Every other model in `/api/v1/images/models` is discovered and
 served through the native `POST /api/v1/images` with `aspect_ratio`, `resolution` and
 `input_references` as the catalog lists them. Aspect ratios are the ones the app knows plus `auto`.
 Sizes are the catalog's `resolution` values among 1K / 2K / 4K. References are capped at 8. A model
@@ -493,7 +511,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, or GPT Image 2.6 on APIMart only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, everything discovered is `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, or GPT Image 2.6 on APIMart only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare and everything discovered is `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
