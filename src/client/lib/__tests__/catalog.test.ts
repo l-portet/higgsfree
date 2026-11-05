@@ -204,7 +204,7 @@ describe("video models (hidden)", () => {
 describe("fal routes", () => {
   it("every fal-only model has a route, and every route covers what the model offers", () => {
     for (const m of IMAGE_MODELS) {
-      // GPT Image 2.6 is only on APIMart.
+      // GPT Image 2.6 and Seedream 5.5 are only on APIMart.
       if (m.offOpenRouter) {
         expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
         expect(m.endpoint).toBe("fal");
@@ -233,5 +233,12 @@ describe("fal routes", () => {
       if (m.caps.audio && m.offOpenRouter) expect(m.fal.audio, `${m.id} audio field`).toBeTruthy();
       if (m.fal.resolutions) for (const r of m.resolutions) expect(m.fal.resolutions[r], `${m.id} has no fal value for ${r}`).toBeTruthy();
     }
+  });
+
+  it("Seedream 5.5 has an APIMart route and no other", () => {
+    const m = findImageModel("bytedance/seedream-5.5");
+    expect(m?.apimart).toEqual({ family: "seedream", model: "seedream-5.5" });
+    expect(m?.offOpenRouter).toBe(true);
+    expect(m?.fal ?? m?.kie ?? m?.revana).toBeUndefined();
   });
 });

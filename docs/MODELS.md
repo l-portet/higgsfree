@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 22 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models)) and 49 video models, of which 47 are offered
+Curated today: 23 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models)) and 49 video models, of which 47 are offered
 (17 fal-only, 2 [on kie.ai or APIMart only](#kieai-and-apimart-only), 7 of the 47 are
 [video editors](#video-editing)) and 2 are hidden.
 
@@ -68,9 +68,9 @@ GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered 
 model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
 
-Not on OpenRouter: the [fal-only image models](#fal-only-image-models), and GPT Image 2.6, which runs on
-APIMart only (see [APIMart-only image models](#apimart-only-image-models)); GPT Image 2.6 Flare and Sunburst,
-above, are separate models.
+Not on OpenRouter: the [fal-only image models](#fal-only-image-models), and GPT Image 2.6 and Seedream 5.5, which
+run on APIMart only (see [APIMart-only image models](#apimart-only-image-models)); GPT Image 2.6 Flare and
+Sunburst, above, are separate models.
 
 Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
 
@@ -236,6 +236,7 @@ Not on OpenRouter, fal nor kie.ai: these run only with an APIMart key (fields an
 | Model | Id | APIMart model | t2i | i2i (max refs) | Sizes | Aspect ratios |
 |---|---|---|:-:|:-:|---|---|
 | **GPT Image 2.6** <sub>NEW</sub> | `openai/gpt-image-2.6` | `gpt-image-2.6` ¹ | ✓ | ✓ (8, `image_urls`) | 1K / 2K / 4K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 5:4, 4:5, 16:9, 9:16 |
+| **Seedream 5.5** <sub>NEW</sub> | `bytedance/seedream-5.5` | `seedream-5.5` ² | ✓ | ✓ (8, `image_urls`) | 1K / 2K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 |
 
 ¹ OpenAI's GPT Image 2.6, read from APIMart's model page on 30 Oct 2026; not on fal, kie.ai or
 OpenRouter yet. Text to image and edits are one model, with GPT Image 2's APIMart fields: `size` is
@@ -244,6 +245,12 @@ takes 16 references, the app sends 8 at most. Not sent: `quality` (auto / low / 
 picks), `n` (up to 4; the app makes one call per image), `output_format` and `background`
 (transparent). APIMart lists no price for it yet, so there is no estimate; the cost of each run is
 recorded. GPT Image 2.6 Flare and Sunburst, separate models, are on OpenRouter too (see [Image models](#image-models)).
+² ByteDance's Seedream 5.5, read from APIMart's model page on 5 Nov 2026; not on fal, kie.ai or OpenRouter yet
+(they stop at Seedream 5.0). Text to image and edits are one model: `size` is the ratio (`auto` allowed; APIMart's
+2:1 and 1:2 are not listed, the app has no such option), `resolution` `1K` / `2K` (APIMart's 1.5K is not listed
+either), references as `image_urls`. APIMart takes 10 references, the app sends 8 at most. Not sent:
+`output_format`, `background` (transparent), `layer_decomposition`, `optimize_prompt_options`, `watermark` and
+`nsfw_check`. APIMart lists no price for it yet, so there is no estimate; the cost of each run is recorded.
 
 ### kie.ai and APIMart only
 
@@ -312,6 +319,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare, 2.6 Sunburst | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
+| | | Seedream 5.5 (only here) | `seedream-5.5` |
 
 ### Models on both
 
@@ -514,7 +522,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, or GPT Image 2.6 on APIMart only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst and everything discovered are `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, or GPT Image 2.6 and Seedream 5.5 on APIMart only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst and everything discovered are `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
