@@ -184,11 +184,11 @@ describe("buildApimartImagePayload", () => {
     });
   });
 
-  it("GPT Image 2.6 Flare: GPT Image 2's fields under its own model, 21:9 included", () => {
-    expect(buildApimartImagePayload(image("openai/gpt-image-2.6-flare"), { prompt: "p", aspectRatio: "21:9", size: "1K" }, ["https://r"])).toEqual({
+  it.each(["flare", "sunburst"])("GPT Image 2.6 %s: GPT Image 2's fields under its own model, 21:9 included", (tier) => {
+    expect(buildApimartImagePayload(image(`openai/gpt-image-2.6-${tier}`), { prompt: "p", aspectRatio: "21:9", size: "1K" }, ["https://r"])).toEqual({
       kind: "images",
-      body: { model: "gpt-image-2.6-flare", prompt: "p", n: 1, image_urls: ["https://r"], size: "21:9", resolution: "1k" },
-      priceKey: "gpt-image-2.6-flare",
+      body: { model: `gpt-image-2.6-${tier}`, prompt: "p", n: 1, image_urls: ["https://r"], size: "21:9", resolution: "1k" },
+      priceKey: `gpt-image-2.6-${tier}`,
     });
   });
 });
@@ -203,9 +203,9 @@ describe("resultUrls", () => {
 
 describe("APIMart prices", () => {
   it("price every route at its defaults, and nothing else", () => {
-    // APIMart lists no price for these yet (read 30 Oct 2026), or bills them in tokens only (GPT Image 2.6 Flare,
-    // read 5 Nov 2026): no estimate rather than a guessed one.
-    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6", "gpt-image-2.6-flare"]);
+    // APIMart lists no price for these yet (read 30 Oct 2026), or bills them in tokens only (GPT Image 2.6 Flare and
+    // Sunburst, read 5 Nov 2026): no estimate rather than a guessed one.
+    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6", "gpt-image-2.6-flare", "gpt-image-2.6-sunburst"]);
     const used = new Set<string>();
     for (const m of VIDEO_MODELS.filter((v) => v.apimart && !v.hidden)) {
       const durations: Partial<Record<string, number>> = { veo: 8, "gemini-omni": 8 };
@@ -243,8 +243,8 @@ describe("APIMart prices", () => {
     expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toEqual({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 
-  it("GPT Image 2.6 Flare: on OpenRouter, fal and APIMart, priced on none, so OpenRouter runs it when its key is there", () => {
-    const m = image("openai/gpt-image-2.6-flare");
+  it.each(["flare", "sunburst"])("GPT Image 2.6 %s: on OpenRouter, fal and APIMart, priced on none, so OpenRouter runs it when its key is there", (tier) => {
+    const m = image(`openai/gpt-image-2.6-${tier}`);
     const req = { aspectRatio: "21:9" as const, size: "1K" as const, count: 1, references: 8 };
     const all = { openrouter: true, fal: true, apimart: true };
     expect(quoteImage(m, req, all)).toEqual({
