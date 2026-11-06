@@ -196,16 +196,17 @@ export const IMAGE_MODELS: ImageModel[] = [
     endpoint: "native",
     featured: false,
     badges: ["new", "fast"],
-    // OpenRouter, fal and APIMart take 16 references; the app sends 8 at most.
+    // OpenRouter, fal, kie.ai and APIMart take 16 references; the app sends 8 at most.
     caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
     aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"],
-    // OpenRouter lists no `resolution` for it (only `quality`, left at its default).
+    // OpenRouter lists no `resolution` for it (only `quality`, left at its default). kie.ai also takes 2K and 4K, not offered here.
     sizes: ["1K"],
-    // Billed in tokens on OpenRouter, fal and APIMart, none with a per-image price (5 Nov 2026): no estimate rather than a guessed one.
+    // Billed in tokens on OpenRouter, fal and APIMart (5 Nov 2026) and kie.ai (6 Nov 2026), none with a per-image price: no estimate rather than a guessed one.
     estCostUsd: {},
     supportsImageSize: false,
     verified: false,
     fal: { textToImage: "openai/gpt-image-2.6/flare/text-to-image", edit: "openai/gpt-image-2.6/flare/edit", refs: "image_urls", aspect: "image_size" },
+    kie: { family: "gpt-image-2", model: "gpt-image-2-6/flare-text-to-image", editModel: "gpt-image-2-6/flare-image-to-image" },
     apimart: { family: "gpt-image-2", model: "gpt-image-2.6-flare" },
   },
   {

@@ -47,7 +47,8 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   "nano-banana-2": { unit: "image", amount: { "1K": 8, "2K": 12, "4K": 18 } },
   "nano-banana-2-lite": { unit: "image", amount: 4 },
   "google/nano-banana": { unit: "image", amount: 4 },
-  "gpt-image-2": { unit: "image", amount: { "1K": 6, "2K": 10, "4K": 16 } },
+  "gpt-image-2-text-to-image": { unit: "image", amount: { "1K": 6, "2K": 10, "4K": 16 } },
+  // No entry for GPT Image 2.6 Flare: kie bills it per million tokens, with no per-image price (read 6 Nov 2026).
   "flux1-kontext#flux-kontext-pro": { unit: "image", amount: 5 },
   "z-image": { unit: "image", amount: 0.8 },
 };
