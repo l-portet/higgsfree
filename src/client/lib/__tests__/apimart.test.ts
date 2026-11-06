@@ -272,15 +272,12 @@ describe("APIMart prices", () => {
     expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toEqual({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 
-  it.each([
-    ["flare", ["openrouter", "fal", "kie", "apimart"]],
-    ["sunburst", ["openrouter", "fal", "apimart"]],
-  ] as const)("GPT Image 2.6 %s: priced on none of its providers, so OpenRouter runs it when its key is there", (tier, providers) => {
+  it.each(["flare", "sunburst"])("GPT Image 2.6 %s: priced on none of its providers, so OpenRouter runs it when its key is there", (tier) => {
     const m = image(`openai/gpt-image-2.6-${tier}`);
     const req = { aspectRatio: "21:9" as const, size: "1K" as const, count: 1, references: 8 };
     const all = { openrouter: true, fal: true, kie: true, apimart: true };
     expect(quoteImage(m, req, all)).toEqual({
-      quotes: providers.map((provider) => ({ provider, noKey: false })),
+      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }, { provider: "kie", noKey: false }, { provider: "apimart", noKey: false }],
       provider: "openrouter",
       reason: "unpriced",
     });

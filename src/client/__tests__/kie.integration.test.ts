@@ -136,15 +136,15 @@ describe("kie.ai images", () => {
     expect(mock.calls("/api/v1/chat/completions")).toHaveLength(0);
   });
 
-  it("GPT Image 2.6 Flare, billed in tokens: no estimate to route on, the edit model run with the reference, the cost recorded", async () => {
+  it.each(["flare", "sunburst"])("GPT Image 2.6 %s, billed in tokens: no estimate to route on, the edit model run with the reference, the cost recorded", async (tier) => {
     setProviderKey("kie", KIE_KEY);
     const ref = await uploadImage();
-    const g = (await api.generateImage({ prompt: "p", model: "openai/gpt-image-2.6-flare", aspectRatio: "21:9", size: "1K", count: 1, referenceImages: [ref] })).generations[0];
+    const g = (await api.generateImage({ prompt: "p", model: `openai/gpt-image-2.6-${tier}`, aspectRatio: "21:9", size: "1K", count: 1, referenceImages: [ref] })).generations[0];
     if (!g) throw new Error("no generation");
     expect(g.provider).toBe("kie");
     await waitFor(completed(g.id));
     expect(mock.kie("/api/v1/jobs/createTask")[0]?.body).toEqual({
-      model: "gpt-image-2-6/flare-image-to-image",
+      model: `gpt-image-2-6/${tier}-image-to-image`,
       input: { prompt: "p", aspect_ratio: "21:9", resolution: "1K", input_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] },
     });
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });

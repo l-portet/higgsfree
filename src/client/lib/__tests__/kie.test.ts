@@ -172,16 +172,16 @@ describe("buildKieImagePayload", () => {
     expect(() => buildKieImagePayload(image("fal/flux-kontext-pro"), { prompt: "p", aspectRatio: "3:2", size: "1K" }, [])).toThrow("Takes no 3:2");
   });
 
-  it("GPT Image 2.6 Flare: GPT Image 2's fields under its own model ids, 21:9 included", () => {
-    expect(buildKieImagePayload(image("openai/gpt-image-2.6-flare"), { prompt: "p", aspectRatio: "21:9", size: "1K" }, [])).toEqual({
-      model: "gpt-image-2-6/flare-text-to-image",
+  it.each(["flare", "sunburst"])("GPT Image 2.6 %s: GPT Image 2's fields under its own model ids, 21:9 included", (tier) => {
+    expect(buildKieImagePayload(image(`openai/gpt-image-2.6-${tier}`), { prompt: "p", aspectRatio: "21:9", size: "1K" }, [])).toEqual({
+      model: `gpt-image-2-6/${tier}-text-to-image`,
       input: { prompt: "p", aspect_ratio: "21:9", resolution: "1K" },
-      priceKey: "gpt-image-2-6/flare-text-to-image",
+      priceKey: `gpt-image-2-6/${tier}-text-to-image`,
     });
-    expect(buildKieImagePayload(image("openai/gpt-image-2.6-flare"), { prompt: "p", aspectRatio: "auto", size: "1K" }, ["https://r", "https://s"])).toEqual({
-      model: "gpt-image-2-6/flare-image-to-image",
+    expect(buildKieImagePayload(image(`openai/gpt-image-2.6-${tier}`), { prompt: "p", aspectRatio: "auto", size: "1K" }, ["https://r", "https://s"])).toEqual({
+      model: `gpt-image-2-6/${tier}-image-to-image`,
       input: { prompt: "p", aspect_ratio: "auto", resolution: "1K", input_urls: ["https://r", "https://s"] },
-      priceKey: "gpt-image-2-6/flare-text-to-image",
+      priceKey: `gpt-image-2-6/${tier}-text-to-image`,
     });
   });
 });
@@ -197,8 +197,8 @@ describe("resultUrls", () => {
 
 describe("kie prices", () => {
   it("price every route at its defaults, and nothing else", () => {
-    // kie bills these in tokens only (GPT Image 2.6 Flare, read 6 Nov 2026): no estimate rather than a guessed one.
-    const unpriced = new Set(["gpt-image-2-6/flare-text-to-image"]);
+    // kie bills these in tokens only (GPT Image 2.6 Flare and Sunburst, read 6 Nov 2026): no estimate rather than a guessed one.
+    const unpriced = new Set(["gpt-image-2-6/flare-text-to-image", "gpt-image-2-6/sunburst-text-to-image"]);
     const used = new Set<string>();
     // Upscalers are priced in `upscale.ts`, not from `KIE_PRICES`.
     for (const m of VIDEO_MODELS.filter((v) => v.kie && !v.hidden && !v.caps.upscale)) {
@@ -231,9 +231,9 @@ describe("kie prices", () => {
     expect(estimateKieImageCost(image("openai/gpt-image-2"), { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeCloseTo(0.03);
   });
 
-  it("GPT Image 2.6 Flare has no estimate, with or without references, rather than GPT Image 2's", () => {
-    const flare = image("openai/gpt-image-2.6-flare");
-    expect(estimateKieImageCost(flare, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeUndefined();
-    expect(estimateKieImageCost(flare, { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeUndefined();
+  it.each(["flare", "sunburst"])("GPT Image 2.6 %s has no estimate, with or without references, rather than GPT Image 2's", (tier) => {
+    const m = image(`openai/gpt-image-2.6-${tier}`);
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeUndefined();
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeUndefined();
   });
 });
