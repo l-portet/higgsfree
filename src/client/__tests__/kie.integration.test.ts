@@ -150,6 +150,24 @@ describe("kie.ai images", () => {
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
+  it("GPT Image 2.6 Economy, on kie.ai only: no `resolution`, the edit model run with a reference, the cost recorded", async () => {
+    setProviderKey("kie", KIE_KEY);
+    const req = { prompt: "p", model: "openai/gpt-image-2.6-economy", aspectRatio: "16:9" as const, size: "1K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("kie");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    await waitFor(completed(edit.id));
+    expect(mock.kie("/api/v1/jobs/createTask").map((c) => c.body)).toEqual([
+      { model: "gpt-image-2-6/economy-text-to-image", input: { prompt: "p", aspect_ratio: "16:9" } },
+      { model: "gpt-image-2-6/economy-image-to-image", input: { prompt: "p", aspect_ratio: "16:9", input_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] } },
+    ]);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
+  });
+
   it("goes to another provider when the one picked cannot take the request", async () => {
     setStoredFalKey(FAL_KEY);
     setProviderKey("kie", KIE_KEY);

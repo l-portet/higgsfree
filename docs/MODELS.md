@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 23 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models)) and 50 video models, of which 48 are offered
+Curated today: 24 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
 (19 fal-only, 1 [on kie.ai or APIMart only](#kieai-and-apimart-only), 8 of the 48 are
 [video editors](#video-editing)) and 2 are hidden.
 
@@ -56,7 +56,7 @@ OpenRouter's image catalog lists. "all 11" aspect ratios = `auto`, 1:1, 3:4, 4:3
 | **Krea 2 Medium** | `krea/krea-2-medium` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.04 | – |
 | **Krea 2 Turbo** <sub>FAST</sub> | `krea/krea-2-medium-turbo` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.02 | – |
 
-¹ OpenAI's two GPT Image 2.6 tiers (4 Nov 2026), Flare for speed and Sunburst for detail, on OpenRouter, fal,
+¹ Two of OpenAI's GPT Image 2.6 tiers (4 Nov 2026), Flare for speed and Sunburst for detail, on OpenRouter, fal,
 [kie.ai](#kieai) and APIMart ([models on both](#models-on-both)). They are the curated `native` models: their ratios, sizes and
 reference count come from OpenRouter's image catalog once it arrives (the values here are the catalog's on
 5 Nov 2026: no `resolution`, 16 references, which the app caps at 8). `quality` (auto to max) and `background`
@@ -68,8 +68,9 @@ GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered 
 model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
 
-Not on OpenRouter: the [fal-only image models](#fal-only-image-models), and GPT Image 2.6 and Seedream 5.5, which
-run on APIMart only (see [APIMart-only image models](#apimart-only-image-models)); GPT Image 2.6 Flare and
+Not on OpenRouter: the [fal-only image models](#fal-only-image-models), GPT Image 2.6 and Seedream 5.5, which
+run on APIMart only (see [APIMart-only image models](#apimart-only-image-models)), and GPT Image 2.6 Economy, which
+runs on kie.ai only (see [kie.ai-only image models](#kieai-only-image-models)); GPT Image 2.6 Flare and
 Sunburst, above, are separate models.
 
 Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
@@ -269,6 +270,20 @@ either), references as `image_urls`. APIMart takes 10 references, the app sends 
 `output_format`, `background` (transparent), `layer_decomposition`, `optimize_prompt_options`, `watermark` and
 `nsfw_check`. APIMart lists no price for it yet, so there is no estimate; the cost of each run is recorded.
 
+### kie.ai-only image models
+
+Not on OpenRouter, fal nor APIMart: this runs only with a kie.ai key (fields and rules in [KIE.md](KIE.md)). The id is
+the app's own (`<maker>/<name>`). It is not verified yet.
+
+| Model | Id | kie models | t2i | i2i (max refs) | Sizes | Aspect ratios | Est. cost / image |
+|---|---|---|:-:|:-:|---|---|---|
+| **GPT Image 2.6 Economy** <sub>NEW</sub> | `openai/gpt-image-2.6-economy` | `gpt-image-2-6/economy-text-to-image` · `economy-image-to-image` ¹ | ✓ | ✓ (8, `input_urls`) | 1K (not sent) | auto, 1:1, 3:2, 2:3, 4:3, 16:9, 9:16, 21:9 | 1K $0.025 |
+
+¹ The cost-efficient GPT Image 2.6 variant, read from kie's docs and pricing API on 6 Nov 2026; not on OpenRouter, fal,
+APIMart or Revana. It generates at 1K only, with no `resolution` field, and has no 3:4. kie takes 16 references, the app
+sends 8 at most. Not sent: `background`, `output_format` (`png` by default), `frame_count` and `frame_duration_ms`. 5
+credits ($0.025) an image, with or without references (`KIE_PRICES`).
+
 ### kie.ai and APIMart only
 
 Not on OpenRouter nor fal: this runs only with a kie.ai or APIMart key (fields and rules in
@@ -303,7 +318,7 @@ what each run cost.
 | Grok Imagine Video, Grok Imagine 1.5 | `grok-imagine/…`, `grok-imagine-video-1-5-preview` | Z-Image Turbo | `z-image` |
 | Gemini Omni Flash 1.1 | `google/gemini-omni-flash-1-1` | GPT Image 2.6 Flare ¹ | `gpt-image-2-6/flare-text-to-image` / `flare-image-to-image` |
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | GPT Image 2.6 Sunburst ¹ | `gpt-image-2-6/sunburst-text-to-image` / `sunburst-image-to-image` |
-| PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | | |
+| PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | | |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
@@ -540,7 +555,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, or GPT Image 2.6 and Seedream 5.5 on APIMart only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst and everything discovered are `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 and Seedream 5.5 on APIMart only, or GPT Image 2.6 Economy on kie.ai only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst and everything discovered are `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |

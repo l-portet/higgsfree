@@ -285,6 +285,8 @@ const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[
   "nano-banana-lite": { aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"], maxRefs: 10 },
   // GPT Image 2.6 Flare and Sunburst too: the same fields and limits, under their own model ids.
   "gpt-image-2": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"], maxRefs: 16, sizes: true },
+  // GPT Image 2.6 Economy: fewer ratios than Flare and Sunburst (no 3:4), and no `resolution`, since it generates at 1K only.
+  "gpt-image-economy": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "16:9", "9:16", "21:9"], maxRefs: 16 },
   "flux-kontext": { aspects: ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], maxRefs: 1 },
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16"], maxRefs: 0 },
   "topaz-upscale": { aspects: ["auto"], maxRefs: 1 },
@@ -321,6 +323,13 @@ export function buildKieImagePayload(model: ImageModel, req: KieImageParams, ref
       break;
     case "gpt-image-2":
       Object.assign(input, { aspect_ratio: req.aspectRatio, resolution: req.size });
+      if (edit) {
+        id = route.editModel ?? route.model;
+        input.input_urls = referenceUrls;
+      }
+      break;
+    case "gpt-image-economy":
+      input.aspect_ratio = req.aspectRatio;
       if (edit) {
         id = route.editModel ?? route.model;
         input.input_urls = referenceUrls;
