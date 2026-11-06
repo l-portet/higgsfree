@@ -214,7 +214,7 @@ describe("fal routes", () => {
       if (m.caps.imageToImage) expect(m.fal.edit, `${m.id} edit endpoint`).toBeTruthy();
     }
     for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
-      // PixVerse 6 Max is only on kie.ai and APIMart, Gemini Omni Flash 1.2 only on APIMart.
+      // PixVerse 6 Max is only on kie.ai and APIMart.
       if (m.offOpenRouter) expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
       if (!m.fal) continue;
       if (m.caps.motionControl) {

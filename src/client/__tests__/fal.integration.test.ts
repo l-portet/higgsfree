@@ -192,6 +192,15 @@ describe("fal videos", () => {
     expect(await api.getGeneration(g.id)).toMatchObject({ provider: "fal", params: { duration: 6, audio: false } });
   });
 
+  it("Gemini Omni Flash 1.2 on fal: the length goes out, past what APIMart could run", async () => {
+    setStoredFalKey(FAL_KEY);
+    const g = (await api.generateVideo({ prompt: "a fox", model: "google/gemini-omni-flash-1.2", duration: 12, resolution: "4K", aspectRatio: "9:16" })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g).toMatchObject({ provider: "fal", params: { duration: 12, resolution: "4K", aspectRatio: "9:16" } });
+    expect(mock.fal("/google/gemini-omni-flash/v1.2/text-to-video")[0]?.body).toEqual({ prompt: "a fox", duration: 12, aspect_ratio: "9:16", resolution: "4k" });
+    await waitFor(completed(g.id));
+  });
+
   it("a job fal reports as failed ends with fal's message", async () => {
     setStoredFalKey(FAL_KEY);
     const { generations } = await api.generateVideo({ prompt: "FAL_FAIL", model: "fal/gemini-omni-flash-1.1", duration: 8, resolution: "1080p", aspectRatio: "16:9" });

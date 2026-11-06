@@ -145,6 +145,7 @@ export function buildFalVideoPayload(model: VideoModel, req: FalVideoParams, med
     if (media.firstFrame) input[route.imageField ?? "image_url"] = media.firstFrame;
     if (media.lastFrame) {
       if (!route.endImage) throw badRequest(`${model.name} on fal does not take a last frame`);
+      if (route.endImageMaxSec && params.duration > route.endImageMaxSec) throw badRequest(`Takes clips of up to ${route.endImageMaxSec} s between two frames`);
       input.end_image_url = media.lastFrame;
     }
   }

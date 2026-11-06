@@ -60,6 +60,8 @@ describe("estimateFalVideoCost", () => {
     expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "720p", audio: true })).toBeCloseTo(2.838);
     expect(estimateFalVideoCost(seedance, { duration: 5, resolution: "480p", audio: false, firstFrame: true })).toBeCloseTo(1.323);
     expect(estimateFalVideoCost(video("fal/gemini-omni-flash-1.1"), { duration: 8, resolution: "4K" })).toBeCloseTo(2.4);
+    expect(estimateFalVideoCost(video("google/gemini-omni-flash-1.2"), { duration: 10, resolution: "1080p" })).toBeCloseTo(1.229);
+    expect(estimateFalVideoCost(video("google/gemini-omni-flash-1.2"), { duration: 15, resolution: "4K", firstFrame: true })).toBeCloseTo(3.6855);
     expect(estimateFalVideoCost(video("fal/kling-v4"), { duration: 10, resolution: "1080p", firstFrame: true })).toBeCloseTo(2.35);
   });
 
@@ -79,6 +81,9 @@ describe("estimateFalVideoCost", () => {
     expect(estimateFalVideoCost(draft, { duration: 10, firstFrame: true, lastFrame: true })).toBeCloseTo(0.6);
     expect(estimateFalVideoCost(draft, { duration: 10, lastFrame: true })).toBeUndefined();
     expect(estimateFalVideoCost(video("fal/vidu-q4"), { duration: 5, resolution: "1080p" })).toBeUndefined();
+    const omni = video("google/gemini-omni-flash-1.2");
+    expect(estimateFalVideoCost(omni, { duration: 10, firstFrame: true, lastFrame: true })).toBeCloseTo(0.819);
+    expect(estimateFalVideoCost(omni, { duration: 12, firstFrame: true, lastFrame: true })).toBeUndefined();
   });
 
   it("uses a promotional rate up to its last day", () => {
@@ -103,6 +108,7 @@ describe("estimateFalVideoCost", () => {
     expect(estimateFalVideoCost(video("fal/kling-o3-edit"), { duration: 0, videoSec: 10 })).toBeCloseTo(1.68);
     expect(estimateFalVideoCost(video("black-forest-labs/flux-video-edit"), { duration: 0, videoSec: 12 })).toBeCloseTo(0.36);
     expect(estimateFalVideoCost(video("fal/gemini-omni-flash-1.1-edit"), { duration: 0, resolution: "4K", videoSec: 6 })).toBeCloseTo(1.8);
+    expect(estimateFalVideoCost(video("fal/gemini-omni-flash-1.2-edit"), { duration: 0, videoSec: 10 })).toBeCloseTo(0.819); // 720p by default
     expect(estimateFalVideoCost(video("fal/wan-2.7-edit"), { duration: 0, videoSec: 4 })).toBeCloseTo(0.6); // 1080p by default
     expect(estimateFalVideoCost(video("fal/grok-imagine-edit"), { duration: 0, resolution: "720p", videoSec: 12 })).toBeCloseTo(0.64); // first 8 s
     expect(estimateFalVideoCost(video("fal/kling-o3-edit"), { duration: 0 })).toBeUndefined();

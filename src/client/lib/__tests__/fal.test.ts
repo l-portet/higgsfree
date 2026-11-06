@@ -129,6 +129,23 @@ describe("buildFalVideoPayload", () => {
     expect(() => buildFalVideoPayload(video("fal/vidu-q4"), { prompt: "p", duration: 5 }, {})).toThrow("needs a first frame");
   });
 
+  it("Gemini Omni Flash 1.2: the length up to 15 s, the ratio with a frame too, and no more than 10 s between two frames", () => {
+    const m = video("google/gemini-omni-flash-1.2");
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 15, resolution: "4K", aspectRatio: "9:16" }, {})).toEqual({
+      endpoint: "google/gemini-omni-flash/v1.2/text-to-video",
+      input: { prompt: "p", duration: 15, aspect_ratio: "9:16", resolution: "4k" },
+      params: { duration: 15, aspectRatio: "9:16", resolution: "4K" },
+    });
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 15, aspectRatio: "16:9" }, { firstFrame: "data:f" })).toMatchObject({
+      endpoint: "google/gemini-omni-flash/v1.2/image-to-video",
+      input: { prompt: "p", duration: 15, image_url: "data:f", aspect_ratio: "16:9", resolution: "720p" },
+    });
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 10 }, { firstFrame: "data:f", lastFrame: "data:l" }).input).toEqual({
+      prompt: "p", duration: 10, image_url: "data:f", end_image_url: "data:l", resolution: "720p",
+    });
+    expect(() => buildFalVideoPayload(m, { prompt: "p", duration: 11 }, { firstFrame: "data:f", lastFrame: "data:l" })).toThrow("Takes clips of up to 10 s between two frames");
+  });
+
   it("FLUX.3 Max: resolution and audio; aspect ratio only without a frame; the last frame beside the first", () => {
     const max = video("fal/flux-3-max");
     expect(buildFalVideoPayload(max, { prompt: "p", duration: 14, aspectRatio: "21:9", resolution: "1080p", audio: false }, {})).toEqual({
@@ -194,6 +211,11 @@ describe("buildFalVideoPayload", () => {
       endpoint: "google/gemini-omni-flash/v1.1/edit",
       input: { prompt: "make it snow", video_url: "https://cdn/in.mp4", resolution: "4k" },
       params: { duration: 0, resolution: "4K" },
+    });
+    expect(buildFalVideoPayload(video("fal/gemini-omni-flash-1.2-edit"), { prompt: "make it snow", duration: 5, resolution: "1080p" }, { sourceVideo: "u" })).toEqual({
+      endpoint: "google/gemini-omni-flash/v1.2/edit",
+      input: { prompt: "make it snow", video_url: "u", resolution: "1080p" },
+      params: { duration: 0, resolution: "1080p" },
     });
     // No resolution list (Kling keeps the source's) or no fal spelling for it (FLUX): none sent.
     expect(buildFalVideoPayload(video("fal/kling-o3-edit"), { prompt: "p", duration: 5, resolution: "1080p" }, { sourceVideo: "u" })).toEqual({

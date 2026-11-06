@@ -107,9 +107,8 @@ describe("APIMart videos", () => {
     await waitFor(completed(g.id));
   });
 
-  it("Gemini Omni Flash 1.2, on APIMart only: both frames uploaded, no duration sent, the cost recorded", async () => {
+  it("Gemini Omni Flash 1.2 on APIMart: both frames uploaded, no duration sent, the cost recorded", async () => {
     setStoredKey("test-key");
-    setStoredFalKey(FAL_KEY);
     setProviderKey("kie", KIE_KEY);
     await expect(video({ model: "google/gemini-omni-flash-1.2", duration: 8 })).rejects.toMatchObject({ status: 401, error: expect.stringContaining("APIMart") });
     setProviderKey("apimart", APIMART_KEY);

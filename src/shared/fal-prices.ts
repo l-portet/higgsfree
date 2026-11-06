@@ -53,6 +53,8 @@ const MINIMAX_H3_MAX: FalPrice = {
   promo: { until: "2026-10-15", usd: { "480p": 0.03, "768p": 0.048, "1080p": 0.096 } },
 };
 const GEMINI_OMNI_FLASH: FalPrice = { unit: "second", usd: { "720p": 0.1, "1080p": 0.15, "4K": 0.3 } };
+// Read 6 Nov 2026. Sound included; fal's 360p ($0.0273) is not listed, the app has no 360p.
+const GEMINI_OMNI_FLASH_1_2: FalPrice = { unit: "second", usd: { "720p": 0.0819, "1080p": 0.1229, "4K": 0.2457 } };
 const FLUX_3_DRAFT: FalPrice = { unit: "second", usd: 0.06 };
 // Launch offer (read 19 Oct 2026): 75% off from 15 Oct through 7 Nov.
 const FLUX_3_MAX: FalPrice = {
@@ -104,6 +106,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/kling-video/v3/standard/motion-control": { unit: "second", usd: 0.126 },
   "google/gemini-omni-flash/v1.1/text-to-video": GEMINI_OMNI_FLASH,
   "google/gemini-omni-flash/v1.1/image-to-video": GEMINI_OMNI_FLASH,
+  "google/gemini-omni-flash/v1.2/text-to-video": GEMINI_OMNI_FLASH_1_2,
+  "google/gemini-omni-flash/v1.2/image-to-video": GEMINI_OMNI_FLASH_1_2,
   "blackforestlabs/flux-3-max/text-to-video": FLUX_3_MAX,
   "blackforestlabs/flux-3-max/image-to-video": FLUX_3_MAX,
   "blackforestlabs/flux-3/text-to-video/draft": FLUX_3_DRAFT,
@@ -132,6 +136,7 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/kling-video/o3/pro/video-to-video/edit": { unit: "second", usd: 0.168 },
   "fal-ai/kling-video/o3/standard/video-to-video/edit": { unit: "second", usd: 0.126 },
   "google/gemini-omni-flash/v1.1/edit": GEMINI_OMNI_FLASH,
+  "google/gemini-omni-flash/v1.2/edit": GEMINI_OMNI_FLASH_1_2,
   // $0.05 (480p) or $0.07 (720p) per second of output plus $0.01 per second of input.
   "xai/grok-imagine-video/edit-video": { unit: "second", usd: { "480p": 0.06, "720p": 0.08 } },
   "fal-ai/wan/v2.7/edit-video": { unit: "second", usd: { "720p": 0.1, "1080p": 0.15 } },
