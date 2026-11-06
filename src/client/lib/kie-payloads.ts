@@ -283,6 +283,7 @@ const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[
   "nano-banana": { aspects: ["auto", "1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3", "5:4", "4:5", "21:9"], maxRefs: 10 },
   "nano-banana-2": { aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"], maxRefs: 8, sizes: true },
   "nano-banana-lite": { aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"], maxRefs: 10 },
+  // GPT Image 2.6 Flare too: the same fields and limits, under its own model ids.
   "gpt-image-2": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5", "16:9", "9:16", "21:9"], maxRefs: 16, sizes: true },
   "flux-kontext": { aspects: ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], maxRefs: 1 },
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16"], maxRefs: 0 },
@@ -324,7 +325,6 @@ export function buildKieImagePayload(model: ImageModel, req: KieImageParams, ref
         id = route.editModel ?? route.model;
         input.input_urls = referenceUrls;
       }
-      priceKey = "gpt-image-2";
       break;
     case "flux-kontext":
       Object.assign(input, { model: route.tier, output_format: "png" });

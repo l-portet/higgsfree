@@ -57,10 +57,10 @@ OpenRouter's image catalog lists. "all 11" aspect ratios = `auto`, 1:1, 3:4, 4:3
 | **Krea 2 Turbo** <sub>FAST</sub> | `krea/krea-2-medium-turbo` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.02 | – |
 
 ¹ OpenAI's two GPT Image 2.6 tiers (4 Nov 2026), Flare for speed and Sunburst for detail, on OpenRouter, fal
-and APIMart ([models on both](#models-on-both)). They are the curated `native` models: their ratios, sizes and
+and APIMart ([models on both](#models-on-both)), and Flare on [kie.ai](#kieai) too. They are the curated `native` models: their ratios, sizes and
 reference count come from OpenRouter's image catalog once it arrives (the values here are the catalog's on
 5 Nov 2026: no `resolution`, 16 references, which the app caps at 8). `quality` (auto to max) and `background`
-are left at OpenRouter's defaults. All three providers bill them in tokens and give no per-image price, so
+are left at OpenRouter's defaults. Every provider bills them in tokens and gives no per-image price, so
 there is no estimate; the cost of each run is recorded.
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
@@ -301,10 +301,15 @@ what each run cost.
 | Wan 3.0, Wan 3.0 Prime | `wan/3-0-video`, `wan/3-0-video-prime` | GPT Image 2 | `gpt-image-2-text-to-image` / `-image-to-image` |
 | Wan 2.7 | `wan/2-7-text-to-video` / `image-to-video` | FLUX.1 Kontext Pro | `flux1-kontext` (`flux-kontext-pro`) |
 | Grok Imagine Video, Grok Imagine 1.5 | `grok-imagine/…`, `grok-imagine-video-1-5-preview` | Z-Image Turbo | `z-image` |
-| Gemini Omni Flash 1.1 | `google/gemini-omni-flash-1-1` | | |
+| Gemini Omni Flash 1.1 | `google/gemini-omni-flash-1-1` | GPT Image 2.6 Flare ¹ | `gpt-image-2-6/flare-text-to-image` / `flare-image-to-image` |
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | | |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | | |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | | |
+
+¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills it per million tokens, with no per-image price, so it
+has no `KIE_PRICES` entry and no estimate: in credits, 900 text input, 225 cached text input, 1,440 image input, 360
+cached image input, 5,400 image output. kie also takes 2K and 4K, which the app does not list, since the model's sizes
+follow OpenRouter's catalog. Not verified end to end.
 
 ### Revana
 
