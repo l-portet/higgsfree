@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { KIE_PRICES } from "@shared/kie-prices";
 import { findImageModel, findVideoModel, IMAGE_MODELS, VIDEO_MODELS } from "@shared/models";
 import type { ImageModel, VideoModel } from "@shared/types";
+import { quoteImage } from "../image-cost";
 import { resultUrls } from "../kie";
 import { buildKieImagePayload, buildKieVideoPayload } from "../kie-payloads";
 import { estimateKieImageCost, estimateKieVideoCost, kieVideoPayloadFor } from "../kie-pricing";
@@ -184,6 +185,23 @@ describe("buildKieImagePayload", () => {
       priceKey: `gpt-image-2-6/${tier}-text-to-image`,
     });
   });
+
+  it("GPT Image 2.6 Economy: its own model ids, no `resolution` since it is 1K only, and kie's smaller set of ratios", () => {
+    const m = image("openai/gpt-image-2.6-economy");
+    expect(buildKieImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "1K" }, [])).toEqual({
+      model: "gpt-image-2-6/economy-text-to-image",
+      input: { prompt: "p", aspect_ratio: "21:9" },
+      priceKey: "gpt-image-2-6/economy-text-to-image",
+    });
+    expect(buildKieImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, ["https://r", "https://s"])).toEqual({
+      model: "gpt-image-2-6/economy-image-to-image",
+      input: { prompt: "p", aspect_ratio: "auto", input_urls: ["https://r", "https://s"] },
+      priceKey: "gpt-image-2-6/economy-text-to-image",
+    });
+    for (const aspectRatio of m.aspectRatios) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size: "1K" }, [])).not.toThrow();
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "3:4", size: "1K" }, [])).toThrow("Takes no 3:4");
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array.from({ length: 17 }, () => "https://r"))).toThrow("Takes up to 16 reference images");
+  });
 });
 
 describe("resultUrls", () => {
@@ -235,5 +253,19 @@ describe("kie prices", () => {
     const m = image(`openai/gpt-image-2.6-${tier}`);
     expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeUndefined();
     expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeUndefined();
+  });
+
+  it("GPT Image 2.6 Economy: 5 credits an image, with or without references, and only a kie.ai key runs it", () => {
+    const m = image("openai/gpt-image-2.6-economy");
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeCloseTo(0.025);
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 4, true)).toBeCloseTo(0.1);
+    const req = { aspectRatio: "16:9" as const, size: "1K" as const, count: 1, references: 8 };
+    const quote = quoteImage(m, req, { kie: true });
+    expect(quote).toMatchObject({ quotes: [{ provider: "kie", noKey: false }], provider: "kie", reason: "only" });
+    expect(quote.quotes[0]?.usd).toBeCloseTo(0.025);
+    // No other key helps.
+    const others = quoteImage(m, req, { openrouter: true, fal: true, apimart: true, revana: true });
+    expect(others).toMatchObject({ quotes: [{ provider: "kie", noKey: true }], reason: "none" });
+    expect(others.provider).toBeUndefined();
   });
 });

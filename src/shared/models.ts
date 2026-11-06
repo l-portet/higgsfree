@@ -234,6 +234,29 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "openai/gpt-image-2.6-economy",
+    name: "GPT Image 2.6 Economy",
+    provider: "openai",
+    description: "OpenAI's cost-efficient 2.6 image model, at 1K only",
+    endpoint: "fal",
+    featured: false,
+    badges: ["new"],
+    // kie.ai takes 16 references; the app sends 8 at most.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    // kie.ai's ratios for it: no 3:4, unlike Flare and Sunburst.
+    aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "16:9", "9:16", "21:9"],
+    // kie.ai generates it at 1K only and has no `resolution` field for it.
+    sizes: ["1K"],
+    // Priced from `KIE_PRICES` (5 credits an image, read 6 Nov 2026), like the other models off OpenRouter.
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    // Not on OpenRouter, fal nor APIMart yet.
+    offOpenRouter: true,
+    kie: { family: "gpt-image-economy", model: "gpt-image-2-6/economy-text-to-image", editModel: "gpt-image-2-6/economy-image-to-image" },
+  },
+  {
+    kind: "image",
     id: "bytedance/seedream-5.5",
     name: "Seedream 5.5",
     provider: "bytedance",
