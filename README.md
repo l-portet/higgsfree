@@ -16,7 +16,7 @@
 
 ## What it does
 
-- **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more, plus FLUX.1 Kontext, Ideogram 4.5 and other fal models with a fal key, and GPT Image 2.6 and Seedream 5.5 with an APIMart key. Reference images, batches of four, 1K to 4K.
+- **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more, plus FLUX.1 Kontext, Ideogram 4.5 and other fal models with a fal key, GPT Image 2.6 and Seedream 5.5 with an APIMart key, and GPT Image 2.6 Economy with a kie.ai key. Reference images, batches of four, 1K to 4K.
 - **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, MiniMax H3, Wan 3.0 and more. First and last frame, style references, native audio. With a fal key: Kling 3.0 Motion Control (your character, moving like a reference video), Gemini Omni Flash, Vidu Q4, PixVerse 6 and more; with a kie.ai or APIMart key, PixVerse 6 Max; with a fal or APIMart key, Gemini Omni Flash 1.2.
 - **Video editing**: change a clip in plain words ("make it snow", "swap the jacket for a red one", "remove the car"), keeping its motion and framing. FLUX Video Edit and Runway Aleph 2 on OpenRouter; with a fal key, Kling O3 Edit, Gemini Omni Flash Edit, Grok Imagine Edit and Wan 2.7 Edit too. Upload a video, or press **Edit video** on any clip you made.
 - **Favorites**: press the heart on any run to keep it in one place, with folders you create: drag runs onto a folder, or pick one from the heart's menu.
@@ -51,7 +51,7 @@ The rules are in [docs/FAL.md](docs/FAL.md).
 
 ## kie.ai (optional)
 
-[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0 and 4.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash, PixVerse 6 and 6 Max, Vidu, Nano Banana Pro, GPT Image 2, 2.6 Flare and 2.6 Sunburst and more. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares every provider. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
+[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0 and 4.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash, PixVerse 6 and 6 Max, Vidu, Nano Banana Pro, GPT Image 2, 2.6 Flare and 2.6 Sunburst and more; GPT Image 2.6 Economy runs only there. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares every provider. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
 
 ## APIMart (optional)
 
@@ -99,7 +99,7 @@ What follows from that:
 
 ## Models
 
-Curated: 23 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 10 of the image models and 20 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, PixVerse 6 Max on kie.ai and APIMart only, and GPT Image 2.6 and Seedream 5.5 on APIMart only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 24 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 11 of the image models and 20 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, PixVerse 6 Max on kie.ai and APIMart only, GPT Image 2.6 and Seedream 5.5 on APIMart only, and GPT Image 2.6 Economy on kie.ai only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
 
