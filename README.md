@@ -17,7 +17,7 @@
 ## What it does
 
 - **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more, plus FLUX.1 Kontext, Ideogram 4.5 and other fal models with a fal key, and GPT Image 2.6 and Seedream 5.5 with an APIMart key. Reference images, batches of four, 1K to 4K.
-- **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, MiniMax H3, Wan 3.0 and more. First and last frame, style references, native audio. With a fal key: Kling 3.0 Motion Control (your character, moving like a reference video), Gemini Omni Flash, Vidu Q4, PixVerse 6 and more; with a kie.ai or APIMart key, PixVerse 6 Max; with an APIMart key, Gemini Omni Flash 1.2.
+- **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, MiniMax H3, Wan 3.0 and more. First and last frame, style references, native audio. With a fal key: Kling 3.0 Motion Control (your character, moving like a reference video), Gemini Omni Flash, Vidu Q4, PixVerse 6 and more; with a kie.ai or APIMart key, PixVerse 6 Max; with a fal or APIMart key, Gemini Omni Flash 1.2.
 - **Video editing**: change a clip in plain words ("make it snow", "swap the jacket for a red one", "remove the car"), keeping its motion and framing. FLUX Video Edit and Runway Aleph 2 on OpenRouter; with a fal key, Kling O3 Edit, Gemini Omni Flash Edit, Grok Imagine Edit and Wan 2.7 Edit too. Upload a video, or press **Edit video** on any clip you made.
 - **Favorites**: press the heart on any run to keep it in one place, with folders you create: drag runs onto a folder, or pick one from the heart's menu.
 - **AI Prompt Editor** (video): ask GPT-6 Luna to rewrite your prompt ("more cinematic", "add rain"), preview the shot as six frames in one picture with GPT Image 2.5 Flare, or drop in a clip and have Gemini 4 Argon write the prompt that recreates it, with your instructions. All run on your OpenRouter key and show what they cost.
@@ -39,7 +39,7 @@ Open http://localhost:3000 and paste your key behind **Add key** (top right). Th
 
 ## fal (optional)
 
-[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 Edit, Grok Imagine Edit, Wan 2.7 Edit), Kling 4.0, Gemini Omni Flash 1.1, FLUX.3 Max, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6, LTX 2.3, Luma Ray 3.2, FLUX.1 Kontext, Ideogram 4.5 and more.
+[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 and 1.2 Edit, Grok Imagine Edit, Wan 2.7 Edit), Kling 4.0, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Max, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6, LTX 2.3, Luma Ray 3.2, FLUX.1 Kontext, Ideogram 4.5 and more.
 
 - **Add a key** when you need it: pick a fal model and press Generate, and a small dialog asks for the fal key ("Save and generate" finishes the job). It is also in Settings › Keys, next to **Test connection** and **Remove key**. Get one at [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys).
 - **Every model is listed, whatever keys you have.** Pick one whose provider has no key and a small notice above the prompt says which provider it runs on; Generate opens the key dialog for that provider. That goes both ways: a fal-only model with only an OpenRouter key, an OpenRouter-only model with only a fal key.
@@ -99,7 +99,7 @@ What follows from that:
 
 ## Models
 
-Curated: 23 image models and 47 video models (7 of them video editors) with their real limits (sizes, durations, resolutions, audio); 10 of the image models and 19 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, PixVerse 6 Max on kie.ai and APIMart only, and Gemini Omni Flash 1.2, GPT Image 2.6 and Seedream 5.5 on APIMart only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 23 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 10 of the image models and 20 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, PixVerse 6 Max on kie.ai and APIMart only, and GPT Image 2.6 and Seedream 5.5 on APIMart only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
 

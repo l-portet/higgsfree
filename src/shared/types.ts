@@ -306,6 +306,8 @@ export interface FalVideoRoute {
   imageField?: "image_url" | "start_image_url";
   /** The last frame goes in `end_image_url`. */
   endImage?: boolean;
+  /** The longest clip the endpoint makes with a last frame, when that is less than the model's longest (Gemini Omni Flash 1.2). */
+  endImageMaxSec?: number;
   /**
    * Both frames go to this endpoint instead, as `start_image_url` and `end_image_url`, both required
    * (FLUX 3 splits first-frame and first-and-last-frame jobs). A last frame alone is refused.
@@ -319,8 +321,8 @@ export interface FalVideoRoute {
   resolutions?: Partial<Record<VideoResolution, string>>;
   /** Field that toggles the audio track. */
   audio?: "generate_audio" | "generate_audio_switch";
-  /** An upscaler on `edit` (the video as `video_url`, no prompt): the scale as `upscale_factor`, or the resolution as `target_resolution`. */
-  upscale?: "upscale_factor" | "target_resolution";
+  /** An upscaler on `edit` (the video as `video_url`, no prompt): the scale as `upscale_factor`, or the target resolution as `target_resolution` or `resolution`. */
+  upscale?: "upscale_factor" | "target_resolution" | "resolution";
   /** An upscaler's creative mode: another endpoint (`edit`), or a 0/1 field on the same one (`field`). */
   upscaleCreative?: { edit?: string; field?: string };
   extra?: Record<string, string | number | boolean>;

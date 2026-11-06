@@ -155,7 +155,8 @@ is stored in the record's `params`.
 - Frames are data URLs. The first frame goes in `imageField` (`image_url` by default, `start_image_url`
   for Kling 3.0 Pro and Standard), the last frame in `end_image_url`, only with `endImage: true`
   (otherwise a 400). On the `firstLastFrameToVideo` endpoint they are `start_image_url` and
-  `end_image_url`.
+  `end_image_url`. `endImageMaxSec` caps the clip with a last frame (10 s on Gemini Omni Flash 1.2): a
+  longer one is a 400 before anything is created.
 - `aspect_ratio`: `aspect: "always"` sends it with or without a frame, `aspect: "text"` only for
   text-to-video, no `aspect` never. `omitAspectRatioOnI2v` still drops it when a frame is attached.
 - `resolution`: the requested one if the model lists it, else the model's default, mapped through
@@ -166,7 +167,8 @@ is stored in the record's `params`.
   the toggle is not sent there.
 - Style references are not sent to fal. A run that has them is a 400 before anything is created ("… on
   fal does not take style references. Remove them, or add an OpenRouter key in Settings."; off OpenRouter,
-  the model's other providers instead: "a kie.ai or APIMart key" for Kling 4.0).
+  the model's other providers instead: "a kie.ai or APIMart key" for Kling 4.0, "an APIMart key" for
+  Gemini Omni Flash 1.2).
 
 ### Motion control
 

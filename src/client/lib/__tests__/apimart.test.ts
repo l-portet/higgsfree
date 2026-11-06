@@ -98,12 +98,14 @@ describe("buildApimartVideoPayload", () => {
 
   it("Gemini Omni Flash 1.2: no duration, frames in their own fields, references as `image_urls`, the ratio with a frame too", () => {
     const m = video("google/gemini-omni-flash-1.2");
-    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 5, aspectRatio: "9:16", resolution: "4K" }, {})).toEqual({
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 8, aspectRatio: "9:16", resolution: "4K" }, {})).toEqual({
       kind: "videos",
       body: { model: "gemini-omni-1.2-flash", prompt: "p", resolution: "4k", aspect_ratio: "9:16" },
       priceKey: "gemini-omni-1.2-flash",
       params: { duration: 8, resolution: "4K", aspectRatio: "9:16" },
     });
+    // The model takes 3–15 s on fal; APIMart cannot be told a length.
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, {})).toThrow("Takes clips of 8 s");
     expect(buildApimartVideoPayload(m, { prompt: "p", duration: 8, aspectRatio: "9:16" }, { firstFrame: "https://a", lastFrame: "https://b" })).toMatchObject({
       body: { model: "gemini-omni-1.2-flash", prompt: "p", resolution: "720p", aspect_ratio: "9:16", first_frame_image: "https://a", last_frame_image: "https://b" },
       params: { duration: 8, resolution: "720p", aspectRatio: "9:16" },

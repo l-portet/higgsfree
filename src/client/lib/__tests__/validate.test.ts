@@ -18,6 +18,8 @@ describe("sourceVideoProblem", () => {
     expect(sourceVideoProblem(kling, 15.02, 1_000_000)).toBeUndefined(); // header rounding
     const flux = video("black-forest-labs/flux-video-edit");
     expect(sourceVideoProblem(flux, 10, 64 * 1024 * 1024)).toBe("The video is 64 MB. FLUX Video Edit takes up to 50 MB.");
+    expect(sourceVideoProblem(video("fal/gemini-omni-flash-1.2-edit"), 20, 1_000_000)).toBe("The video is 20 s. Gemini Omni Flash 1.2 Edit takes up to 15 s.");
+    expect(sourceVideoProblem(video("fal/gemini-omni-flash-1.2-upscale"), 20, 1_000_000)).toBe("The video is 20 s. Gemini Omni Flash 1.2 Upscale takes up to 15 s.");
   });
 
   it("lets through what it cannot know, and lengths a model cuts rather than refuses", () => {

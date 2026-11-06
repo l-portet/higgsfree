@@ -81,8 +81,8 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
 - **Cost honesty.** Estimates in the UI come from `estCostUsd` / `estCostPerSecUsd` in the
   catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. fal reports no
   cost; fal-only models, and models a provider lists no price for yet (GPT Image 2.6 and Gemini Omni
-  Flash 1.2 on APIMart), carry no estimate rather than a guessed one. If you change an estimate, say where
-  the number came from.
+  Flash 1.2 on APIMart, though fal prices the latter), carry no estimate rather than a guessed one. If you
+  change an estimate, say where the number came from.
 
 ## Adding or updating a model
 

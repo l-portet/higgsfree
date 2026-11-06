@@ -117,6 +117,16 @@ describe("video upscalers", () => {
     await waitFor(completed(g.id));
   });
 
+  it("Gemini Omni Flash 1.2 on fal: the uploaded video and the target as `resolution`, as fal spells it", async () => {
+    setStoredFalKey(FAL_KEY);
+    const source = await uploadVideo();
+    const g = (await api.generateVideo({ prompt: "", model: "fal/gemini-omni-flash-1.2-upscale", duration: 5, sourceVideo: source, resolution: "4K" })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g).toMatchObject({ provider: "fal", params: { resolution: "4K" } });
+    expect(mock.fal("/google/gemini-omni-flash/v1.2/upscale")[0]?.body).toEqual({ video_url: "https://v3b.fal.media/files/ref-1.mp4", resolution: "4k" });
+    await waitFor(completed(g.id));
+  });
+
   it("Topaz Starlight (the creative mode) on fal, asking for H.264 so every browser plays the clip", async () => {
     setStoredFalKey(FAL_KEY);
     const source = await uploadVideo();

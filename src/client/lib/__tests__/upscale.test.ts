@@ -74,6 +74,18 @@ describe("upscale prices", () => {
     expect(upscaleVideoUsd("fal", BYTEDANCE, {}, 10, {})).toBeCloseTo(0.288); // its default, 4K
     expect(upscaleVideoUsd("kie", TOPAZ_VIDEO, { upscale: 2 }, undefined, {})).toBeUndefined(); // the length is not known yet
   });
+
+  it("Gemini Omni Flash 1.2: by the target and the source's resolution, none for a pair fal does not list", () => {
+    const omni = video("fal/gemini-omni-flash-1.2-upscale");
+    expect(upscaleVideoUsd("fal", omni, { resolution: "1080p" }, 10, { width: 1280, height: 720 })).toBeCloseTo(0.41);
+    expect(upscaleVideoUsd("fal", omni, { resolution: "1080p" }, 10, { width: 640, height: 360 })).toBeCloseTo(0.819);
+    expect(upscaleVideoUsd("fal", omni, { resolution: "4K" }, 10, { width: 720, height: 1280 })).toBeCloseTo(1.638); // portrait: the short side
+    expect(upscaleVideoUsd("fal", omni, { resolution: "4K" }, 10, { width: 1920, height: 1080 })).toBeCloseTo(1.638);
+    expect(upscaleVideoUsd("fal", omni, {}, 10, { width: 1280, height: 720 })).toBeCloseTo(0.41); // its default, 1080p
+    expect(upscaleVideoUsd("fal", omni, { resolution: "4K" }, 10, { width: 640, height: 360 })).toBeUndefined(); // not on fal's page
+    expect(upscaleVideoUsd("fal", omni, { resolution: "720p" }, 10, { width: 1920, height: 1080 })).toBeUndefined(); // not an upscale
+    expect(upscaleVideoUsd("fal", omni, { resolution: "1080p" }, 10, {})).toBeUndefined(); // the size is not known yet
+  });
 });
 
 describe("quotes", () => {
