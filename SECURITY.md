@@ -31,18 +31,27 @@ Any script that runs on the app's origin can read localStorage, so it can read t
 
 - a malicious or compromised browser extension with access to the page;
 - a cross-site scripting (XSS) flaw in the app itself;
-- a third-party script the site loads (see Google Analytics below);
+- a third-party script the site loads (see Google Analytics and Microsoft Clarity below);
 - someone at the unlocked device, who can open DevTools or simply use the app and spend your credits.
 
 What the app does about it:
 
-- **One third-party script: Google Analytics.** Production builds (`next build`, so the hosted site, your
+- **Third-party script: Google Analytics.** Production builds (`next build`, so the hosted site, your
   own Vercel deploy and the Docker image alike) load the Google tag from `googletagmanager.com` through
   `@next/third-parties`, with the repo owner's measurement id (`GA_ID` in `src/app/layout.tsx`). `pnpm dev`
   does not. The tag runs on the app's origin like the app's own code, so the threat above applies to it.
   The app sends no events of its own; Google receives page views and whatever the tag collects for that
   property. To build without it, remove the `<GoogleAnalytics>` element and the Google hosts from the CSP
-  in `src/app/layout.tsx`. Fonts are bundled at build time; nothing else is loaded from a CDN at runtime.
+  in `src/app/layout.tsx`.
+- **Third-party script: Microsoft Clarity.** Production builds also load Clarity's session-recording tag
+  from `clarity.ms`, with the repo owner's project id (`CLARITY_ID` in `src/client/lib/clarity.ts`, or
+  `NEXT_PUBLIC_CLARITY_ID` at build time). It stays off under `pnpm dev`, on `localhost` and `127.0.0.1`, and
+  whenever `window.CLARITY_DISABLED_ENV === true` by the time the app hydrates. The threat above applies to
+  it too. Clarity records how the page is used and what it shows. Its default masking covers input fields,
+  dropdowns, numbers and email addresses, so other text on screen, such as the prompts on saved generations
+  and the shortened key previews in Settings, can reach Microsoft. To build without it, remove the
+  `<Clarity>` element from `src/app/layout.tsx` and the Clarity hosts from the CSP there. Fonts are bundled
+  at build time; nothing else is loaded from a CDN at runtime.
 - **Untrusted text is rendered as text.** Prompts, model names and descriptions, provider error bodies
   (OpenRouter's and fal's) and imported archives go through React as strings, never as HTML. Imported
   records are reduced to known fields with validated ids, and imported media are sniffed before they are
@@ -57,14 +66,16 @@ What the app does about it:
     `upload.apimart.ai`);
   - Revana (`api.revana.si`) and the Cloudflare R2 storage its uploads and results use
     (`*.r2.cloudflarestorage.com`);
-  - Google Analytics (`*.google-analytics.com`, `*.analytics.google.com`, `*.googletagmanager.com`).
+  - Google Analytics (`*.google-analytics.com`, `*.analytics.google.com`, `*.googletagmanager.com`);
+  - Microsoft Clarity (`*.clarity.ms`).
 
-  `script-src` is `self`, inline scripts and `*.googletagmanager.com`; `img-src` is `self`, `blob:`,
-  `data:` and the Google Analytics hosts; `media-src` is `self` and `blob:`; `object-src 'none'`,
-  `base-uri 'self'`, `form-action 'self'`. (Inline scripts are needed by Next's bootstrap, so the policy's
-  job is exfiltration, not injection.) Some of those hosts are shared services: `storage.googleapis.com`
-  serves every Google Cloud Storage bucket, and Google's analytics endpoints take hits for any property.
-  The list narrows where an injected script can send the keys; it does not close it.
+  `script-src` is `self`, inline scripts, `*.googletagmanager.com` and `*.clarity.ms`; `img-src` is `self`,
+  `blob:`, `data:`, the Google Analytics hosts, `*.clarity.ms` and `c.bing.com`; `media-src` is `self` and
+  `blob:`; `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. (Inline scripts are needed by Next's
+  bootstrap, so the policy's job is exfiltration, not injection.) Some of those hosts are shared services:
+  `storage.googleapis.com` serves every Google Cloud Storage bucket, Google's analytics endpoints take hits
+  for any property, and Clarity's take uploads for any project. The list narrows where an injected script
+  can send the keys; it does not close it.
 - **`X-Content-Type-Options: nosniff`** on every response (`vercel.json`, `docker/nginx.conf`).
 - Media are shown through `blob:` object urls, never by url from anywhere else.
 
@@ -106,7 +117,7 @@ The host serves static files and nothing else. It never receives your keys, your
 generations or your reference images and videos: those go from the browser to OpenRouter or fal and into
 IndexedDB. A host sees ordinary web-server traffic (your IP address, which pages you load). Vercel adds
 nothing on top (the only configuration there is the nosniff header), but production builds load Google
-Analytics (see above), so Google sees page views too.
+Analytics and Microsoft Clarity (see above), so Google sees page views and Microsoft sees session recordings.
 
 ## Shared computers
 

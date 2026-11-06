@@ -2,6 +2,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import type { ReactNode } from "react";
+import { Clarity } from "@/components/Clarity";
 import Shell from "@/components/layout/Shell";
 import { SITE_DESCRIPTION, SITE_URL } from "@shared/site";
 import { DEFAULT_TITLE, card } from "./meta";
@@ -34,12 +35,15 @@ const GA_ID = "G-SCFQ6KQ6L0";
 /** Google tag endpoints, per https://developers.google.com/tag-platform/security/guides/csp (GA4). */
 const GA_SCRIPT = "https://*.googletagmanager.com";
 const GA_CONNECT = "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
+/** Microsoft Clarity's tag, recorder and uploads, per https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp. Its sync pixel redirects to c.bing.com. */
+const CLARITY_ORIGIN = "https://*.clarity.ms";
+const CLARITY_PIXEL = "https://c.bing.com";
 
 /**
  * Production only (Next dev needs eval and websockets). The keys live in this browser, so the one
  * thing worth locking down is where a script on this origin may send data: OpenRouter, fal, kie.ai, APIMart, Revana
  * (their API hosts, upload targets and the CDNs their results come from), plus the Google Analytics
- * endpoints, and nothing else.
+ * and Microsoft Clarity endpoints, and nothing else.
  */
 const FAL_ORIGINS = "https://fal.run https://queue.fal.run https://rest.fal.ai https://api.fal.ai https://fal.media https://*.fal.media https://storage.googleapis.com";
 const KIE_ORIGINS = "https://api.kie.ai https://kieai.redpandaai.co https://*.aiquickdraw.com";
@@ -49,12 +53,12 @@ const REVANA_ORIGINS = "https://api.revana.si https://*.r2.cloudflarestorage.com
 const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
 const CSP = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${GA_SCRIPT}`,
+  `script-src 'self' 'unsafe-inline' ${GA_SCRIPT} ${CLARITY_ORIGIN}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' blob: data: ${GA_CONNECT}`,
+  `img-src 'self' blob: data: ${GA_CONNECT} ${CLARITY_ORIGIN} ${CLARITY_PIXEL}`,
   "media-src 'self' blob:",
   "font-src 'self'",
-  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${APIMART_ORIGINS} ${REVANA_ORIGINS} ${GA_CONNECT}`,
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${APIMART_ORIGINS} ${REVANA_ORIGINS} ${GA_CONNECT} ${CLARITY_ORIGIN}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -80,6 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       ) : null}
       <body>
         <Shell>{children}</Shell>
+        <Clarity />
       </body>
       {process.env.NODE_ENV === "production" ? <GoogleAnalytics gaId={GA_ID} /> : null}
     </html>
