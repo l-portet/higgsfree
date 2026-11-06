@@ -58,7 +58,7 @@ const VIDEO_LIMITS: Record<ApimartVideoRoute["family"], { durations: number[]; a
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   "pixverse-max": { durations: range(1, 15), aspects: ["16:9", "9:16", "4:3", "3:4", "1:1", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   "gemini-omni": { durations: [4, 6, 8, 10], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
-  // No duration field (the prompt sets the length, about 3–10 s): 8 s is only the catalog's placeholder.
+  // No duration field (the prompt sets the length, about 3–10 s): it runs only at the catalog's default, 8 s, a placeholder.
   "gemini-omni12": { durations: [8], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   flux3: { durations: range(5, 20), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "720p": "hd", "1080p": "fhd" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2K", "4K": "4K" } },

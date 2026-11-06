@@ -82,7 +82,7 @@ export function falUpscaleVideo(
     const res = req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution;
     const value = res ? route.resolutions?.[res] : undefined;
     if (!res || !value) throw badRequest(`${model.name} needs a target resolution`);
-    input.target_resolution = value;
+    input[route.upscale === "resolution" ? "resolution" : "target_resolution"] = value;
     params.resolution = res;
   }
   return { endpoint, input, params };
@@ -166,10 +166,18 @@ const ASSUMED_FPS = 30;
 /** ByteDance's standard tier at 30 fps, per second, by the target resolution. */
 const BYTEDANCE_PER_SECOND: Partial<Record<VideoResolution, number>> = { "1080p": 0.0072, "2K": 0.0144, "4K": 0.0288 };
 
+/** Gemini Omni Flash 1.2 per second, by the target and the source's short side: the pairs fal's page lists (read 6 Nov 2026). */
+const GEMINI_OMNI_12_PER_SECOND: Partial<Record<VideoResolution, Record<number, number>>> = {
+  "720p": { 360: 0.041 },
+  "1080p": { 360: 0.0819, 720: 0.041 },
+  "4K": { 720: 0.1638, 1080: 0.1638 },
+};
+
 /**
  * USD for one upscaled clip of `seconds`. Topaz on fal: by the output's resolution (the source's short side times the
  * scale, so it needs the source's size); on kie.ai 8 credits a second up to 2x, 14 at 4x. ByteDance on fal: by the
- * target resolution. Undefined while the length (or a size it needs) is not known.
+ * target resolution. Gemini Omni Flash 1.2 on fal: by the target and the source's resolution, none for a pair fal does
+ * not list. Undefined while the length (or a size it needs) is not known.
  */
 export function upscaleVideoUsd(
   provider: ProviderId, model: VideoModel, req: { upscale?: number; resolution?: VideoResolution; creative?: boolean }, seconds: number | undefined, input: UpscaleInput,
@@ -186,6 +194,12 @@ export function upscaleVideoUsd(
     if (model.fal?.upscale === "target_resolution") {
       const res = req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution;
       const rate = res ? BYTEDANCE_PER_SECOND[res] : undefined;
+      return rate === undefined ? undefined : rate * seconds;
+    }
+    if (model.fal?.upscale === "resolution") {
+      const res = req.resolution && model.resolutions.includes(req.resolution) ? req.resolution : model.defaultResolution;
+      const source = outputShortSide(input, 1);
+      const rate = res && source ? GEMINI_OMNI_12_PER_SECOND[res]?.[source] : undefined;
       return rate === undefined ? undefined : rate * seconds;
     }
     if (model.id === SEEDVR_VIDEO) {

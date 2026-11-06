@@ -62,7 +62,7 @@ returns a task id, the task url polled until the result urls are there.
 | `pixverse` | PixVerse 6 → `pixverse-v6` | `resolution`, `duration`, `audio`, `size` (text-to-video), `image_urls` [first] or `first_frame_image` + `last_frame_image` (5 or 8 s) | |
 | `pixverse-max` | PixVerse 6 Max → `pixverse-v6-max` | `resolution`, `duration` 1–15, `audio`, `aspect_ratio` (text-to-video; not `size`), `image_urls` [first]; the prompt is optional with a frame | a last frame, an empty prompt without a frame |
 | `gemini-omni` | Gemini Omni Flash 1.1 → `gemini-omni-1.1-flash-ext` | `duration` 4 / 6 / 8 / 10, `resolution` (`4k`), `aspect_ratio`, `generation_type: "frame"` + `image_urls` [first] | a last frame, other durations |
-| `gemini-omni12` | Gemini Omni Flash 1.2 → `gemini-omni-1.2-flash` | no `duration` (the prompt sets the length, about 3–10 s), `resolution` (`4k`), `aspect_ratio` (with frames too), `first_frame_image`, `last_frame_image`, references as `image_urls`; no `metadata.task` (APIMart picks the task) | an empty prompt, frames and references together |
+| `gemini-omni12` | Gemini Omni Flash 1.2 → `gemini-omni-1.2-flash` | no `duration` (the prompt sets the length, about 3–10 s), `resolution` (`4k`), `aspect_ratio` (with frames too), `first_frame_image`, `last_frame_image`, references as `image_urls`; no `metadata.task` (APIMart picks the task) | an empty prompt, frames and references together, any length but the catalog's default (8 s, a placeholder) |
 | `flux3` | FLUX.3 Video → `flux-3-video` | `duration` 5–20, `resolution` `hd` / `fhd`, `aspect_ratio` (`auto`), `image_urls` [first], `audio` | a last frame |
 | `vidu` | Vidu Q4 → `viduq4-preview` | `first_frame_image`, `duration` 3–16, `resolution` (`2K`, `4K`), `audio` | no first frame |
 
@@ -132,8 +132,9 @@ test lists them as unpriced.
   shown verbatim on the card.
 - **The account tier is not known.** Estimates use Gold prices; the recorded cost is what was charged.
 - **No video inputs.** Video editing and motion control never go to APIMart.
-- **Gemini Omni Flash 1.2 has no length or price to show.** The prompt sets the clip's length (the 8 s in the
-  composer is a placeholder), and APIMart lists no price for it yet; the recorded cost is still right.
+- **Gemini Omni Flash 1.2 has no length or price to show.** The prompt sets the clip's length, so it runs here only
+  at the composer's default 8 s, a placeholder; any other length goes to fal. APIMart lists no price for it yet, so
+  with a fal key too it goes to fal unless it has style references; the recorded cost is still right.
 - **Veo is 8 s only** on the models used here (APIMart's per-second "official" Veo channels are not wired).
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
 - **GPT Image 2.6, 2.6 Flare and 2.6 Sunburst have no price to show.** APIMart lists none for 2.6 and bills Flare

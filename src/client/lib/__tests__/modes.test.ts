@@ -29,9 +29,9 @@ describe("modelModes", () => {
     for (const m of [...listed(IMAGE_MODELS), ...listed(VIDEO_MODELS)]) expect(modelModes(m), m.id).not.toEqual([]);
   });
 
-  it("video Edit lists the 7 editors and the 7 models that take reference videos", () => {
+  it("video Edit lists the 8 editors and the 7 models that take reference videos", () => {
     const edit = listed(VIDEO_MODELS).filter((m) => inMode(m, "edit"));
-    expect(edit).toHaveLength(14);
+    expect(edit).toHaveLength(15);
     expect(ids(edit.filter((m) => !m.caps.videoEdit))).toEqual(
       expect.arrayContaining(["bytedance/seedance-2.5", "alibaba/wan-3.0", "alibaba/wan-3.0-prime", "fal/kling-v4"]),
     );

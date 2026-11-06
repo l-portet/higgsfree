@@ -16,8 +16,8 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 23 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models)) and 49 video models, of which 47 are offered
-(17 fal-only, 2 [on kie.ai or APIMart only](#kieai-and-apimart-only), 7 of the 47 are
+Curated today: 23 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models)) and 50 video models, of which 48 are offered
+(19 fal-only, 1 [on kie.ai or APIMart only](#kieai-and-apimart-only), 8 of the 48 are
 [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
@@ -130,8 +130,8 @@ Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced abov
 frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` lists `video_url` and `audio_url`
 parts but documents no inline data, and APIMart uploads images only.
 
-Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal (see
-[fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only, Gemini Omni Flash 1.2 on APIMart only (see
+Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 on fal and APIMart (see
+[fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only (see
 [kie.ai and APIMart only](#kieai-and-apimart-only)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
@@ -169,6 +169,7 @@ brackets are the values fal receives when they differ from the app's.
 
 | Model | Id | fal endpoints | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
+| **Gemini Omni Flash 1.2** <sub>NEW</sub> | `google/gemini-omni-flash-1.2` | `google/gemini-omni-flash/v1.2/text-to-video` · `…/image-to-video` ⁵ | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | 3–15 (default 8), 3–10 with a last frame | 16:9, 9:16 |
 | **Gemini Omni Flash 1.1** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1` | `google/gemini-omni-flash/v1.1/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | 3–10 (default 8) | 16:9, 9:16 |
 | **Kling 4.0** <sub>NEW</sub> | `fal/kling-v4` | `kling/v4/text-to-video` · `…/image-to-video` ⁴ | ✓ | ✓ | ✓ | – ⁴ | 720p / 1080p (default 720p) | 3–30 (default 5) | 21:9, 16:9, 1:1, 9:16 † |
 | **FLUX.3 Max** <sub>NEW</sub> | `fal/flux-3-max` | `blackforestlabs/flux-3-max/text-to-video` · `…/image-to-video` ³ | ✓ | ✓ | ✓ | ✓ | 720p / 1080p (default 720p) | 5–20 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † |
@@ -193,10 +194,26 @@ provider can turn it off, so there is no Sound toggle (`caps.audio: false`). The
 `start_image_url` and `end_image_url`; per-shot prompts (`multi_prompt`) are not used. $0.157/s at
 720p, $0.235/s at 1080p (read 22 Oct 2026). fal's catalog lists both endpoints as active with a
 published schema, but still says "API access is coming soon": a run on fal may be refused until it opens.
+⁵ Google's Gemini Omni 1.2 Flash, listed on fal on 5 Nov 2026 (schemas and prices read 6 Nov 2026), also on APIMart.
+$0.0819 / $0.1229 / $0.2457 per second at 720p / 1080p / 4K; sound is always on and included, so there is no Sound
+toggle (`caps.audio: false`). The ratio goes with a frame too. A last frame caps the clip at 10 s (`endImageMaxSec`).
+fal also offers 360p (not listed, the app has none). `…/reference-to-video` is not used, since fal never gets style
+references, and `…/extend` is not used, since the app has no way to extend a clip; `…/edit` and `…/upscale` are models
+of their own ([Video editing](#video-editing), [Upscaling](#upscaling)).
+On APIMart it is `gemini-omni-1.2-flash` (read 30 Oct 2026; [APIMART.md](APIMART.md) has the fields). There is no
+duration field: the prompt sets the length (about 3–10 s, not guaranteed), so APIMart runs only at the default, 8 s, a
+placeholder, and any other length goes to fal. A first frame, a first and a last frame (`first_frame_image`,
+`last_frame_image`), or style references (`image_urls`; APIMart takes 10 images in all, frames included, the app sends
+frames or references, not both). APIMart also offers 360p (not listed; 1080p and 4K are upscaled) and reference clips,
+edit and extend through `video_urls` and `metadata.task`, which the app does not use (no video input on APIMart). It
+lists no price yet, so APIMart has no estimate and the cost of each run is recorded. With both keys a run therefore goes
+to fal, unless it has style references, which only APIMart takes. The app has no kie.ai route for it.
+OpenRouter's `google/gemini-omni-1.2-flash` (5 Nov 2026) is another slug: like `google/gemini-omni-1.1-flash`, it is
+[discovered](#live-catalog-and-discovered-models) as a model of its own, with OpenRouter's options and prices.
 
 Durations go out as numbers (Gemini Omni Flash, Kling 4.0, FLUX.3 Max, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
 seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`), except Kling 4.0,
-which takes them on kie.ai and APIMart (never on fal).
+which takes them on kie.ai and APIMart, and Gemini Omni Flash 1.2, on APIMart (never on fal).
 
 **Motion control** (`caps.motionControl`): a character image plus a reference video, and an optional
 prompt. The clip copies the video's movement and is as long as the video. There is no duration,
@@ -254,14 +271,12 @@ either), references as `image_urls`. APIMart takes 10 references, the app sends 
 
 ### kie.ai and APIMart only
 
-Not on OpenRouter nor fal: these run only with a kie.ai or APIMart key (fields and rules in
-[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run (Gemini Omni Flash 1.2
-is on APIMart only). The id is the app's own (`<maker>/<name>`). None is verified yet. `†` = the aspect
-ratio is sent for text-to-video only.
+Not on OpenRouter nor fal: this runs only with a kie.ai or APIMart key (fields and rules in
+[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The id is the app's own
+(`<maker>/<name>`). It is not verified yet. `†` = the aspect ratio is sent for text-to-video only.
 
 | Model | Id | kie models · APIMart model | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
-| **Gemini Omni Flash 1.2** <sub>NEW</sub> | `google/gemini-omni-flash-1.2` | – · `gemini-omni-1.2-flash` ² | ✓ | ✓ | ✓ | – | 720p / 1080p / 4K [`4k`] (default 720p) | not sent: the prompt sets it, about 3–10 ² | 16:9, 9:16 |
 | **PixVerse 6 Max** <sub>NEW</sub> | `pixverse/pixverse-v6-max` | `pixverse-v6-max/text-to-video` · `…/image-to-video` · `pixverse-v6-max` ¹ | ✓ | ✓ | – | ✓ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
 
 ¹ The top quality tier of PixVerse 6 (24 Oct 2026): text-to-video and a first frame only (no last
@@ -270,14 +285,6 @@ providers also offer 360p and 540p, which the app does not list (nor for PixVers
 per second without / with sound: kie 8.8 / 12 credits at 720p, 17.6 / 22.4 at 1080p ($0.044 / $0.06,
 $0.088 / $0.112); APIMart $0.0391 / $0.0533 at 720p, $0.0782 / $0.0996 at 1080p (Gold tier), so
 APIMart is the cheaper. APIMart takes a frame without a prompt, kie does not.
-² Google's Gemini Omni 1.2 Flash, read from APIMart's model page on 30 Oct 2026; not on fal, kie.ai or
-OpenRouter yet. There is no duration field: the prompt sets the length (about 3–10 s, not guaranteed),
-so the app offers a single 8 s placeholder and sends nothing. A first frame, a first and a last frame
-(`first_frame_image`, `last_frame_image`), or style references (`image_urls`; APIMart takes 10 images
-in all, frames included, the app sends frames or references, not both); the ratio is sent with frames
-too. APIMart also offers 360p (not listed; 1080p and 4K are upscaled) and reference clips, edit and
-extend through `video_urls` and `metadata.task`, which the app does not use (no video input on
-APIMart). APIMart lists no price for it yet, so there is no estimate; the cost of each run is recorded.
 
 ### kie.ai
 
@@ -379,6 +386,7 @@ which is as long as the video, so the estimate appears once the video's length i
 | **Runway Aleph 2** <sub>PRO</sub> | `runway/aleph-2` | OpenRouter | | 720p (not sent) | ? | $0.28/s, $0.56 minimum |
 | **Kling O3 Edit** <sub>NEW</sub> | `fal/kling-o3-edit` | fal | `fal-ai/kling-video/o3/pro/video-to-video/edit` | follows the video | 3–15 s | $0.168/s |
 | **Kling O3 Edit Standard** | `fal/kling-o3-edit-standard` | fal | `fal-ai/kling-video/o3/standard/video-to-video/edit` | follows the video | 3–15 s | $0.126/s |
+| **Gemini Omni Flash 1.2 Edit** <sub>NEW</sub> | `fal/gemini-omni-flash-1.2-edit` | fal | `google/gemini-omni-flash/v1.2/edit` | 720p / 1080p / 4K [`4k`] (default 720p) | up to 15 s | $0.0819 / $0.1229 / $0.2457 per s |
 | **Gemini Omni Flash 1.1 Edit** <sub>NEW</sub> | `fal/gemini-omni-flash-1.1-edit` | fal | `google/gemini-omni-flash/v1.1/edit` | 720p / 1080p / 4K [`4k`] (default 720p) | ? | $0.10 / $0.15 / $0.30 per s |
 | **Grok Imagine Edit** <sub>FAST</sub> | `fal/grok-imagine-edit` | fal | `xai/grok-imagine-video/edit-video` | 480p / 720p (default 480p) | any; edits the first 8 s | $0.06 / $0.08 per s |
 | **Wan 2.7 Edit** | `fal/wan-2.7-edit` | fal | `fal-ai/wan/v2.7/edit-video` | 720p / 1080p (default 1080p) | 2–10 s | $0.10 / $0.15 per s |
@@ -395,7 +403,7 @@ Upscalers (`caps.upscale`) take one image or one video and return it larger, wit
 picked like any model (the picker lists them under "Upscale an image" / "Upscale a video"), and
 **Upscale** on a finished image or clip (card or lightbox) hands it to its composer on Topaz. Picked, an
 upscaler turns the prompt into a drop zone for its input (drop, paste for images, or click to choose);
-the chips become the scale (2x / 4x) or, for ByteDance, the target resolution. One run per Generate.
+the chips become the scale (2x / 4x) or, for ByteDance and Gemini Omni Flash 1.2, the target resolution. One run per Generate.
 Upscalers with a creative mode (`caps.upscale.creative`: Topaz, FLUX Video Upscale) add a **Creative** toggle
 (accent chip, Sparkles): off is a faithful upscale, on rebuilds detail (Topaz's generative Wonder and Starlight
 endpoints; FLUX's `creativity: 1`). kie.ai has no creative mode, so a creative run goes to fal (or OpenRouter).
@@ -414,10 +422,15 @@ fal / kie.ai price tables: Topaz on fal bills by the output's size, so its estim
 | **SeedVR2 Upscale** <sub>FAST</sub> | `bytedance/seedvr2-upscale` | fal | `fal-ai/seedvr/upscale/image` | 2x / 4x | $0.001 per MP out |
 | **SeedVR2 Video Upscale** <sub>FAST</sub> | `bytedance/seedvr2-video-upscale` | fal | `fal-ai/seedvr/upscale/video` | 2x / 4x | $0.001 per MP out per frame (estimated at 30 fps) |
 | **FLUX Video Upscale** <sub>NEW</sub> | `black-forest-labs/flux-video-upscale` | OpenRouter, fal | `blackforestlabs/flux-video-upscale` | 1.5x / 2x / 3x, Creative (`creativity` 0 / 1); clips up to 20 s, 50 MB | OpenRouter $0.035 per MP-second out ($0.05 creative); fal $0.084 / $0.15 / $0.33 per s at 1080p / 2K / 4K out ($0.12 / $0.21 / $0.474 creative) |
+| **Gemini Omni Flash 1.2 Upscale** <sub>NEW</sub> | `fal/gemini-omni-flash-1.2-upscale` | fal | `google/gemini-omni-flash/v1.2/upscale` | 720p / 1080p / 4K (`resolution`, default 1080p); clips up to 15 s | read 6 Nov 2026: $0.041 per s (360p to 720p, 720p to 1080p), $0.0819 (360p to 1080p), $0.1638 (720p or 1080p to 4K) |
 
 Topaz's Creative mode: images on `topaz/upscale/image/generative` (Wonder 3, $0.08 per started 8 MP out), video on
 `topaz/upscale/video/generative` (Starlight Precise 2.6, $0.12/s up to 1080p out, $0.26/s above). Topaz video asks
 fal for H.264 (`H264_output`); fal's default, H.265, does not play in every browser.
+
+Gemini Omni Flash 1.2's target must be above the source's resolution, says fal's schema; the app does not check it, and
+a refusal from fal is shown as it comes. It bills by the source and the target, so the estimate needs the source's size; a pair fal's page does not list
+(360p to 4K, or a source of another size) has no estimate.
 
 kie.ai lists Topaz images as "2K" and "4K" tiers; the app reads them as the 2x and 4x scales. None is
 verified end to end yet.
@@ -562,7 +575,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `verified` | `true` only after the checklist below. |
 | `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |
 | `discovered` | Set by the browser (`src/client/lib/catalog.ts`), never in `models.ts`: OpenRouter lists the model but the curated catalog does not (see above). |
-| `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
+| `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `endImageMaxSec` (the longest clip with a last frame, when less than the model's longest); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
 | `kie` | How kie.ai serves the model (`KieVideoRoute`): its `family` (which builder maps the fields), the createTask `model`, an `imageModel` used with a frame where kie splits the two, a `tier` (Veo's `model`, Kling's `mode`). See [KIE.md](KIE.md#video-fields-buildkievideopayload). |
 | `apimart` | How APIMart serves the model (`ApimartVideoRoute`): its `family`, APIMart's `model` id and a `tier` (Kling's `mode`). See [APIMART.md](APIMART.md#video-fields-buildapimartvideopayload). |
 | `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with another provider's route that OpenRouter stopped listing. |
