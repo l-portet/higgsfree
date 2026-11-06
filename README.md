@@ -80,6 +80,7 @@ All optional, all read by `next build` only and inlined into the static site (se
 | `APP_URL` | `http://localhost:3000` | Public url of the site, for social-card metadata. On Vercel it defaults to the production domain. |
 | `NEXT_PUBLIC_OPENROUTER_BASE_URL` | `https://openrouter.ai` | Where OpenRouter calls go. Proxies only; the key and the Content-Security-Policy follow it. |
 | `NEXT_PUBLIC_APP_NAME` | `higgsfree` | Sent to OpenRouter as `X-Title` for app attribution. |
+| `NEXT_PUBLIC_CLARITY_ID` | `z9kdvhwh47` | Microsoft Clarity project that production builds report to. |
 
 ## Your data
 
@@ -88,6 +89,8 @@ Everything lives in the browser profile you use the app in:
 - **The OpenRouter key** is in localStorage (`higgsfree.apiKey`) and is only ever sent to openrouter.ai. **Remove key** in Settings › Keys deletes it.
 - **The fal key**, if you add one, is in localStorage (`higgsfree.falKey`) and is only ever sent to fal's API hosts. **Remove key** in Settings › Keys deletes it.
 - **The library** (records, generated images and clips, reference images and videos) is in IndexedDB (database `higgsfree`). Media are displayed through object urls. Nothing is uploaded anywhere, except a video you run a fal model on (a motion-control reference, or a video to edit), which goes to fal's storage when you run it.
+
+Production builds also load Microsoft Clarity, which records sessions, including text shown on screen that it does not mask, such as your saved prompts. It never runs under `pnpm dev` or on `localhost`, and setting `window.CLARITY_DISABLED_ENV = true` before the app hydrates keeps it off. See [SECURITY.md](SECURITY.md).
 
 What follows from that:
 
