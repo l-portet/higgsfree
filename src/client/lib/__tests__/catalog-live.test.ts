@@ -127,6 +127,7 @@ describe("buildImageModel", () => {
       fal: curated.fal,
       apimart: curated.apimart,
     });
+    expect(m?.kie).toEqual(curated.kie);
     expect(m?.discovered).toBeUndefined();
     // The curated ratios are OpenRouter's, so the picker does not change when the catalog arrives.
     expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));

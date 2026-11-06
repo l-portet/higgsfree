@@ -89,9 +89,15 @@ The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@V
 | `nano-banana-2` | Nano Banana Pro → `nano-banana-pro`, Nano Banana 2 → `nano-banana-2` | `aspect_ratio`, `resolution` 1K / 2K / 4K, `image_input` (≤ 8), `output_format: "png"` |
 | `nano-banana` | Nano Banana → `google/nano-banana`, `google/nano-banana-edit` with references | `aspect_ratio`, `image_urls` (≤ 10), `output_format: "png"` |
 | `nano-banana-lite` | Nano Banana 2 Lite → `nano-banana-2-lite` | `aspect_ratio` (required; `auto` allowed), `image_urls` |
-| `gpt-image-2` | GPT Image 2 → `gpt-image-2-text-to-image`, `gpt-image-2-image-to-image` | `aspect_ratio`, `resolution`, `input_urls` (≤ 16) |
+| `gpt-image-2` | GPT Image 2 → `gpt-image-2-text-to-image`, `gpt-image-2-image-to-image`; GPT Image 2.6 Flare → `gpt-image-2-6/flare-text-to-image`, `gpt-image-2-6/flare-image-to-image` | `aspect_ratio`, `resolution`, `input_urls` (≤ 16) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux1-kontext`, `model: "flux-kontext-pro"` | `aspect_ratio` (not `auto`, no 3:2 / 2:3), `input_image` (one reference) |
 | `z-image` | Z-Image Turbo → `z-image` | `aspect_ratio` (required: `auto` becomes 1:1) |
+
+GPT Image 2.6 Flare's two doc pages (read 6 Nov 2026) give it GPT Image 2's fields, with `aspect_ratio` `auto` by
+default and 2:1, 1:2, 9:21, 3:1 and 1:3 besides the ones the app has, `resolution` 1K / 2K / 4K and up to 16
+`input_urls` (JPEG, PNG or WebP, 30 MB each). Its sizes follow OpenRouter's catalog, so the app sends 1K and does not
+list 2K or 4K, and at most 8 references. `background`, `output_format` and the GIF fields (`frame_count`,
+`frame_duration_ms`) are not sent: kie's defaults apply.
 
 An image goes to the cheapest provider with a key that can take the request (`quoteImage`), or to the one
 picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes to fal.
@@ -106,6 +112,10 @@ and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; G
 or per image (by size). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
 and price it, so the estimate follows the model id, tier, resolution, duration and sound sent.
 
+The exception is GPT Image 2.6 Flare (6 Nov 2026), which kie bills per million tokens with no per-image price: in
+credits, 900 text input, 225 cached text input, 1,440 image input, 360 cached image input, 5,400 image output. It has
+no estimate rather than a guessed one, and the test lists it as unpriced.
+
 ## Known gaps
 
 - **Not verified end to end.** The shapes come from kie's docs and its 401 answers; the first real runs may
@@ -113,3 +123,5 @@ and price it, so the estimate follows the model id, tier, resolution, duration a
 - **No cancel.** A deleted job may still finish on kie and be charged.
 - **Uploads are public.** Inputs sent to kie are public urls for 24 h (see [SECURITY.md](../SECURITY.md)).
 - **Veo's price for 4 and 6 s** is assumed to be the 8 s one, since kie lists one price per clip.
+- **GPT Image 2.6 Flare has no price to show**, since kie bills it in tokens. The recorded cost comes from the task's
+  `creditsConsumed`.
