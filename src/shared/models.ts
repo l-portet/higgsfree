@@ -1079,7 +1079,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     featured: true,
     badges: ["new"],
     caps: { textToVideo: true, imageToVideo: true, lastFrame: true, audio: false },
-    // fal takes the length. APIMart takes none (the prompt sets it), so it runs only at the default, 8 s, which is just what the run records.
+    // fal and kie.ai take the length. APIMart takes none (the prompt sets it), so it runs only at the default, 8 s, which is just what the run records.
     durations: { min: 3, max: 15, step: 1 },
     defaultDuration: 8,
     resolutions: ["720p", "1080p", "4K"],
@@ -1090,6 +1090,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     fal: { textToVideo: "google/gemini-omni-flash/v1.2/text-to-video", imageToVideo: "google/gemini-omni-flash/v1.2/image-to-video", endImage: true, endImageMaxSec: 10, duration: "number", aspect: "always", resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
     // OpenRouter's `google/gemini-omni-1.2-flash` is another slug: it is discovered from the live catalog as a model of its own.
     offOpenRouter: true,
+    kie: { family: "gemini-omni12", model: "google/gemini-omni-flash-1-2" },
     apimart: { family: "gemini-omni12", model: "gemini-omni-1.2-flash" },
   },
   {

@@ -37,6 +37,8 @@ export const KIE_PRICES: Record<string, ListPrice> = {
       10: { "720p": 126, "1080p": 126, "4K": 210 },
     },
   },
+  // Read 10 Nov 2026; kie also lists 360p, at 4, which the app has no use for.
+  "google/gemini-omni-flash-1-2": { unit: "second", amount: { "720p": 9, "1080p": 10, "4K": 22 } },
   "pixverse-v6": { unit: "second", amount: { "720p": 7.2, "1080p": 14.4 }, audioAmount: { "720p": 9.6, "1080p": 18.4 } },
   // Read 26 Oct 2026.
   "pixverse-v6-max": { unit: "second", amount: { "720p": 8.8, "1080p": 17.6 }, audioAmount: { "720p": 12, "1080p": 22.4 } },

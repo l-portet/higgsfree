@@ -26,6 +26,7 @@ describe("provider choice", () => {
     expect(modelProviders(video("fal/kling-v3-pro-motion-control"))).toEqual(["fal"]);
     expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart", "revana"]);
     expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart", "revana"]);
+    expect(modelProviders(video("google/gemini-omni-flash-1.2"))).toEqual(["fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
