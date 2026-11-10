@@ -133,8 +133,9 @@ test lists them as unpriced.
 - **The account tier is not known.** Estimates use Gold prices; the recorded cost is what was charged.
 - **No video inputs.** Video editing and motion control never go to APIMart.
 - **Gemini Omni Flash 1.2 has no length or price to show.** The prompt sets the clip's length, so it runs here only
-  at the composer's default 8 s, a placeholder; any other length goes to fal. APIMart lists no price for it yet, so
-  with a fal key too it goes to fal unless it has style references; the recorded cost is still right.
+  at the composer's default 8 s, a placeholder; any other length goes to fal or kie.ai. APIMart lists no price for it
+  yet, so with a kie.ai key too it goes to kie (which also takes style references), and with a fal key to fal unless
+  it has style references; the recorded cost is still right.
 - **Veo is 8 s only** on the models used here (APIMart's per-second "official" Veo channels are not wired).
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
 - **GPT Image 2.6, 2.6 Flare and 2.6 Sunburst have no price to show.** APIMart lists none for 2.6 and bills Flare

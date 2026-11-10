@@ -78,6 +78,31 @@ describe("buildKieVideoPayload", () => {
     expect(buildKieVideoPayload(video("fal/pixverse-v6"), { prompt: "a cat", duration: 5 }, {}).priceKey).toBe("pixverse-v6");
   });
 
+  it("Gemini Omni Flash 1.2: a number duration up to 15 s, 10 s between two frames, the ratio with a frame too, references as `image_urls`", () => {
+    const m = video("google/gemini-omni-flash-1.2");
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 15, aspectRatio: "9:16", resolution: "4K" }, {})).toEqual({
+      model: "google/gemini-omni-flash-1-2",
+      input: { prompt: "p", duration: 15, resolution: "4k", aspect_ratio: "9:16" },
+      priceKey: "google/gemini-omni-flash-1-2",
+      params: { duration: 15, resolution: "4K", aspectRatio: "9:16" },
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 15, aspectRatio: "9:16" }, { firstFrame: "https://a" }).input).toEqual({
+      prompt: "p", duration: 15, resolution: "720p", aspect_ratio: "9:16", first_frame_url: "https://a",
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 10, aspectRatio: "16:9" }, { firstFrame: "https://a", lastFrame: "https://b" })).toEqual({
+      model: "google/gemini-omni-flash-1-2",
+      input: { prompt: "p", duration: 10, resolution: "720p", aspect_ratio: "16:9", first_frame_url: "https://a", last_frame_url: "https://b" },
+      priceKey: "google/gemini-omni-flash-1-2",
+      params: { duration: 10, resolution: "720p", aspectRatio: "16:9" },
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 3 }, { references: ["https://r", "https://s"] }).input).toEqual({
+      prompt: "p", duration: 3, resolution: "720p", image_urls: ["https://r", "https://s"],
+    });
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 11 }, { firstFrame: "https://a", lastFrame: "https://b" })).toThrow("Takes clips of up to 10 s between two frames");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", references: ["https://r"] })).toThrow("not both");
+    expect(() => buildKieVideoPayload(m, { prompt: " ", duration: 8 }, {})).toThrow("Needs a prompt");
+  });
+
   it("Seedance: frames or references (not both), `adaptive` when no ratio is sent, and a 3-character prompt", () => {
     const m = video("bytedance/seedance-2.5");
     expect(buildKieVideoPayload(m, { prompt: "slow push in", duration: 12, resolution: "480p", audio: false }, { firstFrame: "https://a" })).toEqual({
@@ -239,6 +264,8 @@ describe("kie prices", () => {
     expect(estimateKieVideoCost(video("kwaivgi/kling-v3.0-pro"), { prompt: "p", duration: 5, audio: true })).toBeCloseTo(0.675);
     expect(estimateKieVideoCost(video("google/veo-3.1"), { prompt: "p", duration: 8, resolution: "1080p" })).toBeCloseTo(1.275);
     expect(estimateKieVideoCost(video("fal/gemini-omni-flash-1.1"), { prompt: "p", duration: 6, resolution: "4K" })).toBeCloseTo(0.84);
+    expect(estimateKieVideoCost(video("google/gemini-omni-flash-1.2"), { prompt: "p", duration: 15, resolution: "4K" })).toBeCloseTo(1.65);
+    expect(estimateKieVideoCost(video("google/gemini-omni-flash-1.2"), { prompt: "p", duration: 8, firstFrame: true, lastFrame: true })).toBeCloseTo(0.36);
     expect(estimateKieVideoCost(video("fal/kling-v4"), { prompt: "p", duration: 10, resolution: "1080p", references: true })).toBeCloseTo(2.125);
     expect(estimateKieVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(1.12);
     expect(estimateKieVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.22);

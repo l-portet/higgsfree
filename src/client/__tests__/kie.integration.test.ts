@@ -79,6 +79,21 @@ describe("kie.ai videos", () => {
     await waitFor(completed(g.id));
   });
 
+  it("Gemini Omni Flash 1.2: kie is cheaper than fal, the length goes out as a number and the ratio with the frame", async () => {
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const frame = await uploadImage();
+    const g = await video({ model: "google/gemini-omni-flash-1.2", duration: 12, resolution: "1080p", aspectRatio: "9:16", firstFrame: frame });
+    expect(g).toMatchObject({ provider: "kie", params: { duration: 12, resolution: "1080p", aspectRatio: "9:16" } });
+    expect(mock.kie("/api/v1/jobs/createTask")[0]?.body).toEqual({
+      model: "google/gemini-omni-flash-1-2",
+      input: { prompt: "slow push in", duration: 12, resolution: "1080p", aspect_ratio: "9:16", first_frame_url: "https://tempfile.redpandaai.co/higgsfree/up-1.png" },
+    });
+    expect(mock.fal("/google/gemini-omni-flash/v1.2/image-to-video")).toHaveLength(0);
+    await waitFor(completed(g.id));
+    expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
+  });
+
   it("with every key: kie runs what it makes cheapest, the others what they do, and refusals go elsewhere", async () => {
     setStoredKey("test-key");
     setStoredFalKey(FAL_KEY);

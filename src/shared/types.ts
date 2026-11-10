@@ -344,7 +344,7 @@ export interface KieVideoRoute {
 }
 
 export type KieVideoFamily =
-  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "pixverse" | "vidu" | "wan27-edit" | "topaz-video-upscale";
+  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "gemini-omni12" | "pixverse" | "vidu" | "wan27-edit" | "topaz-video-upscale";
 
 export interface KieImageRoute {
   family: KieImageFamily;

@@ -64,6 +64,7 @@ const VIDEO_LIMITS: Record<KieVideoRoute["family"], { durations?: number[]; aspe
   grok: { durations: range(6, 30), aspects: ["2:3", "3:2", "1:1", "16:9", "9:16"], resolutions: { "480p": "480p", "720p": "720p", "1080p": "1080p" } },
   grok15: { durations: range(1, 15), aspects: ["1:1", "16:9", "9:16", "3:2", "2:3"], resolutions: { "480p": "480p", "720p": "720p", "1080p": "1080p" } },
   "gemini-omni": { durations: [4, 6, 8, 10], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
+  "gemini-omni12": { durations: range(3, 15), aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2k", "4K": "4k" } },
   "wan27-edit": { resolutions: { "720p": "720p", "1080p": "1080p" } },
@@ -82,7 +83,7 @@ function durationsLabel(list: number[]): string {
 /** Families whose clips always have sound: a run with the sound off goes elsewhere. */
 const ALWAYS_SOUND = new Set<KieVideoRoute["family"]>(["veo", "minimax-h3"]);
 /** Families that take style references. */
-const TAKES_REFERENCES = new Set<KieVideoRoute["family"]>(["seedance", "wan3", "kling4"]);
+const TAKES_REFERENCES = new Set<KieVideoRoute["family"]>(["seedance", "wan3", "kling4", "gemini-omni12"]);
 /** How many reference videos and audio clips each family takes (the rest take none). Seedance 2.5 takes more than 2.0. */
 function mediaLimits(route: KieVideoRoute): { videos: number; audios: number } {
   switch (route.family) {
@@ -240,6 +241,22 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
       if (first) input.first_frame_url = first;
       if (last) input.last_frame_url = last;
       break;
+    case "gemini-omni12": {
+      // Unlike 1.1: `duration` as a number, 3–10 s between two frames, references as `image_urls`, and the ratio
+      // with a frame too (kie defaults it to 16:9). `seeds` and `video_list` (its video-edit mode) are not sent.
+      if (!prompt) throw badRequest("Needs a prompt");
+      if (last && params.duration > 10) throw badRequest("Takes clips of up to 10 s between two frames");
+      const ratio = aspect ?? (req.aspectRatio && limits.aspects?.includes(req.aspectRatio) ? req.aspectRatio : undefined);
+      Object.assign(input, { prompt, duration: params.duration, resolution: kieResolution });
+      if (ratio) {
+        input.aspect_ratio = ratio;
+        params.aspectRatio = ratio;
+      }
+      if (first) input.first_frame_url = first;
+      if (last) input.last_frame_url = last;
+      if (refs.length) input.image_urls = refs;
+      break;
+    }
     case "pixverse": {
       // PixVerse 6 and 6 Max take the same fields; Max takes any prompt, 6 one of 3 characters or more.
       const max = route.model.startsWith("pixverse-v6-max/");
