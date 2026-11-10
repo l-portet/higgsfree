@@ -63,12 +63,19 @@ family cannot take throws a 400 whose message is what the price tooltip shows ("
 | `grok` | Grok Imagine Video → `grok-imagine/text-to-video` / `image-to-video` | `aspect_ratio`, `mode: "normal"`, `duration` (a string with a frame), `resolution`, `image_urls` [first] | clips under 6 s, 4:3 / 3:4, a last frame |
 | `grok15` | Grok Imagine 1.5 → `grok-imagine-video-1-5-preview` | `image_urls` [first], `aspect_ratio` (`auto`), `resolution`, `duration` 1–15 | a last frame; 1080p has no listed price, so it is never picked over a priced provider |
 | `gemini-omni` | Gemini Omni Flash 1.1 → `google/gemini-omni-flash-1-1` | `duration` "4" / "6" / "8" / "10", `aspect_ratio`, `resolution` (`4k`), `first_frame_url`, `last_frame_url` | other durations, an empty prompt |
+| `gemini-omni12` | Gemini Omni Flash 1.2 → `google/gemini-omni-flash-1-2` | `duration` 3–15 as a number (3–10 with a last frame), `aspect_ratio` (with a frame too), `resolution` (`4k`), `first_frame_url`, `last_frame_url`, `image_urls` (references, ≤ 6) | an empty prompt, frames and references together, over 10 s between two frames |
 | `pixverse` | PixVerse 6 → `pixverse-v6/text-to-video` / `image-to-video`, PixVerse 6 Max → `pixverse-v6-max/text-to-video` / `image-to-video` | `aspect_ratio` (text-to-video), `quality`, `duration`, `generate_audio_switch`, `image_urls` [first] | a prompt under 3 characters (6 Max: an empty prompt), a last frame |
 | `vidu` | Vidu Q4 → `vidu-q4/image-to-video` | `image_url`, `duration` 3–16, `resolution` (`2k`, `4k`), `audio` | no first frame, a last frame |
 | `wan27-edit` | Wan 2.7 Edit → `wan/2-7-videoedit` | `video_url` (stream upload), `resolution` | |
 
-Every family also refuses style references unless it takes them (Seedance, Wan 3.0, Kling 4.0), and a last frame without a
-first one.
+Every family also refuses style references unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2), and a
+last frame without a first one.
+
+Gemini Omni Flash 1.2 (read 10 Nov 2026) takes one of four modes per request: text or reference images, a first frame,
+a first and a last frame, or a video edit (`video_list`). Unlike 1.1 its `duration` is a number, 3–15 s, and 3–10 s with
+a last frame; it has no `audio_ids` or `character_ids`. The ratio goes with a frame too, since kie defaults it to 16:9.
+Not sent: `seeds`, `aspect_ratio: "auto"`, 360p (the app has none) and `video_list`, since the model is not a video
+editor in the app.
 
 **Reference videos and audio** (`caps.mediaReferences`), never with frames. kie.ai is the only provider that runs them
 (fal and OpenRouter refuse them in `video-cost.ts`, APIMart has no upload for them):
@@ -113,9 +120,9 @@ picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes 
 
 `KIE_PRICES` (`src/shared/kie-prices.ts`) has kie's list price in credits ($0.005 each) for every model a
 route sends to, read from kie's pricing page (`kie.ai/pricing`, backed by the public
-`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov); a test checks every route is priced and
+`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov); a test checks every route is priced and
 every price is used. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0
-and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash, by length),
+and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash 1.1, by length),
 or per image (by size). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
 and price it, so the estimate follows the model id, tier, resolution, duration and sound sent.
 

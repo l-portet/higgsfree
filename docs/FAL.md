@@ -167,7 +167,7 @@ is stored in the record's `params`.
   the toggle is not sent there.
 - Style references are not sent to fal. A run that has them is a 400 before anything is created ("… on
   fal does not take style references. Remove them, or add an OpenRouter key in Settings."; off OpenRouter,
-  the model's other providers instead: "a kie.ai or APIMart key" for Kling 4.0, "an APIMart key" for
+  the model's other providers instead: "a kie.ai or APIMart key" for Kling 4.0 and
   Gemini Omni Flash 1.2).
 
 ### Motion control

@@ -90,28 +90,36 @@ describe("quoteVideo", () => {
     expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, NOW)).toMatchObject({ reason: "none" });
   });
 
-  it("Gemini Omni Flash 1.2, on fal and APIMart: fal has the price and the lengths, APIMart the style references and no price yet", () => {
+  it("Gemini Omni Flash 1.2, on fal, kie.ai and APIMart: kie is the cheapest, fal takes no style references, APIMart no length and no price yet", () => {
     const omni = video("google/gemini-omni-flash-1.2");
+    const all = { fal: true, kie: true, apimart: true };
     const both = { fal: true, apimart: true };
-    const q = quoteVideo(omni, { prompt: "a fox", duration: 8, resolution: "1080p", aspectRatio: "9:16" }, both, NOW);
-    expect(q).toMatchObject({ provider: "fal", reason: "cheaper" });
-    expect(q.quotes).toEqual([{ provider: "fal", noKey: false, usd: expect.closeTo(0.9832) }, { provider: "apimart", noKey: false }]);
-    // Only APIMart takes style references.
+    // 8 s at 1080p: $0.9832 on fal, $0.40 on kie (10 credits a second).
+    const q = quoteVideo(omni, { prompt: "a fox", duration: 8, resolution: "1080p", aspectRatio: "9:16" }, all, NOW);
+    expect(q).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(q.quotes).toEqual([
+      { provider: "fal", noKey: false, usd: expect.closeTo(0.9832) },
+      { provider: "kie", noKey: false, usd: expect.closeTo(0.4) },
+      { provider: "apimart", noKey: false },
+    ]);
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 8, resolution: "1080p", aspectRatio: "9:16" }, both, NOW)).toMatchObject({ provider: "fal", reason: "cheaper" });
+    // kie and APIMart take style references, fal does not.
     const refs = quoteVideo(omni, { prompt: "a fox", duration: 8, references: true }, both, NOW);
     expect(refs).toMatchObject({ provider: "apimart", reason: "one-ready" });
     expect(refs.quotes[0]).toMatchObject({ provider: "fal", refusal: "Takes no style references" });
-    // APIMart takes no length, so it runs only at the default: any other goes to fal.
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 8, references: true }, all, NOW)).toMatchObject({ provider: "kie", reason: "cheaper" });
+    // APIMart takes no length, so it runs only at the default: any other goes to fal or kie.
     const long = quoteVideo(omni, { prompt: "a fox", duration: 12 }, both, NOW);
     expect(long).toMatchObject({ provider: "fal", reason: "one-ready" });
-    expect(long.quotes[1]).toMatchObject({ provider: "apimart", refusal: "Takes clips of 8 s" });
-    // Between two frames fal stops at 10 s, and nobody else takes 12.
-    expect(quoteVideo(omni, { prompt: "a fox", duration: 10, firstFrame: true, lastFrame: true }, both, NOW)).toMatchObject({ provider: "fal" });
-    expect(quoteVideo(omni, { prompt: "a fox", duration: 12, firstFrame: true, lastFrame: true }, both, NOW)).toMatchObject({ reason: "none" });
+    expect(long.quotes[2]).toMatchObject({ provider: "apimart", refusal: "Takes clips of 8 s" });
+    // Between two frames fal and kie stop at 10 s, and nobody else takes 12.
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 10, firstFrame: true, lastFrame: true }, all, NOW)).toMatchObject({ provider: "kie" });
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 12, firstFrame: true, lastFrame: true }, all, NOW)).toMatchObject({ reason: "none" });
     // APIMart alone runs it, with no price known yet.
     expect(quoteVideo(omni, { prompt: "a fox", duration: 8 }, { apimart: true }, NOW)).toMatchObject({ provider: "apimart", reason: "one-ready" });
-    expect(quoteVideo(omni, { prompt: "", duration: 8 }, { apimart: true }, NOW).quotes[1]).toMatchObject({ refusal: "Needs a prompt" });
-    // No other key helps.
-    expect(quoteVideo(omni, { prompt: "a fox", duration: 8 }, { openrouter: true, kie: true }, NOW)).toMatchObject({ reason: "none" });
+    expect(quoteVideo(omni, { prompt: "", duration: 8 }, { apimart: true }, NOW).quotes[2]).toMatchObject({ refusal: "Needs a prompt" });
+    // An OpenRouter key does not help.
+    expect(quoteVideo(omni, { prompt: "a fox", duration: 8 }, { openrouter: true }, NOW)).toMatchObject({ reason: "none" });
   });
 
   it("prices motion control and editing by the input video, once its length is known", () => {
