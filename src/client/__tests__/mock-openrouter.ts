@@ -5,6 +5,7 @@
  */
 import { vi } from "vitest";
 import { bytesToBase64 } from "@/lib/data-url";
+import { handleBytedanceProxy } from "../../server/bytedance-proxy";
 // OpenRouter's public catalogs as they were on 14 Oct 2026 (descriptions trimmed).
 import IMAGES_MODELS from "./fixtures/images-models.json";
 import VIDEOS_MODELS from "./fixtures/videos-models.json";
@@ -83,8 +84,10 @@ export interface MockOpenRouter {
   apimart(path: string): Seen[];
   /** Calls to Revana hosts (API, file storage), by path. */
   revana(path: string): Seen[];
-  /** Calls to ByteDance hosts (ModelArk's API, its file storage), by path. */
+  /** Calls to ByteDance hosts (ModelArk's API, its file storage), by path: what the pass-through sent on. */
   bytedance(path: string): Seen[];
+  /** Calls the browser made to the app's own origin (the ByteDance pass-through), by path. */
+  app(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
 }
@@ -97,10 +100,12 @@ export function installMockOpenRouter(): MockOpenRouter {
   const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0, revanaGenerations: {}, revanaUploads: 0, bytedanceTasks: {} };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
-    const u = new URL(input instanceof Request ? input.url : String(input));
+    // A path alone is a call to the app's own origin, as in a browser.
+    const u = new URL(input instanceof Request ? input.url : String(input), APP_ORIGIN);
     const url = u.pathname + u.search;
     const headers = new Headers(init?.headers);
-    const raw = typeof init?.body === "string" ? init.body : undefined;
+    // The ByteDance pass-through sends on the bytes it read.
+    const raw = typeof init?.body === "string" ? init.body : init?.body instanceof Uint8Array ? new TextDecoder().decode(init.body) : undefined;
     const body = raw ? (JSON.parse(raw) as Record<string, unknown>) : undefined;
     const entry: Seen = { method: init?.method ?? "GET", url, host: u.hostname };
     const auth = headers.get("authorization");
@@ -111,6 +116,8 @@ export function installMockOpenRouter(): MockOpenRouter {
       for (const [k, v] of init.body.entries()) entry.form[k] = typeof v === "string" ? v : `${v.name} (${v.size} bytes)`;
     }
     seen.push(entry);
+    // The app's own server: the real ByteDance pass-through, whose calls to ModelArk come back through this mock.
+    if (u.origin === APP_ORIGIN) return handleBytedanceProxy(new Request(u, init));
     if (KIE_HOSTS.includes(u.hostname)) return kieRoute(u, entry, state);
     if (APIMART_HOSTS.includes(u.hostname)) return apimartRoute(u, entry, state);
     if (REVANA_HOSTS.includes(u.hostname)) return revanaRoute(u, entry, state);
@@ -158,9 +165,10 @@ export function installMockOpenRouter(): MockOpenRouter {
     seen,
     state,
     fal: (path) =>
-      seen.filter((s) => s.host !== "openrouter.ai" && ![...KIE_HOSTS, ...APIMART_HOSTS, ...REVANA_HOSTS, ...BYTEDANCE_HOSTS].includes(s.host) && s.url === path),
+      seen.filter((s) => s.host !== "openrouter.ai" && ![...KIE_HOSTS, ...APIMART_HOSTS, ...REVANA_HOSTS, ...BYTEDANCE_HOSTS, APP_HOST].includes(s.host) && s.url === path),
     revana: (path) => seen.filter((s) => REVANA_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     bytedance: (path) => seen.filter((s) => BYTEDANCE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
+    app: (path) => seen.filter((s) => s.host === APP_HOST && s.url.split("?")[0] === path),
     apimart: (path) => seen.filter((s) => APIMART_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     kie: (path) => seen.filter((s) => KIE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     calls: (url) => seen.filter((s) => s.url === url),
@@ -373,22 +381,27 @@ function revanaRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Respo
   return json(404, { error: { message: `no Revana route ${path}` } });
 }
 
+/** The origin the app is served from in these tests: where a fetch of a bare path goes. */
+const APP_ORIGIN = "http://localhost:3000";
+const APP_HOST = new URL(APP_ORIGIN).hostname;
+
 export const BYTEDANCE_KEY = "ark-test-key";
 export const BYTEDANCE_FILES = "https://ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com";
-const BYTEDANCE_HOSTS = ["ark.ap-southeast.bytepluses.com", new URL(BYTEDANCE_FILES).hostname];
+/** A bucket in the same TOS region that is not ModelArk's: the pass-through never fetches from it. */
+export const BYTEDANCE_OTHER_FILES = "https://someone-else.tos-ap-southeast-1.volces.com";
+const BYTEDANCE_HOSTS = ["ark.ap-southeast.bytepluses.com", new URL(BYTEDANCE_FILES).hostname, new URL(BYTEDANCE_OTHER_FILES).hostname];
 
 /**
- * ByteDance (BytePlus ModelArk): \`ark.ap-southeast.bytepluses.com\` (video tasks; listing them is the key test) and the
- * TOS bucket results come from. Errors are HTTP statuses with \`{ error: { code, message, type } }\`. A task is
- * \`running\` on its first poll and \`succeeded\` after, with 108,900 tokens (5 s at 720p); prompts containing
- * BYTEDANCE_FAIL make it fail (a real face), BYTEDANCE_NOT_OPEN makes the submit a 404 \`ModelNotOpen\`, and
- * BYTEDANCE_BLOCKED makes the result's download fail the way a browser blocks it (no CORS on the bucket).
+ * ByteDance (BytePlus ModelArk), as the pass-through reaches it: \`ark.ap-southeast.bytepluses.com\` (video tasks; listing
+ * them is the key test) and the TOS bucket results come from. Errors are HTTP statuses with
+ * \`{ error: { code, message, type } }\`. A task is \`running\` on its first poll and \`succeeded\` after, with 108,900
+ * tokens (5 s at 720p); prompts containing BYTEDANCE_FAIL make it fail (a real face), BYTEDANCE_NOT_OPEN makes the
+ * submit a 404 \`ModelNotOpen\`, and BYTEDANCE_BLOCKED puts the result on a bucket that is not ModelArk's.
  */
 function bytedanceRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
   const path = u.pathname;
   if (u.hostname !== "ark.ap-southeast.bytepluses.com") {
     if (entry.auth) return json(403, { Code: "AccessDenied", Message: "the key never goes here" });
-    if (path.includes("blocked")) throw new TypeError("Failed to fetch");
     return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
   }
   if (entry.auth !== `Bearer ${BYTEDANCE_KEY}`) {
@@ -417,8 +430,8 @@ function bytedanceRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Re
       return json(200, { ...base, status: "failed", content: null, error });
     }
     if (task.polls === 1) return json(200, { ...base, status: "running", content: null, error: null });
-    const file = id === "cgt-blocked" ? "blocked" : id;
-    return json(200, { ...base, status: "succeeded", content: { video_url: `${BYTEDANCE_FILES}/out/${file}.mp4?X-Tos-Signature=x` }, usage: { completion_tokens: 108900, total_tokens: 108900 }, error: null });
+    const file = id === "cgt-blocked" ? `${BYTEDANCE_OTHER_FILES}/out/blocked.mp4` : `${BYTEDANCE_FILES}/out/${id}.mp4`;
+    return json(200, { ...base, status: "succeeded", content: { video_url: `${file}?X-Tos-Signature=x` }, usage: { completion_tokens: 108900, total_tokens: 108900 }, error: null });
   }
   return json(404, { error: { code: "NotFound", message: `no ByteDance route ${path}`, type: "NotFound" } });
 }

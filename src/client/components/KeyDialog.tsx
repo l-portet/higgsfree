@@ -4,13 +4,14 @@ import { toast } from "sonner";
 import type { ProviderId } from "@shared/types";
 import * as api from "@/lib/api";
 import { ApiClientError, describeApiError } from "@/lib/api";
-import { PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
+import { KEY_VIA_SERVER, PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
 import { useUi } from "@/store/ui";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/Dialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
+import { KeyViaServerNote } from "@/components/KeyViaServerNote";
 
 /** The key is checked before it is saved; only a clear rejection blocks it (an unreachable provider does not). */
 async function checkKey(provider: ProviderId, key: string): Promise<string | null> {
@@ -40,11 +41,13 @@ export function KeyDialog() {
   const [error, setError] = useState<string | null>(null);
   const inputId = useId();
   const hintId = useId();
+  const viaServerId = useId();
 
   const open = prompt !== null;
   const provider: ProviderId = prompt?.provider ?? "openrouter";
   const name = PROVIDER_NAME[provider];
   const copy = PROVIDER_KEYS[provider];
+  const viaServer = KEY_VIA_SERVER[provider];
   const trimmed = value.trim();
   const continues = Boolean(prompt?.onSaved);
 
@@ -85,7 +88,7 @@ export function KeyDialog() {
         <DialogTitle>Add your {name} key</DialogTitle>
         <DialogDescription>
           {prompt?.reason ? `${prompt.reason} ` : ""}
-          It stays in this browser and is only sent to {copy.host}.
+          {viaServer ? "It stays in this browser." : `It stays in this browser and is only sent to ${copy.host}.`}
         </DialogDescription>
 
         <form onSubmit={(e) => void onSave(e)} className="mt-5" aria-describedby={hintId}>
@@ -106,6 +109,7 @@ export function KeyDialog() {
             spellCheck={false}
             autoFocus
             aria-invalid={error ? true : undefined}
+            aria-describedby={viaServer ? viaServerId : undefined}
             className="[&_input]:h-[34px] [&_input]:font-mono [&_input]:text-[13px]"
             rightSlot={
               <IconButton label={reveal ? "Hide key" : "Show key"} size="sm" onClick={() => setReveal((r) => !r)} aria-pressed={reveal} disabled={!value}>
@@ -113,6 +117,7 @@ export function KeyDialog() {
               </IconButton>
             }
           />
+          {viaServer ? <KeyViaServerNote id={viaServerId} text={viaServer} /> : null}
           {error ? (
             <p role="alert" className="mt-2 flex items-start gap-1.5 text-meta text-danger">
               <CircleAlert size={13} className="mt-0.5 shrink-0" aria-hidden="true" />

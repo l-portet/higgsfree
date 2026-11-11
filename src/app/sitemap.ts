@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { siteHref } from "@shared/site";
 
-/** `output: "export"` prerenders this only when the handler is explicitly static. */
+/** Prerendered at build time, like the pages: nothing here depends on the request. */
 export const dynamic = "force-static";
 
 /**

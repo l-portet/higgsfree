@@ -1,20 +1,19 @@
 /**
  * Thin ByteDance client for the browser: BytePlus ModelArk, ByteDance's own model platform outside China, in region
- * ap-southeast-1 (`Authorization: Bearer <ModelArk API key>`). Errors are HTTP statuses with
- * `{ error: { code, message, type } }`:
+ * ap-southeast-1 (`Authorization: Bearer <ModelArk API key>`). Unlike every other provider, ModelArk is not called
+ * from the browser: it refuses browser calls (docs/BYTEDANCE.md), so each call goes to this site's own pass-through
+ * (`/api/bytedance/…`, `src/server/bytedance-proxy.ts`), which forwards it once to ModelArk with the key and keeps
+ * nothing. Errors are ModelArk's own HTTP statuses with `{ error: { code, message, type } }`:
  *
- *  - `POST https://ark.ap-southeast.bytepluses.com/api/v3/contents/generations/tasks` `{ model, content, … }` → `{ id }`.
+ *  - `POST /api/bytedance/v3/contents/generations/tasks` `{ model, content, … }` → `{ id }`.
  *  - `GET  …/contents/generations/tasks/<id>` → `status` (`queued`, `running`, `succeeded`, `failed`, `expired`,
  *    `cancelled`), `content.video_url` (on ModelArk's storage, kept 24 hours), `usage.completion_tokens`, `error`.
  *  - `GET  …/contents/generations/tasks?page_size=1` → the key's tasks: the key test (nothing is charged).
+ *  - `POST /api/bytedance/media` `{ url }` → the finished video, read by the server from ModelArk's storage, no key.
  *
- * Images go inline as data URLs; there is no upload. The key only ever goes to the API host.
- *
- * CORS, probed from a browser on 11 Nov 2026 (docs/BYTEDANCE.md): the API's preflights pass, but its error answers
- * carry no `Access-Control-Allow-Origin`, so the browser sees a failed fetch instead of ModelArk's message; and the
- * storage bucket the results are on has CORS turned off, so a finished video may not be readable either. Each of
- * those failures gets a message that says what to check.
+ * Images go inline as data URLs; there is no upload. The key only ever goes to the pass-through, on this origin.
  */
+import { BYTEDANCE_PROXY_API, BYTEDANCE_PROXY_MAX_BODY_BYTES, BYTEDANCE_PROXY_MEDIA, BYTEDANCE_TASK_ID, isBytedanceFileUrl } from "@shared/bytedance-proxy";
 import { BYTEDANCE_VIDEO_MODELS } from "@shared/bytedance-prices";
 import type { VideoResolution } from "@shared/types";
 import { base64ToBytes } from "./data-url";
@@ -22,47 +21,51 @@ import { ApiClientError } from "./errors";
 import { detectImage } from "./image-meta";
 import { abortedError, anySignal } from "./openrouter";
 
-export const BYTEDANCE_API = "https://ark.ap-southeast.bytepluses.com/api/v3";
-const KEY_HOSTS = new Set(["ark.ap-southeast.bytepluses.com"]);
+/** ModelArk's API, as the browser reaches it: through the pass-through on this origin. */
+export const BYTEDANCE_API = BYTEDANCE_PROXY_API;
+/** Stands in for this origin when checking a url; only the path and query are ever fetched. */
+const SAME_ORIGIN = "https://higgsfree.invalid";
 
 /** Where each model is switched on for the account: a model that is not gets `ModelNotOpen`. */
 export const BYTEDANCE_ACTIVATE_URL = "https://ai.byteplus.com/ark/region:ap-southeast-1/openManagement";
 export const BYTEDANCE_KEY_REJECTED = "ByteDance rejected the API key";
-/** A request that failed with nothing the browser can read: ModelArk's errors carry no CORS headers. */
-export const BYTEDANCE_UNREADABLE = "ByteDance request failed: check the key, and that the model is activated in the BytePlus console";
-/** ModelArk's limits on an inline image and on a whole request. */
+/** Nothing answered: the browser is offline, or this site's server is down. */
+export const BYTEDANCE_UNREACHABLE = "Could not reach this site's server, which passes ByteDance calls on: check your connection";
+/** What a copy of the app with no pass-through answers (a static export of it, or a host that only serves files). */
+export const BYTEDANCE_NO_SERVER = "This copy of higgsfree has no server to pass ByteDance calls on (ModelArk refuses calls from a browser), so ByteDance can't run here";
+/** ModelArk's limit on an inline image. A whole request goes up to `BYTEDANCE_PROXY_MAX_BODY_BYTES`, the pass-through's. */
 export const BYTEDANCE_MAX_IMAGE_BYTES = 30 * 1024 * 1024;
-export const BYTEDANCE_MAX_BODY_BYTES = 64 * 1024 * 1024;
 
-/** Thrown when a url to call is off ModelArk's API host; the key never goes there. */
+/** Thrown when a url to call is not the pass-through on this origin; the key never goes there. */
 export class BytedanceOriginError extends ApiClientError {
-  constructor(host: string) {
-    super(502, `Refusing to send the ByteDance key to ${host}`);
+  constructor(where: string) {
+    super(502, `Refusing to send the ByteDance key to ${where}`);
     this.name = "BytedanceOriginError";
   }
 }
 
+/** The pass-through path and query `url` stands for; anything off this origin or outside `/api/bytedance/v3/` throws. */
 export function assertBytedanceOrigin(url: string): string {
-  const u = new URL(url);
-  if (u.protocol !== "https:" || !KEY_HOSTS.has(u.hostname)) throw new BytedanceOriginError(u.host);
-  return u.toString();
+  const u = new URL(url, SAME_ORIGIN);
+  if (u.origin !== SAME_ORIGIN || !u.pathname.startsWith(`${BYTEDANCE_API}/`)) throw new BytedanceOriginError(u.origin === SAME_ORIGIN ? u.pathname : u.host);
+  return u.pathname + u.search;
 }
 
 /**
- * A finished video the browser may not read (ModelArk's storage sends no CORS headers). It ends the job: retrying
+ * A finished video the server would not fetch (a host or redirect off ModelArk's storage). It ends the job: retrying
  * would only spend the link's downloads (Seedance 2.5 allows 100). The link itself still opens in a tab.
  */
 export class BytedanceDownloadBlockedError extends ApiClientError {
   constructor(url: string) {
-    super(502, `ByteDance made the video, but its file host does not let the browser download it. It opens in a new tab for 24 hours: ${url}`);
+    super(502, `ByteDance made the video, but on a file host the higgsfree server does not download from. It opens in a new tab for 24 hours: ${url}`);
     this.name = "BytedanceDownloadBlockedError";
   }
 }
 
-/** A failed fetch as an `ApiClientError` that names ByteDance: unreadable, timed out or cancelled. */
+/** A failed fetch as an `ApiClientError` that names ByteDance: unreachable, timed out or cancelled. */
 function bytedanceAbortedError(signal: AbortSignal, err: unknown): ApiClientError {
   const e = abortedError(signal, err);
-  if (e.status === 0) return new ApiClientError(0, BYTEDANCE_UNREADABLE, e.provider);
+  if (e.status === 0) return new ApiClientError(0, BYTEDANCE_UNREACHABLE, e.provider);
   if (e.status === 504) return new ApiClientError(504, "ByteDance request timed out");
   return e;
 }
@@ -77,13 +80,22 @@ export function bytedanceMessage(code: string | undefined, message: string | und
   return message || code || undefined;
 }
 
-/** `{ error: { code, message } }`, or a bare string. */
-function bodyMessage(body: unknown): string | undefined {
-  if (typeof body === "string") return body.slice(0, 500) || undefined;
+/** The `{ error: { code, message } }` ModelArk (or the pass-through) answers with, if that is what came back. */
+function errorOf(body: unknown): { code?: string; message?: string } | undefined {
   const error = body && typeof body === "object" ? (body as { error?: unknown }).error : undefined;
   if (!error || typeof error !== "object") return undefined;
   const { code, message } = error as { code?: unknown; message?: unknown };
-  return bytedanceMessage(typeof code === "string" ? code : undefined, typeof message === "string" ? message : undefined);
+  return { ...(typeof code === "string" ? { code } : {}), ...(typeof message === "string" ? { message } : {}) };
+}
+
+/** The response's JSON, or undefined when it is empty or not JSON (a host's own error page). */
+async function readJson(res: Response): Promise<unknown> {
+  const text = await res.text();
+  try {
+    return text ? (JSON.parse(text) as unknown) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function request<T>(url: string, opts: { key: string; method?: "GET" | "POST"; body?: string; timeoutMs?: number; signal?: AbortSignal }): Promise<T> {
@@ -96,19 +108,21 @@ async function request<T>(url: string, opts: { key: string; method?: "GET" | "PO
       method: opts.method ?? "GET",
       headers: opts.body === undefined ? { Authorization: `Bearer ${opts.key}` } : { Authorization: `Bearer ${opts.key}`, "Content-Type": "application/json" },
       body: opts.body,
+      cache: "no-store",
       signal,
     });
-    const text = await res.text();
-    body = text ? JSON.parse(text) : undefined;
+    body = await readJson(res);
   } catch (err) {
-    if (err instanceof SyntaxError) throw new ApiClientError(502, "ByteDance returned a non-JSON response");
     throw bytedanceAbortedError(signal, err);
   }
+  const error = errorOf(body);
   if (!res.ok) {
-    const msg = bodyMessage(body) ?? `ByteDance returned HTTP ${res.status}`;
     if (res.status === 401) throw new ApiClientError(401, BYTEDANCE_KEY_REJECTED, body);
-    throw new ApiClientError(res.status, msg, body);
+    // No JSON error at all: the page a host without the pass-through answers with.
+    if (!error && (res.status === 404 || res.status === 405)) throw new ApiClientError(501, BYTEDANCE_NO_SERVER);
+    throw new ApiClientError(res.status, bytedanceMessage(error?.code, error?.message) ?? `ByteDance returned HTTP ${res.status}`, body);
   }
+  if (body === undefined) throw new ApiClientError(502, "ByteDance returned a non-JSON response");
   return body as T;
 }
 
@@ -117,16 +131,20 @@ async function request<T>(url: string, opts: { key: string; method?: "GET" | "PO
 /** Submit a video task (`{ model, content, … }`); resolves with its id. */
 export async function submitVideo(key: string, payload: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
   const body = JSON.stringify(payload);
-  // Images go inline, so a run with large ones can outgrow the request.
-  if (body.length > BYTEDANCE_MAX_BODY_BYTES) throw new ApiClientError(413, "Too large for ByteDance: images go inside the request, which takes up to 64 MB");
+  // Images go inline, so a run with large ones can outgrow what the pass-through takes (Vercel's limit, not ModelArk's).
+  if (new TextEncoder().encode(body).byteLength > BYTEDANCE_PROXY_MAX_BODY_BYTES) {
+    throw new ApiClientError(413, `Too large for ByteDance: images go inside the request, which the higgsfree server passes on up to ${BYTEDANCE_PROXY_MAX_BODY_BYTES / 1024 / 1024} MB. Try smaller images.`);
+  }
   const res = await request<{ id?: unknown }>(`${BYTEDANCE_API}/contents/generations/tasks`, { key, method: "POST", body, timeoutMs: 90_000, signal });
   if (typeof res?.id !== "string" || !res.id) throw new ApiClientError(502, "ByteDance did not return a task id", res);
   return res.id;
 }
 
-/** Where a task is polled (stored as the record's polling url). */
+/** Where a task is polled (stored as the record's polling url): the pass-through's path, on this origin. */
 export function taskUrl(id: string): string {
-  return `${BYTEDANCE_API}/contents/generations/tasks/${encodeURIComponent(id)}`;
+  // The pass-through only polls ids of ModelArk's own shape (`cgt-…`), so nothing in one can reach another path.
+  if (!BYTEDANCE_TASK_ID.test(id)) throw new ApiClientError(502, `ByteDance returned a task id the app does not recognise: ${id.slice(0, 80)}`);
+  return `${BYTEDANCE_API}/contents/generations/tasks/${id}`;
 }
 
 export interface BytedanceTask {
@@ -168,20 +186,29 @@ export async function task(key: string, url: string, signal?: AbortSignal): Prom
   return out;
 }
 
-/** Download a result, without the key. A fetch the browser blocks ends the job with the link (`BytedanceDownloadBlockedError`). */
+/** What the pass-through answers when it will not fetch a url (`src/server/bytedance-proxy.ts`). */
+const MEDIA_REFUSED = new Set(["HostNotAllowed", "RedirectNotAllowed"]);
+
+/**
+ * Download a result through the pass-through (ModelArk's storage lets no browser read it), without the key. A url the
+ * server will not fetch ends the job with the link (`BytedanceDownloadBlockedError`).
+ */
 export async function download(url: string, signal?: AbortSignal, timeoutMs = 10 * 60_000): Promise<Blob> {
-  const u = new URL(url);
-  if (u.protocol !== "https:") throw new ApiClientError(502, "ByteDance returned a non-https file url");
+  if (!isBytedanceFileUrl(url)) throw new BytedanceDownloadBlockedError(url);
   const s = anySignal([AbortSignal.timeout(timeoutMs), signal]);
   let res: Response;
   try {
-    res = await fetch(u.toString(), { signal: s });
+    res = await fetch(BYTEDANCE_PROXY_MEDIA, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }), cache: "no-store", signal: s });
   } catch (err) {
-    const e = abortedError(s, err);
-    if (e.status === 0) throw new BytedanceDownloadBlockedError(u.toString());
+    const e = bytedanceAbortedError(s, err);
     throw e.status === 504 ? new ApiClientError(504, "ByteDance file download timed out") : e;
   }
-  if (!res.ok) throw new ApiClientError(502, `ByteDance file download failed (HTTP ${res.status})`);
+  if (!res.ok) {
+    const error = errorOf(await readJson(res).catch(() => undefined));
+    if (error?.code && MEDIA_REFUSED.has(error.code)) throw new BytedanceDownloadBlockedError(url);
+    if (!error && (res.status === 404 || res.status === 405)) throw new ApiClientError(501, BYTEDANCE_NO_SERVER);
+    throw new ApiClientError(502, `ByteDance file download failed (${error?.message ?? `HTTP ${res.status}`})`);
+  }
   return res.blob();
 }
 

@@ -1,13 +1,15 @@
 # Security
 
-higgsfree is a static site. It has no server of its own, no database and no accounts: the browser holds
-your keys (OpenRouter, and fal if you add one) and your library, and talks to OpenRouter and fal directly.
-Every security question therefore comes down to the browser and the origin the app is served from.
+higgsfree runs in the browser. It has no database and no accounts: the browser holds your keys and your library,
+and talks to OpenRouter, fal, kie.ai, APIMart and Revana directly. Its only server code is a stateless pass-through
+for ByteDance (`src/server/bytedance-proxy.ts`), whose API refuses browser calls: a ByteDance key and its requests go
+through the app's own server on their way to ByteDance, and nothing of them is kept. Every other security question
+comes down to the browser and the origin the app is served from.
 
 ## Where your keys live
 
-There are two keys, each stored in this browser's localStorage and nowhere else, and each sent only to its
-own provider.
+Each key is stored in this browser's localStorage and nowhere else, and each is sent only to its own provider. The
+ByteDance key is the one that travels through the app's server on the way (below).
 
 - **OpenRouter** (`higgsfree.apiKey`) is sent with exactly one kind of request: calls to
   `https://openrouter.ai` (or the `NEXT_PUBLIC_OPENROUTER_BASE_URL` the site was built with). A url
@@ -17,7 +19,18 @@ own provider.
   `queue.fal.run`, `rest.fal.ai` and `api.fal.ai`. The status url fal hands back for a video job is checked
   against those hosts before the key travels with it; anything else is refused (`assertFalOrigin` in
   `src/client/lib/fal.ts`). fal's result files and the presigned upload url are fetched without the key.
-- The app never logs either key and never puts one in a url; the UI shows them masked (`sk-or-v1-…a1b2`).
+- kie.ai, APIMart and Revana keys go only to their own API hosts in the same way (`assertKieOrigin`,
+  `assertApimartOrigin`, `assertRevanaOrigin`).
+- **ByteDance** (`higgsfree.bytedanceKey`, optional) is the exception. ByteDance's BytePlus ModelArk blocks browser
+  calls (no CORS headers on its errors or its result files, and its image API refuses the `Authorization` header), so
+  the browser sends the key, in the `Authorization` header, only to the pass-through on its own origin
+  (`/api/bytedance/v3/…`, `assertBytedanceOrigin` in `src/client/lib/bytedance.ts`). The server uses it once to call
+  `https://ark.ap-southeast.bytepluses.com/api/v3` and drops it: nothing stores, caches or logs it (no module state,
+  no console output, `Cache-Control: no-store`, fixed error messages), and it forwards only the three calls the app
+  makes (submit a video task, read one by its `cgt-…` id, list one task as the key test), refusing anything else
+  before it leaves the server. Finished videos are fetched by the server from ModelArk's own storage bucket only,
+  without the key. Settings › Keys and the key dialog say this next to the ByteDance key field.
+- The app never logs a key and never puts one in a url; the UI shows them masked (`sk-or-v1-…a1b2`).
 - Use a **dedicated OpenRouter key with a spend limit** for this app, and rotate it any time at
   <https://openrouter.ai/keys>. Test connection in Settings › Keys shows the key's label, spend limit and
   remaining credits; **Remove key** deletes it from the browser. Rotate the fal key at
@@ -66,8 +79,6 @@ What the app does about it:
     `upload.apimart.ai`);
   - Revana (`api.revana.si`) and the Cloudflare R2 storage its uploads and results use
     (`*.r2.cloudflarestorage.com`);
-  - ByteDance's BytePlus ModelArk (`ark.ap-southeast.bytepluses.com`) and the TOS storage its videos come from
-    (`*.tos-ap-southeast-1.volces.com`);
   - Google Analytics (`*.google-analytics.com`, `*.analytics.google.com`, `*.googletagmanager.com`);
   - Microsoft Clarity (`*.clarity.ms`).
 
@@ -78,7 +89,11 @@ What the app does about it:
   `storage.googleapis.com` serves every Google Cloud Storage bucket, Google's analytics endpoints take hits
   for any property, and Clarity's take uploads for any project. The list narrows where an injected script
   can send the keys; it does not close it.
-- **`X-Content-Type-Options: nosniff`** on every response (`vercel.json`, `docker/nginx.conf`).
+  ByteDance needs no entry: the browser only reaches it through the app's own origin (`'self'`).
+- **`X-Content-Type-Options: nosniff`** and **`frame-ancestors 'none'`** on every response (`vercel.json`; the
+  Docker image's standalone server sends the same headers, from `next.config.ts`). The ByteDance pass-through's
+  answers also carry `Cache-Control: no-store`, and the videos it streams are typed as videos (anything else as
+  `application/octet-stream`) under `Content-Security-Policy: default-src 'none'; sandbox`.
 - Media are shown through `blob:` object urls, never by url from anywhere else.
 
 The origin is the trust boundary: whoever controls the files served at the url you use controls the keys.
@@ -110,24 +125,29 @@ On Revana, each frame, reference and video to edit is uploaded to Revana's stora
 Cloudflare R2) and passed as a keyless `api.revana.si` link, kept 14 days. Its results are read with the key
 from `api.revana.si`, which redirects to a short-lived file url.
 
-On ByteDance (BytePlus ModelArk), frames and reference images travel inline in the request; nothing is uploaded.
-Its videos are presigned urls on its TOS storage for 24 hours, downloaded without the key; when the browser may not
-read one, the run's error shows that url.
+On ByteDance (BytePlus ModelArk), frames and reference images travel inline in the request, through the app's
+server; nothing is uploaded. Its videos are presigned urls on its TOS storage for 24 hours, read through the app's
+server without the key; a url on any other host is never fetched, and the run's error shows it instead.
 
 The app does not keep these urls, but the providers have them. Treat anything you send to fal, kie.ai,
 APIMart, Revana or ByteDance, and anything they make, as reachable by url.
 
 ## What a hosted copy can see
 
-The host serves static files and nothing else. It never receives your keys, your prompts, your
-generations or your reference images and videos: those go from the browser to OpenRouter or fal and into
-IndexedDB. A host sees ordinary web-server traffic (your IP address, which pages you load). Vercel adds
-nothing on top (the only configuration there is the nosniff header), but production builds load Google
+The host serves the pages and runs the ByteDance pass-through. It never receives your OpenRouter, fal, kie.ai,
+APIMart or Revana keys, your library, or what you send those providers: that goes from the browser to them and
+into IndexedDB. A host sees ordinary web-server traffic (your IP address, which pages you load) and, if you use
+ByteDance, your ByteDance calls as they pass through: the key, the prompt and options, the frames and references,
+and the finished video's link and bytes. The code it runs keeps none of that (no storage, no logs, nothing cached),
+but whoever controls the server controls that code, which is one more reason to use a copy you deploy yourself.
+The url of each call (`/api/bytedance/v3/contents/generations/tasks/cgt-…`) is in the host's ordinary request logs,
+like any page load; the key and the video's presigned link are not (they travel in a header and in a request body).
+Vercel adds nothing on top (the only configuration there is the headers above), but production builds load Google
 Analytics and Microsoft Clarity (see above), so Google sees page views and Microsoft sees session recordings.
 
 ## Shared computers
 
-- The keys and the library belong to the browser profile. On a shared machine, **Remove key** for both
+- The keys and the library belong to the browser profile. On a shared machine, **Remove key** for each
   (Settings › Keys) when you are done; the library
   stays, so export it first if you want to keep it, or **Delete everything**.
 - A private window starts empty and forgets everything when it closes (some browsers block IndexedDB there,
@@ -137,7 +157,8 @@ Analytics and Microsoft Clarity (see above), so Google sees page views and Micro
 ## Reporting a vulnerability
 
 Please open a GitHub issue for anything that is not sensitive. If the report could put users at risk (e.g.
-a way to read a stored key from another origin, or to make a key go anywhere other than its provider),
+a way to read a stored key from another origin, to make a key go anywhere other than its provider, or to make the
+ByteDance pass-through call or fetch anything off its allowlist),
 open a
 [private security advisory](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
 on the repository instead so it can be fixed before it's public.

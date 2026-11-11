@@ -12,20 +12,26 @@ pnpm install                  # pnpm 11, Node >= 22
 pnpm dev                      # Next.js on :3000; paste a key behind Add key
 ```
 
-There is no server, database or secret to set up: the keys and the library live in the browser.
+There is no database or secret to set up: the keys and the library live in the browser (`pnpm dev` also serves the
+one server route, the ByteDance pass-through).
 `cp .env.example .env.local` only matters if you want to change one of the three build-time values
 (site url for social cards, OpenRouter base url for a proxy, app name for `X-Title`).
 
-Other scripts: `pnpm typecheck`, `pnpm lint`, `pnpm test` (vitest), `pnpm build` (static export to
-`out/`), `pnpm preview` (serves `out/`), `pnpm format` / `pnpm format:check` (Prettier).
+Other scripts: `pnpm typecheck`, `pnpm lint`, `pnpm test` (vitest), `pnpm build` (prerendered pages plus the
+ByteDance pass-through, in `.next/`), `pnpm start` / `pnpm preview` (serve that build), `pnpm format` /
+`pnpm format:check` (Prettier).
 
 ## Layout
 
 ```
 src/
   app/        Next.js App Router: the root layout (metadata, fonts, the production CSP), one thin
-              client page per route, the error screens, and `/` redirecting to `/image` on the client
-  shared/     types.ts (the UI ⇄ data-layer contract) · models.ts (the model catalog)
+              client page per route, the error screens, and `/` redirecting to `/image` on the client;
+              api/bytedance/[...path]/route.ts mounts the ByteDance pass-through
+  server/     bytedance-proxy.ts: the only server code, a stateless pass-through to ByteDance's ModelArk
+              (an allowlist of calls; the key used once, never stored or logged) · __tests__/
+  shared/     types.ts (the UI ⇄ data-layer contract) · models.ts (the model catalog) ·
+              bytedance-proxy.ts (what the pass-through allows, shared by the client and the server)
   client/
     lib/
       openrouter.ts   the OpenRouter client: headers, origin check, errors, the live model list
@@ -48,7 +54,6 @@ src/
                       fal integration tests
     features/         one folder per view · components/ composer, ui, settings · store/ zustand
 public/       icons, manifest, sample stills
-docker/       nginx.conf for the static image
 docs/         OPENROUTER.md, FAL.md (integration rules) · DESIGN.md (visual spec) · MODELS.md
               (catalog)
 ```
@@ -58,14 +63,19 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
 
 ## Rules of the road
 
-- **Nothing that needs a server.** The site must build with `output: "export"`: no route handlers, no
-  server actions, no `headers()` / `cookies()` / `redirect()` on the server, no `redirects` / `rewrites` /
-  `headers` in `next.config.ts`, no proxy or middleware; `next/image` stays `unoptimized`. Anything that
-  needs a runtime runs in the browser. CI checks that `out/` contains the expected pages.
-- **Each key goes to one place.** Never log a key or store it anywhere but `higgsfree.apiKey` (OpenRouter)
-  and `higgsfree.falKey` (fal). The OpenRouter key goes only to OpenRouter's origin
-  (`assertProviderOrigin`), the fal key only to fal's API hosts (`assertFalOrigin`); fal's CDN and upload
-  urls never get it. See [SECURITY.md](SECURITY.md).
+- **Nothing else that needs a server.** The one exception is the ByteDance pass-through
+  (`src/server/bytedance-proxy.ts`), because ModelArk refuses browser calls; it forwards only an allowlist of calls
+  and never stores, caches or logs a key or a request. Every other provider stays in the browser, and so does
+  everything else: no other route handlers, no server actions, no `headers()` / `cookies()` / `redirect()` on the
+  server, no `redirects` / `rewrites` in `next.config.ts`, no proxy or middleware; every page stays prerendered
+  (`○` in the build output) and `next/image` stays `unoptimized`. Don't widen the pass-through's allowlist (paths,
+  methods, queries, file hosts) without a test, and never add logging to it. CI starts the built server and checks
+  that the pages answer and that the pass-through refuses what it should.
+- **Each key goes to one place.** Never log a key or store it anywhere but its own localStorage entry
+  (`higgsfree.apiKey` for OpenRouter, `higgsfree.falKey` for fal, and so on). The OpenRouter key goes only to
+  OpenRouter's origin (`assertProviderOrigin`), the fal key only to fal's API hosts (`assertFalOrigin`); fal's CDN
+  and upload urls never get it. The ByteDance key goes only to the pass-through on the app's own origin
+  (`assertBytedanceOrigin`), which sends it only to ModelArk's API host. See [SECURITY.md](SECURITY.md).
 - **Match `docs/OPENROUTER.md`, `docs/FAL.md` and `docs/DESIGN.md`.** They encode verified
   OpenRouter behaviour (HTTP 202 on video submit, `frame_images` for i2v, downloading results with
   the Bearer header, etc.), the fal rules (the `Key` header, the queue's own status urls, keyless CDN
@@ -112,12 +122,12 @@ the PR description.
 pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
-CI runs the same four commands on Node 22 and 24, checks that `out/` contains the expected pages, and
-builds the Docker image. Please also:
+CI runs the same four commands on Node 22 and 24, starts the built server for a smoke test (the pages, and
+what the ByteDance pass-through refuses), and builds the Docker image. Please also:
 
 - Describe what you tested manually (which model, which mode, which browser).
 - Add screenshots for UI changes (dark theme, 1400px-wide content area).
-- Don't commit `.env*` files (other than `.env.example`), `out/`, or generated media.
+- Don't commit `.env*` files (other than `.env.example`), `.next/`, or generated media.
 
 ## Reporting bugs / requesting models
 

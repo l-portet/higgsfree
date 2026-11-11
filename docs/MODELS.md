@@ -360,8 +360,10 @@ list (`REVANA_MODELS`), and a run goes there whenever it is the cheapest. Revana
 With a ByteDance key, Seedance 2.5, 2.0, 2.0 Fast and 2.0 Mini also run on ByteDance's own platform, BytePlus
 ModelArk ([BYTEDANCE.md](BYTEDANCE.md)), billed per video token at ModelArk's rates (`BYTEDANCE_VIDEO_MODELS`), and a
 run goes there whenever it is the cheapest. That is never the case with every key set (OpenRouter charges the same and
-wins the tie; APIMart and Revana are cheaper), but it beats fal and kie.ai on Seedance 2.5 and 2.0. No image model
-is routed: ModelArk's image API does not take a key from a browser. Not verified with a real key.
+wins the tie; APIMart and Revana are cheaper), but it beats fal and kie.ai on Seedance 2.5 and 2.0. Its calls go
+through the app's server, the one provider that does (ModelArk refuses browser calls). No image model is routed: the
+Seedream models ModelArk has (5.0 Pro, Flash and Lite, 4.5, 4.0) are not in the curated catalog, and the catalog's
+Seedream 5.5 is not on ModelArk. Not verified with a real key.
 
 | Model | ModelArk id | Resolutions | Durations |
 |---|---|---|---|

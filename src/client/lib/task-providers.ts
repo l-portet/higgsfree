@@ -48,7 +48,7 @@ export interface TaskProvider {
   download(url: string, signal?: AbortSignal, key?: string): Promise<Blob>;
   /**
    * An error that ends the job at once rather than being retried: a url off the provider's own hosts, or (ByteDance) a
-   * finished video the browser may not download.
+   * finished video on a host the server will not fetch from.
    */
   endsJob(err: unknown): boolean;
 }

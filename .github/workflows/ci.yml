@@ -51,8 +51,19 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      - name: Static export sanity
-        run: test -f out/index.html && test -f out/image.html && test -f out/404.html
+      # The built server: the pages answer, and the ByteDance pass-through refuses what it should (no key, a call the
+      # app does not make, a file off ModelArk's storage) without ever reaching ByteDance.
+      - name: Server smoke test
+        run: |
+          pnpm start --port 3000 > next-start.log 2>&1 &
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+          curl -fsS --retry 30 --retry-delay 1 --retry-all-errors -o /dev/null http://127.0.0.1:3000/image
+          for page in / /video /favorites /settings /robots.txt /sitemap.xml; do curl -fsS -o /dev/null "http://127.0.0.1:3000$page"; done
+          test "$(code http://127.0.0.1:3000/no-such-page)" = 404
+          test "$(code http://127.0.0.1:3000/api/bytedance/v3/contents/generations/tasks/cgt-1)" = 401
+          test "$(code -X POST -H 'Authorization: Bearer x' http://127.0.0.1:3000/api/bytedance/v3/chat/completions)" = 404
+          test "$(code -H 'Authorization: Bearer x' http://127.0.0.1:3000/api/bytedance/v3/contents/generations/tasks/..%2Fx)" = 400
+          test "$(code -X POST -H 'Content-Type: application/json' -d '{"url":"https://example.com/x.mp4"}' http://127.0.0.1:3000/api/bytedance/media)" = 403
 
   docker:
     name: Docker image (build only)

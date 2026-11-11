@@ -7,13 +7,14 @@ import { describeApiError } from "@/lib/api";
 import { BYTEDANCE_ACTIVATE_URL } from "@/lib/bytedance";
 import { formatUsd } from "@/lib/format";
 import { KIE_CREDIT_USD } from "@/lib/kie";
-import { PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
+import { KEY_VIA_SERVER, PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
+import { KeyViaServerNote } from "@/components/KeyViaServerNote";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { FieldLabel, SettingsCard } from "./SettingsCard";
 
@@ -54,8 +55,10 @@ function ProviderKeyCard({ provider, settings, description, offHint }: { provide
   const [test, setTest] = useState<TestState>(null);
   const inputId = useId();
   const hintId = useId();
+  const viaServerId = useId();
 
   const name = PROVIDER_NAME[provider];
+  const viaServer = KEY_VIA_SERVER[provider];
   const masked = settings?.keys[provider];
   const hasKey = Boolean(masked);
   const trimmed = value.trim();
@@ -134,7 +137,7 @@ function ProviderKeyCard({ provider, settings, description, offHint }: { provide
             placeholder={PROVIDER_KEYS[provider].placeholder}
             autoComplete="off"
             spellCheck={false}
-            aria-describedby={hintId}
+            aria-describedby={viaServer ? `${viaServerId} ${hintId}` : hintId}
             className="font-mono [&_input]:font-mono [&_input]:text-[12px]"
             rightSlot={
               <IconButton label={reveal ? "Hide key" : "Show key"} size="sm" onClick={() => setReveal((r) => !r)} aria-pressed={reveal} disabled={!value}>
@@ -142,10 +145,11 @@ function ProviderKeyCard({ provider, settings, description, offHint }: { provide
               </IconButton>
             }
           />
+          {viaServer ? <KeyViaServerNote id={viaServerId} text={viaServer} /> : null}
           <p id={hintId} className="mt-2 text-meta">
             {hasKey ? (
               <>
-                Using <span className="text-mono text-fg">{masked}</span>. Stored in this browser only. Sent only to {name}.
+                Using <span className="text-mono text-fg">{masked}</span>. Stored in this browser only.{viaServer ? "" : ` Sent only to ${name}.`}
               </>
             ) : (
               offHint
@@ -259,7 +263,7 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
             <KeysLink provider="bytedance" href={BYTEDANCE_ACTIVATE_URL}>
               activation page
             </KeysLink>
-            . Not tried with a real key yet: if ModelArk keeps the finished video from the browser, the run gives its link instead.
+            . Not tried with a real key yet.
           </>
         }
         offHint="No key yet. Runs go to the other providers until one is saved here."

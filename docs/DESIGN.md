@@ -271,7 +271,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
 - **fal, kie.ai, APIMart, Revana and ByteDance key cards** (`ProviderKeyCard`): the OpenRouter card's anatomy, titled "fal key" / "kie.ai key" / "APIMart key" / "Revana key" / "ByteDance key" with
   a Connected / Not set badge, a line on what the key opens with a link to the provider's keys page, a monospace
   password field, Save / Test connection / Remove key (confirm dialog). kie's and APIMart's test results add the
-  balance ("Balance: 1,234 credits ($6.17)", "Balance: $12.50").
+  balance ("Balance: 1,234 credits ($6.17)", "Balance: $12.50"). The ByteDance card (and the key dialog, for
+  ByteDance) has a note right under the field (`KeyViaServerNote`: a `Server` icon in `warning`, `warning/25` border
+  on `warning/5`, `text-meta`): its key goes through the higgsfree server, which never stores it. Its "Using …" hint
+  then drops "Sent only to ByteDance".
 - **Library card**: a usage line ("Using 1.2 GB of 60 GB the browser allows") over a thin bar (accent, `danger` from
   90 %), then two tiles, Images and Videos (count · size, files), with a reference-images line under them. Below a
   divider, "Protected from eviction" with a Yes / Not yet badge and a Protect button while it is not (Safari gets a

@@ -23,7 +23,7 @@ function ExternalRow({ href, icon, children }: { href: string; icon: React.React
 
 export function AboutCard() {
   return (
-    <SettingsCard icon={<Info />} title="About" description="Open-source studio on your OpenRouter key. Runs entirely in your browser.">
+    <SettingsCard icon={<Info />} title="About" description="Open-source studio on your OpenRouter key. Runs in your browser; only ByteDance calls pass through the server, which keeps nothing.">
       <dl className="divide-y divide-border">
         <Row label="Version" mono>
           {`v${APP_VERSION}`}

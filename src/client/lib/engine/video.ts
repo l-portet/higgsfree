@@ -38,7 +38,7 @@ import { failGeneration, isCancelled, NOT_ACQUIRED, savePublish, tryWithJobLock 
 const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$${c.toFixed(4)}`);
 
 /**
- * Only a 400 / 404 / 422 (or a url on a foreign origin, or a ByteDance video the browser may not download) ends the
+ * Only a 400 / 404 / 422 (or a url on a foreign origin, or a ByteDance video the server will not fetch) ends the
  * job. 401 / 403 are transient: the key may have just been rotated, so keep polling with whatever key is configured
  * until `JOB_TIMEOUT_MS` runs out.
  */

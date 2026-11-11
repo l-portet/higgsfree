@@ -21,6 +21,16 @@ export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; plac
   bytedance: { url: "https://ai.byteplus.com/ark/region:ap-southeast-1/apikey", host: "ark.ap-southeast.bytepluses.com", placeholder: "Your ModelArk API key" },
 };
 
+/**
+ * Shown next to the key field of a provider whose key goes through this site's server instead of straight from the
+ * browser: ByteDance, whose API blocks browser calls (`src/server/bytedance-proxy.ts` forwards each call and keeps
+ * nothing). Every other key is only ever sent from the browser to its provider.
+ */
+export const KEY_VIA_SERVER: Partial<Record<ProviderId, string>> = {
+  bytedance:
+    "Unlike the other providers, your ByteDance key is sent to the higgsfree server so it can call ByteDance's API (it blocks direct browser calls). It is only used to forward your request and is never stored or logged.",
+};
+
 export function isProviderId(v: unknown): v is ProviderId {
   return typeof v === "string" && (PROVIDER_IDS as readonly string[]).includes(v);
 }

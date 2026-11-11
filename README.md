@@ -4,7 +4,7 @@
 
 <h1 align="center">higgsfree</h1>
 
-<p align="center">Open-source AI image and video studio. Runs on your own OpenRouter key, entirely in your browser. A Next.js static site: one click on Vercel, or any host that serves files.</p>
+<p align="center">Open-source AI image and video studio. Runs on your own OpenRouter key, in your browser: only ByteDance calls go through a stateless pass-through on the server. One click on Vercel, or any host that runs Next.js.</p>
 
 <p align="center">
   <a href="https://github.com/l-portet/higgsfree/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/l-portet/higgsfree/actions/workflows/ci.yml/badge.svg"></a>
@@ -22,7 +22,7 @@
 - **Favorites**: press the heart on any run to keep it in one place, with folders you create: drag runs onto a folder, or pick one from the heart's menu.
 - **AI Prompt Editor** (video): ask GPT-6 Luna to rewrite your prompt ("more cinematic", "add rain"), preview the shot as six frames in one picture with GPT Image 2.5 Flare, or drop in a clip and have Gemini 4 Argon write the prompt that recreates it, with your instructions. All run on your OpenRouter key and show what they cost.
 - **Video ready alerts**: a ding and / or a system notification when a video finishes, switched on in Settings › Notifications. They work while the site is open in a tab, even in the background.
-- **Your keys, your browser**: one OpenRouter key for every provider, billed at provider price, and an optional [fal](https://fal.ai) key for the models only fal has. The keys stay in this browser's localStorage, the library (every generation and its file) in its IndexedDB, and you can export it all as a zip any time. No account, no server, nothing in between.
+- **Your keys, your browser**: one OpenRouter key for every provider, billed at provider price, and an optional [fal](https://fal.ai) key for the models only fal has. The keys stay in this browser's localStorage, the library (every generation and its file) in its IndexedDB, and you can export it all as a zip any time. No account, no database, nothing in between, with one exception: ByteDance's API refuses browser calls, so a ByteDance key and its requests pass through the app's server, which forwards them and stores nothing.
 
 ## Quick start (local)
 
@@ -35,7 +35,7 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000 and paste your key behind **Add key** (top right). That's it: there is no server to run, no database and no environment variable to set.
+Open http://localhost:3000 and paste your key behind **Add key** (top right). That's it: no database and no environment variable to set (`pnpm dev` also serves the ByteDance pass-through).
 
 ## fal (optional)
 
@@ -63,21 +63,26 @@ The rules are in [docs/FAL.md](docs/FAL.md).
 
 ## ByteDance (optional)
 
-ByteDance runs its own Seedance models (2.5, 2.0, 2.0 Fast and 2.0 Mini) on [BytePlus ModelArk](https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-list), at ModelArk's prices. Add a key in Settings › Keys (get one at [BytePlus ModelArk](https://ai.byteplus.com/ark/region:ap-southeast-1/apikey), then activate each Seedance model on its [activation page](https://ai.byteplus.com/ark/region:ap-southeast-1/openManagement)) and a run goes there whenever it is the cheapest; the real cost of each run is recorded from the tokens ModelArk bills. Frames and style references go inline in the request; videos and reference audio go to other providers. Not tried with a real key yet: ModelArk hides its error messages from browsers, and its file storage may not let the browser download the video (the run then ends with the video's link). The rules are in [docs/BYTEDANCE.md](docs/BYTEDANCE.md).
+ByteDance runs its own Seedance models (2.5, 2.0, 2.0 Fast and 2.0 Mini) on [BytePlus ModelArk](https://ai.byteplus.com/ark/region:ap-southeast-1/docs/model-list), at ModelArk's prices. Add a key in Settings › Keys (get one at [BytePlus ModelArk](https://ai.byteplus.com/ark/region:ap-southeast-1/apikey), then activate each Seedance model on its [activation page](https://ai.byteplus.com/ark/region:ap-southeast-1/openManagement)) and a run goes there whenever it is the cheapest; the real cost of each run is recorded from the tokens ModelArk bills. Frames and style references go inline in the request (up to 4 MB in all); videos and reference audio go to other providers.
 
-## Deploy anywhere
+**Unlike the other providers, your ByteDance key is sent to the higgsfree server**: ModelArk blocks calls from a browser (no CORS on its errors and its files, and its image API refuses the key), so the browser sends ByteDance calls to `/api/bytedance/…` on its own origin and the server forwards each one to ModelArk's API, and streams the finished video back. It only forwards the calls the app makes, and it never stores or logs the key or anything else. Settings says so next to the key field. Not tried with a real key yet. The rules are in [docs/BYTEDANCE.md](docs/BYTEDANCE.md).
 
-`pnpm build` writes a static site to `out/` (one HTML file per route plus the assets). Copy it to any static host:
+## Deploy
 
-- **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new). Nothing to configure: Vercel runs the build and serves `out/`. The checked-in `vercel.json` only adds the `X-Content-Type-Options: nosniff` header.
-- **Netlify, Cloudflare Pages, GitHub Pages**: build command `pnpm build`, publish directory `out`.
-- **S3, nginx, any file server**: upload `out/`. Clean urls (`/image`) need the host to fall back to `image.html`; `docker/nginx.conf` shows the rule.
+`pnpm build` is a normal Next.js build: every page is prerendered as a static file, plus one server route, the ByteDance pass-through (`src/app/api/bytedance`).
 
-The host never sees your keys or your library: the browser talks to OpenRouter and fal directly and keeps everything else on your machine. [SECURITY.md](SECURITY.md) spells out what a hosted copy can and cannot see.
+- **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new). Nothing to configure: Vercel serves the pages and runs the pass-through as a function. The checked-in `vercel.json` only adds the `X-Content-Type-Options: nosniff` and `frame-ancestors 'none'` headers.
+- **Any Node host**: `pnpm build && pnpm start` (Node 22+; `PORT` picks the port).
+- **Docker**: see [Self-hosting with Docker](#self-hosting-with-docker).
+- **Other hosts that run Next.js** (Netlify, Cloudflare and others, through their Next.js adapters) should work the same way, but have not been tried.
+
+A host that only serves files (GitHub Pages, S3, a plain nginx) can no longer run the app: since the build has a server route, there is no static export any more.
+
+The host never sees your library, nor any key but ByteDance's: the browser talks to OpenRouter, fal, kie.ai, APIMart and Revana directly and keeps everything else on your machine. ByteDance calls (key, prompt, images) pass through the host's server on their way to ModelArk, and nothing of them is kept. [SECURITY.md](SECURITY.md) spells out what a hosted copy can and cannot see.
 
 ## Configuration
 
-All optional, all read by `next build` only and inlined into the static site (see `.env.example`).
+All optional, all read by `next build` only and inlined into the pages (see `.env.example`).
 
 | Variable | Default | What it does |
 |---|---|---|
@@ -91,7 +96,8 @@ All optional, all read by `next build` only and inlined into the static site (se
 Everything lives in the browser profile you use the app in:
 
 - **The OpenRouter key** is in localStorage (`higgsfree.apiKey`) and is only ever sent to openrouter.ai. **Remove key** in Settings › Keys deletes it.
-- **The fal key**, if you add one, is in localStorage (`higgsfree.falKey`) and is only ever sent to fal's API hosts. **Remove key** in Settings › Keys deletes it.
+- **The fal key**, if you add one, is in localStorage (`higgsfree.falKey`) and is only ever sent to fal's API hosts. **Remove key** in Settings › Keys deletes it. The kie.ai, APIMart and Revana keys work the same way.
+- **The ByteDance key**, if you add one, is in localStorage (`higgsfree.bytedanceKey`) too, but it goes with each ByteDance call to the app's own server, which forwards it to ModelArk's API (`ark.ap-southeast.bytepluses.com`) and never stores or logs it.
 - **The library** (records, generated images and clips, reference images and videos) is in IndexedDB (database `higgsfree`). Media are displayed through object urls. Nothing is uploaded anywhere, except a video you run a fal model on (a motion-control reference, or a video to edit), which goes to fal's storage when you run it.
 
 Production builds also load Microsoft Clarity, which records sessions, including text shown on screen that it does not mask, such as your saved prompts. It never runs under `pnpm dev` or on `localhost`, and setting `window.CLARITY_DISABLED_ENV = true` before the app hydrates keeps it off. See [SECURITY.md](SECURITY.md).
@@ -114,14 +120,14 @@ Cost estimates are shown before you generate, from the prices of whichever provi
 
 ## How it works
 
-Next.js (App Router) with `output: "export"`: `next build` writes plain HTML, CSS and JS, and there is no server code at all. The pages are thin shells; the React client does everything.
+Next.js (App Router): `next build` prerenders every page as plain HTML, CSS and JS, and the only server code is the ByteDance pass-through (`src/server/bytedance-proxy.ts`, mounted at `src/app/api/bytedance/[...path]/route.ts`). The pages are thin shells; the React client does everything else.
 
 - **OpenRouter** is called straight from the browser with your key (`src/client/lib/openrouter.ts`, request bodies in `payloads.ts`). OpenRouter allows cross-origin requests on every endpoint the app uses. Provider errors are kept verbatim so the supported values show on the card. The rules are in [docs/OPENROUTER.md](docs/OPENROUTER.md).
 - **fal** is called straight from the browser too, with the fal key (`src/client/lib/fal.ts`, request bodies in `fal-payloads.ts`): images in one request to `fal.run`, videos through fal's queue, polled like OpenRouter's. Results come from fal's CDN without the key. With both keys, `providers.ts` picks who runs a model both offer. The rules are in [docs/FAL.md](docs/FAL.md).
 - **kie.ai** likewise (`src/client/lib/kie.ts`, request bodies in `kie-payloads.ts`): inputs uploaded to kie's file host, then `createTask` and `recordInfo` polled until the result url is there, for images and videos alike. A run goes to the cheapest provider with a key that can take it (`routeQuotes` in `video-cost.ts`), unless one is picked next to Generate. The rules are in [docs/KIE.md](docs/KIE.md).
 - **APIMart** the same way (`src/client/lib/apimart.ts`, request bodies in `apimart-payloads.ts`); kie and APIMart share one task flow in the engine (`task-providers.ts`). The rules are in [docs/APIMART.md](docs/APIMART.md).
 - **Revana** through the same task flow (`src/client/lib/revana.ts`, request bodies in `revana-payloads.ts`, its model list and prices in `src/shared/revana-models.ts`). The rules are in [docs/REVANA.md](docs/REVANA.md).
-- **ByteDance** (BytePlus ModelArk) through the same task flow, for videos only (`src/client/lib/bytedance.ts`, request bodies in `bytedance-payloads.ts`, its models and token prices in `src/shared/bytedance-prices.ts`). The rules are in [docs/BYTEDANCE.md](docs/BYTEDANCE.md).
+- **ByteDance** (BytePlus ModelArk) through the same task flow, for videos only (`src/client/lib/bytedance.ts`, request bodies in `bytedance-payloads.ts`, its models and token prices in `src/shared/bytedance-prices.ts`), but not from the browser: ModelArk refuses browser calls, so the client calls the pass-through on its own origin, which forwards exactly the task submit, the task poll and the key test to ModelArk's API with the key it was sent, and streams finished videos from ModelArk's storage. It keeps nothing. The rules are in [docs/BYTEDANCE.md](docs/BYTEDANCE.md).
 - **Storage** is IndexedDB: a `generations` store for the records and a `media` store for the Blobs (`gen_abc.png`, `gen_abc.mp4`, `up_xyz.jpg`), shown through object urls.
 - **Image jobs** are N parallel calls in the tab that submitted them. A call cannot be resumed: if that tab closes, the job is lost (OpenRouter still charges) and the next visit marks it failed as "Interrupted…" with a Retry button. The tab warns before unloading while images are in flight.
 - **Video jobs** are submitted to `/api/v1/videos` (or fal's queue), then polled every 6 seconds by whichever open tab holds the job's Web Lock. The finished clip is downloaded straight into IndexedDB (with the key from OpenRouter, without it from fal's CDN). A steward in every tab adopts video jobs nobody is driving, so closing and reopening the app resumes polling. Jobs only advance while a tab is open; nothing runs when the site is closed.
@@ -131,7 +137,7 @@ Next.js (App Router) with `output: "export"`: `next build` writes plain HTML, CS
 
 ## Self-hosting with Docker
 
-The image is `nginx:alpine` serving `out/`. No volumes, no environment: the container holds nothing of yours.
+The image runs Next's standalone Node server (`node:22-slim`, as the unprivileged `node` user) on port 80 inside the container: the pages, and the ByteDance pass-through. It sends the same security headers as `vercel.json`. No volumes, no environment: the container holds nothing of yours.
 
 ```bash
 docker compose up -d   # http://localhost:3000 (set PORT to change the host port)
@@ -141,8 +147,8 @@ docker compose up -d   # http://localhost:3000 (set PORT to change the host port
 
 ```bash
 pnpm dev        # Next.js dev server on :3000
-pnpm build      # static export to out/
-pnpm preview    # serve out/ locally
+pnpm build      # production build: prerendered pages + the ByteDance pass-through
+pnpm start      # serve that build (pnpm preview does the same)
 pnpm test       # vitest in Node with fake-indexeddb; the engine runs against a mocked OpenRouter and fal
 pnpm typecheck
 pnpm lint

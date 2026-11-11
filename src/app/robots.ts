@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 import { siteHref } from "@shared/site";
 
-/** `output: "export"` prerenders this only when the handler is explicitly static. */
+/** Prerendered at build time, like the pages: nothing here depends on the request. */
 export const dynamic = "force-static";
 
 /**
- * robots.txt, written into `out/` by `next build`.
+ * robots.txt, prerendered by `next build`.
  *
  * `/_next/` and the `.txt` files are the build's own artefacts — the chunk graph and the RSC payloads
  * (`/index.txt`, `/video.txt`, `/__next.*.txt`), which are served as plain text and would otherwise be
