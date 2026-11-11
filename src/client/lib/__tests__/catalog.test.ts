@@ -204,7 +204,7 @@ describe("video models (hidden)", () => {
 describe("fal routes", () => {
   it("every fal-only model has a route, and every route covers what the model offers", () => {
     for (const m of IMAGE_MODELS) {
-      // GPT Image 2.6 and Seedream 5.5 are only on APIMart, GPT Image 2.6 Economy only on kie.ai.
+      // GPT Image 2.6 is only on APIMart, GPT Image 2.6 Economy only on kie.ai, Seedream 5.5 on both.
       if (m.offOpenRouter) {
         expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
         expect(m.endpoint).toBe("fal");
@@ -235,11 +235,13 @@ describe("fal routes", () => {
     }
   });
 
-  it("Seedream 5.5 has an APIMart route and no other", () => {
+  it("Seedream 5.5 has kie.ai and APIMart routes and no other, and is not verified", () => {
     const m = findImageModel("bytedance/seedream-5.5");
+    expect(m?.kie).toEqual({ family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" });
     expect(m?.apimart).toEqual({ family: "seedream", model: "seedream-5.5" });
     expect(m?.offOpenRouter).toBe(true);
-    expect(m?.fal ?? m?.kie ?? m?.revana).toBeUndefined();
+    expect(m?.verified).toBe(false);
+    expect(m?.fal ?? m?.revana).toBeUndefined();
   });
 
   it("GPT Image 2.6 Economy has a kie.ai route and no other, and is not verified", () => {

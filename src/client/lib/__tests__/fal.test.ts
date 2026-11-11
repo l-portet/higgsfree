@@ -31,6 +31,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
+    expect(modelProviders(image("bytedance/seedream-5.5"))).toEqual(["kie", "apimart"]);
     expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal"]);
   });
 

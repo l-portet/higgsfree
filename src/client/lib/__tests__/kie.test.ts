@@ -227,6 +227,24 @@ describe("buildKieImagePayload", () => {
     expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "3:4", size: "1K" }, [])).toThrow("Takes no 3:4");
     expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array.from({ length: 17 }, () => "https://r"))).toThrow("Takes up to 16 reference images");
   });
+
+  it("Seedream 5.5: `size` as the app's size, references as `image_urls` on the edit model, and `auto` on edits only", () => {
+    const m = image("bytedance/seedream-5.5");
+    expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "21:9", size: "2K" }, [])).toEqual({
+      model: "seedream/5-5-text-to-image",
+      input: { prompt: "a red fox", aspect_ratio: "21:9", size: "2K" },
+      priceKey: "seedream/5-5-text-to-image",
+    });
+    expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "auto", size: "1K" }, ["https://r", "https://s"])).toEqual({
+      model: "seedream/5-5-image-to-image",
+      input: { prompt: "a red fox", aspect_ratio: "auto", size: "1K", image_urls: ["https://r", "https://s"] },
+      priceKey: "seedream/5-5-text-to-image",
+    });
+    // Text to image has no `auto`: 1:1 is sent for it.
+    expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "auto", size: "1K" }, []).input).toMatchObject({ aspect_ratio: "1:1" });
+    for (const aspectRatio of m.aspectRatios) for (const size of m.sizes) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array.from({ length: 11 }, () => "https://r"))).toThrow("Takes up to 10 reference images");
+  });
 });
 
 describe("resultUrls", () => {
@@ -253,8 +271,8 @@ describe("kie prices", () => {
     for (const m of IMAGE_MODELS.filter((i) => i.kie && !i.caps.upscale)) {
       const { priceKey } = buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []);
       used.add(priceKey);
-      if (unpriced.has(priceKey)) expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on kie`).toBeUndefined();
-      else expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on kie`).toBeGreaterThan(0);
+      if (unpriced.has(priceKey)) expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0), `${m.id} on kie`).toBeUndefined();
+      else expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0), `${m.id} on kie`).toBeGreaterThan(0);
     }
     expect(Object.keys(KIE_PRICES).filter((k) => !used.has(k))).toEqual([]);
   });
@@ -272,20 +290,20 @@ describe("kie prices", () => {
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5, resolution: "1080p", videoSec: 8 })).toBeCloseTo(0.96);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5 })).toBeUndefined(); // the source's length is not known yet
     expect(estimateKieVideoCost(video("x-ai/grok-imagine-video-1.5"), { prompt: "p", duration: 5, resolution: "1080p" })).toBeUndefined(); // no price listed
-    expect(estimateKieImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "4K" }, 2, true)).toBeCloseTo(0.24);
-    expect(estimateKieImageCost(image("openai/gpt-image-2"), { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeCloseTo(0.03);
+    expect(estimateKieImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "4K" }, 2, 1)).toBeCloseTo(0.24);
+    expect(estimateKieImageCost(image("openai/gpt-image-2"), { aspectRatio: "1:1", size: "1K" }, 1, 1)).toBeCloseTo(0.03);
   });
 
   it.each(["flare", "sunburst"])("GPT Image 2.6 %s has no estimate, with or without references, rather than GPT Image 2's", (tier) => {
     const m = image(`openai/gpt-image-2.6-${tier}`);
-    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeUndefined();
-    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeUndefined();
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeUndefined();
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 1)).toBeUndefined();
   });
 
   it("GPT Image 2.6 Economy: 5 credits an image, with or without references, and only a kie.ai key runs it", () => {
     const m = image("openai/gpt-image-2.6-economy");
-    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeCloseTo(0.025);
-    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 4, true)).toBeCloseTo(0.1);
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeCloseTo(0.025);
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 4, 1)).toBeCloseTo(0.1);
     const req = { aspectRatio: "16:9" as const, size: "1K" as const, count: 1, references: 8 };
     const quote = quoteImage(m, req, { kie: true });
     expect(quote).toMatchObject({ quotes: [{ provider: "kie", noKey: false }], provider: "kie", reason: "only" });
@@ -294,5 +312,18 @@ describe("kie prices", () => {
     const others = quoteImage(m, req, { openrouter: true, fal: true, apimart: true, revana: true });
     expect(others).toMatchObject({ quotes: [{ provider: "kie", noKey: true }], reason: "none" });
     expect(others.provider).toBeUndefined();
+  });
+
+  it("Seedream 5.5: 3.6 credits at 1K and 6.3 at 2K, plus 1.44 for each reference image", () => {
+    const m = image("bytedance/seedream-5.5");
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeCloseTo(0.018);
+    expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.0315);
+    // Two references, four images: (6.3 + 2 × 1.44) × 4 credits.
+    expect(estimateKieImageCost(m, { aspectRatio: "auto", size: "2K" }, 4, 2)).toBeCloseTo(0.1836);
+    // With an APIMart key too, kie.ai runs it: APIMart has no price for it in the app.
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 3 };
+    const quote = quoteImage(m, req, { kie: true, apimart: true });
+    expect(quote).toMatchObject({ quotes: [{ provider: "kie", noKey: false }, { provider: "apimart", noKey: false }], provider: "kie", reason: "cheaper" });
+    expect(quote.quotes[0]?.usd).toBeCloseTo((6.3 + 3 * 1.44) * 0.005);
   });
 });

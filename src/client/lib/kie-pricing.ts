@@ -56,17 +56,17 @@ export function estimateKieVideoCost(model: VideoModel, req: KieVideoEstimate): 
   return videoListUsd(KIE_PRICES[payload.priceKey], model, payload.params, req.resolution, seconds, KIE_CREDIT_USD, inputVideoSec);
 }
 
-/** Estimated USD for `count` images of `req` on kie.ai, with or without reference images. */
-export function estimateKieImageCost(model: ImageModel, req: Omit<KieImageParams, "prompt">, count: number, withRefs: boolean): number | undefined {
+/** Estimated USD for `count` images of `req` on kie.ai, with `references` reference images (Seedream 5.5 bills each one). */
+export function estimateKieImageCost(model: ImageModel, req: Omit<KieImageParams, "prompt">, count: number, references: number): number | undefined {
   if (model.caps.upscale) {
     const usd = upscaleImageUsd("kie", model, req.upscale, {});
     return usd === undefined ? undefined : usd * count;
   }
   let payload;
   try {
-    payload = buildKieImagePayload(model, { ...req, prompt: "" }, withRefs ? ["https://ref"] : []);
+    payload = buildKieImagePayload(model, { ...req, prompt: "" }, Array.from({ length: references }, () => "https://ref"));
   } catch {
     return undefined;
   }
-  return imageListUsd(KIE_PRICES[payload.priceKey], req.size, count, KIE_CREDIT_USD);
+  return imageListUsd(KIE_PRICES[payload.priceKey], req.size, count, KIE_CREDIT_USD, references);
 }
