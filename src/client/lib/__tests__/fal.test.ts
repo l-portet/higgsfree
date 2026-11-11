@@ -4,7 +4,8 @@ import { findImageModel, findVideoModel } from "@shared/models";
 import type { ImageModel, VideoModel } from "@shared/types";
 import { ApiClientError } from "../errors";
 import * as fal from "../fal";
-import { buildFalImagePayload, buildFalVideoPayload } from "../fal-payloads";
+import { quoteImage } from "../image-cost";
+import { buildFalImagePayload, buildFalVideoPayload, falScaledSize } from "../fal-payloads";
 import { chooseProvider, modelProviders, providerNotice } from "../providers";
 
 const image = (id: string): ImageModel => {
@@ -30,6 +31,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
+    expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -86,6 +88,47 @@ describe("buildFalImagePayload", () => {
       endpoint: `openai/gpt-image-2.6/${tier}/edit`,
       input: { prompt: "p", image_urls: ["data:a", "data:b"] },
     });
+  });
+
+  it("MiniMax H3 Image: the ratio and the size in one explicit `image_size`, square for `auto` without references", () => {
+    const h3 = image("minimax/minimax-h3-image");
+    expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "16:9", size: "1K" }, [])).toEqual({
+      endpoint: "minimax/h3-image/text-to-image",
+      input: { prompt: "p", image_size: { width: 1344, height: 768 } },
+    });
+    expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "auto", size: "2K" }, []).input).toEqual({ prompt: "p", image_size: { width: 2048, height: 2048 } });
+    expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "21:9", size: "4K" }, []).input).toEqual({ prompt: "p", image_size: { width: 6272, height: 2688 } });
+    expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "9:16", size: "4K" }, ["data:a"])).toEqual({
+      endpoint: "minimax/h3-image/edit",
+      input: { prompt: "p", image_urls: ["data:a"], image_size: { width: 3072, height: 5440 } },
+    });
+    // With references, `auto` is fal's: the first reference's ratio, about 2K.
+    expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "auto", size: "4K" }, ["data:a", "data:b"]).input).toEqual({ prompt: "p", image_urls: ["data:a", "data:b"] });
+  });
+
+  it("MiniMax H3 Image: priced on neither provider, so OpenRouter runs it when its key is there", () => {
+    const h3 = image("minimax/minimax-h3-image");
+    const req = { aspectRatio: "16:9" as const, size: "4K" as const, count: 1, references: 2 };
+    expect(quoteImage(h3, req, { openrouter: true, fal: true })).toEqual({
+      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }],
+      provider: "openrouter",
+      reason: "unpriced",
+    });
+    expect(quoteImage(h3, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
+  });
+
+  it("MiniMax H3 Image: every ratio and size it offers is within fal's limits (1:3 to 3:1, 655,360 px to 20 MP, sides 468 to 7745)", () => {
+    const h3 = image("minimax/minimax-h3-image");
+    for (const ar of h3.aspectRatios.filter((a) => a !== "auto")) {
+      for (const size of h3.sizes) {
+        const { width, height } = falScaledSize(ar, size);
+        expect(width * height, `${ar} ${size}`).toBeGreaterThanOrEqual(655_360);
+        expect(width * height, `${ar} ${size}`).toBeLessThanOrEqual(20_000_000);
+        expect(Math.min(width, height), `${ar} ${size}`).toBeGreaterThanOrEqual(468);
+        expect(Math.max(width, height), `${ar} ${size}`).toBeLessThanOrEqual(7745);
+        expect(Math.max(width, height) / Math.min(width, height), `${ar} ${size}`).toBeLessThanOrEqual(3);
+      }
+    }
   });
 });
 

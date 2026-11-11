@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 24 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
+Curated today: 25 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
 (19 fal-only, 1 [on kie.ai or APIMart only](#kieai-and-apimart-only), 8 of the 48 are
 [video editors](#video-editing)) and 2 are hidden.
 
@@ -52,6 +52,7 @@ OpenRouter's image catalog lists. "all 11" aspect ratios = `auto`, 1:1, 3:4, 4:3
 | **GPT Image 2** <sub>PRO</sub> | `openai/gpt-image-2` | `images` | ✓ | ✓ (1) | 1K * | 1:1, 2:3, 3:2 | 1K $0.17 | ✓ |
 | **GPT Image 2.6 Flare** <sub>NEW</sub> <sub>FAST</sub> | `openai/gpt-image-2.6-flare` | `native` | ✓ | ✓ (8) | 1K * | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | none ¹ | – |
 | **GPT Image 2.6 Sunburst** <sub>NEW</sub> <sub>PRO</sub> | `openai/gpt-image-2.6-sunburst` | `native` | ✓ | ✓ (8) | 1K * | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | none ¹ | – |
+| **MiniMax H3 Image** <sub>NEW</sub> | `minimax/minimax-h3-image` | `native` | ✓ | ✓ (8) | 1K / 2K / 4K | all 11 | none ² | – |
 | **Krea 2 Large** | `krea/krea-2-large` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.06 | ✓ |
 | **Krea 2 Medium** | `krea/krea-2-medium` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.04 | – |
 | **Krea 2 Turbo** <sub>FAST</sub> | `krea/krea-2-medium-turbo` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.02 | – |
@@ -62,6 +63,15 @@ reference count come from OpenRouter's image catalog once it arrives (the values
 5 Nov 2026: no `resolution`, 16 references, which the app caps at 8). `quality` (auto to max) and `background`
 are left at OpenRouter's defaults. Every provider bills them in tokens and gives no per-image price, so
 there is no estimate; the cost of each run is recorded.
+
+² MiniMax's image model (10 Nov 2026), text to image and edits from up to 16 references, on OpenRouter and fal
+([models on both](#models-on-both)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
+Also a curated `native` model: the values here are OpenRouter's catalog on 11 Nov 2026 (`resolution` 1K / 2K / 4K,
+16 references, which the app caps at 8). OpenRouter also lists ratios the app has no option for (1:2, 2:1, 1:3, 3:1,
+2.35:1, 5:2, 5:7, 7:5, 9:19.5, 19.5:9, 9:20, 20:9, 9:21). `n` and `output_format` are left at their defaults, and so
+is prompt enhancement (on; OpenRouter passes `disable_prompt_enhanced` through). Both providers bill it in tokens
+($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens) with no per-image price, so there is
+no estimate; the cost of each run is recorded.
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
@@ -159,8 +169,8 @@ verified yet.
 Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint (`FAL_PRICES` in
 `src/shared/fal-prices.ts`, read from each endpoint's page on 15 Oct 2026), not the catalog's
 OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
-times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst have no fal price: fal bills them in tokens
-and gives no per-size figure for them. fal reports no cost with a result, so runs on fal record none.
+times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst, and MiniMax H3 Image, have no fal price: fal
+bills them in tokens and gives no per-size figure for them. fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -376,6 +386,12 @@ fal's fields. Style references are never sent to fal.
   price (see above).
 - **GPT Image 2.6 Sunburst**: `openai/gpt-image-2.6/sunburst/text-to-image` · `openai/gpt-image-2.6/sunburst/edit`;
   as GPT Image 2.6 Flare.
+- **MiniMax H3 Image**: `minimax/h3-image/text-to-image` · `minimax/h3-image/edit`; `image_urls` (fal takes 16),
+  and the ratio and size together as an explicit `image_size` (`scaledSize`: about 1, 4 or 16 MP at 1K / 2K / 4K,
+  sides in multiples of 64, e.g. 16:9 1344×768 at 1K, 21:9 6272×2688 at 4K; fal takes 0.66 to 20 MP, 1:3 to 3:1).
+  `auto` is square at the size without references; with references it is fal's own `auto` (the first image's
+  ratio, about 2K), so the size is not sent. `enable_prompt_expansion` (text to image only) is left at fal's
+  default (on). No price (see above).
 - **Seedance 2.5**: `bytedance/seedance-2.5/us/text-to-video` · `…/image-to-video`; `duration` as a
   string, `aspect_ratio` (not with a frame), `resolution` 480p / 720p, `end_image_url`,
   `generate_audio`. These are fal's US-hosted endpoints, the only ones it lists since Oct 2026
@@ -488,7 +504,7 @@ and `minimum_cents_per_generation` as `minCostUsd`). Every other listed model is
 
 **Image.** Curated models keep their verified routes and options (`chat` and `images` do not take
 the catalog's fields one to one), and stay listed as they are when OpenRouter stops listing them. A
-curated `native` model (GPT Image 2.6 Flare, Sunburst) is the exception: it takes the catalog's options as a
+curated `native` model (GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image) is the exception: it takes the catalog's options as a
 discovered model does, keeps its name, badges, description and its other providers' routes, and leaves the
 picker if OpenRouter stops listing it. Every other model in `/api/v1/images/models` is discovered and
 served through the native `POST /api/v1/images` with `aspect_ratio`, `resolution` and
@@ -561,7 +577,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 and Seedream 5.5 on APIMart only, or GPT Image 2.6 Economy on kie.ai only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst and everything discovered are `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 and Seedream 5.5 on APIMart only, or GPT Image 2.6 Economy on kie.ai only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image and everything discovered are `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
@@ -571,7 +587,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `supportsImageSize` | Whether `image_config.image_size` is honoured. If false the app never sends it. |
 | `estCostUsd` | USD per image keyed by size. Missing sizes fall back to `"1K"`. Shown as `~$0.13` in the Generate button. Empty for fal-only models (no estimate shown). |
 | `verified` | `true` only after the checklist below. For a model on both, it is about the OpenRouter route. |
-| `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
+| `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `scaledSize` (`true` = an explicit `image_size` for the ratio at the requested 1K / 2K / 4K, as MiniMax H3 Image takes); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
 | `kie` | How kie.ai serves the model (`KieImageRoute`): its `family` (which builder maps the fields), the createTask `model`, an `editModel` used with references, a `tier`. See [KIE.md](KIE.md#image-fields-buildkieimagepayload). |
 | `apimart` | How APIMart serves the model (`ApimartImageRoute`): its `family` and APIMart's `model` id. See [APIMART.md](APIMART.md#image-fields-buildapimartimagepayload). |
 | `revana` | How Revana serves the model (`RevanaRoute`): Revana's `model` id. See [REVANA.md](REVANA.md). |

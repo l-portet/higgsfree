@@ -283,6 +283,11 @@ export interface FalImageRoute {
   aspect?: "aspect_ratio" | "image_size";
   /** Per-ratio `image_size` values when the model has its own list (otherwise fal's presets / explicit sizes). */
   imageSizes?: Partial<Record<ImageAspectRatio, string>>;
+  /**
+   * `image_size` is an explicit width × height for the ratio at the requested size (1K about 1 MP, 2K 4 MP, 4K 16 MP),
+   * square for `auto` without references; with references, `auto` sends none and the output follows the first one.
+   */
+  scaledSize?: boolean;
   /** `resolution: "1K" | "2K" | "4K"` is accepted. */
   resolution?: boolean;
   /** Fixed fields sent with every request. */

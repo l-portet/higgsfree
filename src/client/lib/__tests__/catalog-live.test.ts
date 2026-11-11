@@ -133,6 +133,27 @@ describe("buildImageModel", () => {
     expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
   });
 
+  it("MiniMax H3 Image: a curated native model with the catalog's 1K / 2K / 4K, every ratio the app has, and its fal route", () => {
+    const curated = findImageModel("minimax/minimax-h3-image");
+    if (!curated) throw new Error("catalog changed");
+    const m = buildImageModel(imageSpec("minimax/minimax-h3-image"), curated);
+    expect(m).toMatchObject({
+      endpoint: "native",
+      name: "MiniMax H3 Image",
+      provider: "minimax",
+      badges: ["new"],
+      verified: false,
+      sizes: ["1K", "2K", "4K"],
+      supportsImageSize: true,
+      caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+      estCostUsd: {},
+      fal: curated.fal,
+    });
+    expect(m?.discovered).toBeUndefined();
+    // The catalog's extra ratios (1:2, 2.35:1, 9:19.5 and more) are dropped; the ones the app has match the curated list.
+    expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
+  });
+
   it("builds a native model from the catalog: ratios, sizes, reference limits", () => {
     const m = buildImageModel(imageSpec("bytedance-seed/seedream-5-0-pro"));
     expect(m).toMatchObject({

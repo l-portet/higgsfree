@@ -280,6 +280,29 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "minimax/minimax-h3-image",
+    name: "MiniMax H3 Image",
+    provider: "minimax",
+    description: "MiniMax's image model, for generation and multi-image edits up to 4K",
+    // OpenRouter's native images API: the live catalog replaces the ratios, sizes and reference count below.
+    endpoint: "native",
+    featured: false,
+    badges: ["new"],
+    // OpenRouter and fal take 16 references; the app sends 8 at most.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    // OpenRouter also lists ratios the app has no option for (1:2, 2:1, 1:3, 3:1, 2.35:1, 5:2, 5:7, 7:5, 9:19.5 and more).
+    aspectRatios: ALL_IMAGE_AR,
+    sizes: ["1K", "2K", "4K"],
+    // Billed in tokens on OpenRouter and fal ($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens,
+    // 11 Nov 2026), neither with a per-image price: no estimate rather than a guessed one.
+    estCostUsd: {},
+    supportsImageSize: true,
+    verified: false,
+    // fal takes an exact size (up to 20 MP, 1:3 to 3:1) rather than a ratio and a resolution, so both go in one `image_size`.
+    fal: { textToImage: "minimax/h3-image/text-to-image", edit: "minimax/h3-image/edit", refs: "image_urls", aspect: "image_size", scaledSize: true },
+  },
+  {
+    kind: "image",
     id: "krea/krea-2-large",
     name: "Krea 2 Large",
     provider: "krea",
