@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "description": "Open-source AI image & video studio powered by your OpenRouter API key. Runs entirely in the browser; deploys as a static site.",
-  "license": "MIT",
+  "license": "Beerware",
   "type": "module",
   "engines": {
     "node": ">=22"

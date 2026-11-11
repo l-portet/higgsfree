@@ -127,4 +127,4 @@ endpoint id and whatever constraints you already know.
 
 ## License
 
-By contributing you agree that your contributions are licensed under the MIT License.
+By contributing you agree that your contributions are licensed under the Beerware License.

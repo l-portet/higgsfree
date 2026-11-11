@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/l-portet/higgsfree/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/l-portet/higgsfree/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="LICENSE"><img alt="Beerware license" src="https://img.shields.io/badge/license-Beerware-yellow.svg"></a>
   <img alt="Node 22+" src="https://img.shields.io/badge/node-22%2B-brightgreen">
 </p>
 
@@ -154,4 +154,4 @@ they are: no recolouring, no effects, no stretching.
 
 ## License
 
-MIT. higgsfree is an independent project and is not affiliated with Higgsfield AI. Provider names and logos identify the model providers and belong to their owners.
+Beerware. higgsfree is an independent project and is not affiliated with Higgsfield AI. Provider names and logos identify the model providers and belong to their owners.
