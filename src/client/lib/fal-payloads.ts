@@ -31,6 +31,16 @@ export const FAL_SIZE_DIMENSIONS: Partial<Record<ImageAspectRatio, { width: numb
   "21:9": { width: 1536, height: 640 },
 };
 
+/** Megapixels per size for `scaledSize` routes. */
+const SCALED_AREA: Record<ImageSize, number> = { "1K": 1024 * 1024, "2K": 2048 * 2048, "4K": 4096 * 4096 };
+
+/** An explicit size for the ratio with about the size's area, each side a multiple of 64. */
+export function falScaledSize(aspectRatio: Exclude<ImageAspectRatio, "auto">, size: ImageSize): { width: number; height: number } {
+  const [w = 1, h = 1] = aspectRatio.split(":").map(Number);
+  const side = (v: number): number => Math.round(Math.sqrt(SCALED_AREA[size] * v) / 64) * 64;
+  return { width: side(w / h), height: side(h / w) };
+}
+
 export interface FalImageParams {
   prompt: string;
   aspectRatio: ImageAspectRatio;
@@ -52,7 +62,10 @@ export function buildFalImagePayload(model: ImageModel, req: FalImageParams, ref
     if (route.refs === "image_url") input.image_url = referenceUrls[0];
     else input.image_urls = referenceUrls;
   }
-  if (req.aspectRatio !== "auto" && model.aspectRatios.includes(req.aspectRatio)) {
+  if (route.scaledSize) {
+    const ratio = req.aspectRatio === "auto" ? (edit ? undefined : "1:1") : req.aspectRatio;
+    if (ratio && model.aspectRatios.includes(req.aspectRatio) && model.sizes.includes(req.size)) input.image_size = falScaledSize(ratio, req.size);
+  } else if (req.aspectRatio !== "auto" && model.aspectRatios.includes(req.aspectRatio)) {
     if (route.aspect === "aspect_ratio") input.aspect_ratio = req.aspectRatio;
     else if (route.aspect === "image_size") {
       const size = route.imageSizes?.[req.aspectRatio] ?? FAL_SIZE_PRESETS[req.aspectRatio] ?? FAL_SIZE_DIMENSIONS[req.aspectRatio];

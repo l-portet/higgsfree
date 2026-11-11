@@ -108,6 +108,10 @@ The model's `fal` route (`FalImageRoute`) says how each option is spelled.
     `portrait_4_3`, `16:9` `landscape_16_9`, `9:16` `portrait_16_9`), else an explicit
     `{ width, height }` of about one megapixel in multiples of 64 (`2:3` 832×1216, `3:2` 1216×832, `4:5`
     896×1152, `5:4` 1152×896, `21:9` 1536×640).
+  - `scaledSize: true` (MiniMax H3 Image) → `image_size` is an explicit `{ width, height }` for the ratio
+    at the requested size instead: about 1, 4 or 16 MP at 1K / 2K / 4K, sides in multiples of 64
+    (`falScaledSize`). `auto` is 1:1 at that size without references; with references nothing is sent,
+    so fal's `auto` keeps the first image's ratio (about 2K).
   - No `aspect`: never sent.
 - `resolution: "1K" | "2K" | "4K"` only when the route has `resolution: true`, the model has
   `supportsImageSize` and lists the size (Nano Banana Pro, Nano Banana 2).
@@ -260,7 +264,8 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026; a test checks it covers every
   endpoint, size and resolution the catalog offers. The exceptions are GPT Image 2.6 Flare and Sunburst: their
   pages (5 Nov 2026) give token rates only, with no per-size figure, so they have no estimate on fal and the
-  test lists their four endpoints as unpriced. fal's pricing API needs a key and gives one unit
+  test lists their four endpoints as unpriced. MiniMax H3 Image's two endpoints are the same (11 Nov 2026: $2.30 /
+  $1.50 / $3.80 per 1M input text / input image / output image tokens). fal's pricing API needs a key and gives one unit
   price per endpoint, without the tiers below, so the app does not read it.
 - A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on
   Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4 and FLUX.3 Max), per image (by size, or by the
