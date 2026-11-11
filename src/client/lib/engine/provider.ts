@@ -1,7 +1,7 @@
 /** Pick the provider for a run from the stored keys, the price and the composer's pick, or explain why there is none. */
 import type { CatalogModel, ProviderId, VideoModel } from "@shared/types";
 import { ApiClientError } from "../errors";
-import { chooseProvider, PROVIDER_IDS, providerNotice, type ProviderKeys } from "../providers";
+import { chooseProvider, PROVIDER_IDS, providerNotice, type ModelRoutes, type ProviderKeys } from "../providers";
 import { getProviderKey } from "../settings";
 import { pinQuote, quoteVideo, type VideoQuoteRequest } from "../video-cost";
 
@@ -19,7 +19,7 @@ export interface ProviderRun {
 }
 
 /** 401 with a message the composer can show when no provider of the model has a key. */
-export function resolveRun(model: Pick<CatalogModel, "name" | "fal" | "kie" | "apimart" | "revana" | "offOpenRouter">): ProviderRun {
+export function resolveRun(model: Pick<CatalogModel, "name"> & ModelRoutes): ProviderRun {
   const keys = storedKeys();
   const { provider } = chooseProvider(model, keys);
   if (!provider) {

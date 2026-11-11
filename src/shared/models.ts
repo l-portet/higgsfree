@@ -583,6 +583,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     fal: { textToVideo: "bytedance/seedance-2.5/us/text-to-video", imageToVideo: "bytedance/seedance-2.5/us/image-to-video", endImage: true, duration: "string", aspect: "always", resolutions: { "480p": "480p", "720p": "720p" }, audio: "generate_audio" },
     kie: { family: "seedance", model: "bytedance/seedance-2-5" },
     apimart: { family: "seedance", model: "seedance-2.5" },
+    bytedance: { model: "dreamina-seedance-2-5-260628" },
   },
   {
     kind: "video",
@@ -604,6 +605,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: true,
     kie: { family: "seedance", model: "bytedance/seedance-2" },
     apimart: { family: "seedance", model: "seedance-2.0" },
+    bytedance: { model: "dreamina-seedance-2-0-260128" },
   },
   {
     kind: "video",
@@ -625,6 +627,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: false,
     kie: { family: "seedance", model: "bytedance/seedance-2-fast" },
     apimart: { family: "seedance", model: "seedance-2.0-fast" },
+    bytedance: { model: "dreamina-seedance-2-0-fast-260128" },
   },
   {
     kind: "video",
@@ -646,6 +649,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: false,
     kie: { family: "seedance", model: "bytedance/seedance-2-mini" },
     apimart: { family: "seedance", model: "seedance-2.0-mini" },
+    bytedance: { model: "dreamina-seedance-2-0-mini-260615" },
   },
   {
     kind: "video",

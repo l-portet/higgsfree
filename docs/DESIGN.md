@@ -113,7 +113,8 @@ There is no page chrome: the app is four views under one floating nav, with one 
     key together (`$52.47`) and an accent dot. Either way it opens Settings on the keys. Hovering shows each stored
     key's balance (label "Balance", one row per provider: name in `fg-muted`, amount right-aligned and tabular,
     kie.ai's credits after it in `fg-subtle`, "Unlimited" for an unlimited APIMart key, "Key can't read it" for a
-    fal key without billing access, "Couldn't read" otherwise), then a Total row under a hairline. Balances are read
+    fal key without billing access, "In its console" for ByteDance (an API key has no balance to read on ModelArk),
+    "Couldn't read" otherwise), then a Total row under a hairline. Balances are read
     on load, when a key changes, on hover (cached 30 s) and after each finished run (`lib/balances.ts`).
 - **Content**: max-width 1400 px, 24 px page padding, 72 px top padding to clear the nav, bottom padding equal to the
   composer's measured height (`--composer-h`) + 16 px.
@@ -264,10 +265,10 @@ There is no page chrome: the app is four views under one floating nav, with one 
   `rounded-control`; the open one raised on `surface-2`), and the open section's cards on the right, shown flat
   (no card border or fill, sections separated by a divider). Below `sm` the sections become a scrolling row under the
   title. Keys: the OpenRouter key (masked key, Save / Test connection / Remove key, a Connected / Not set badge),
-  then the fal, kie.ai, APIMart and Revana key cards. There is no provider preference (the price menu next to Generate picks one per run), no credits breakdown (the key box shows the balance) and no default-model setting:
+  then the fal, kie.ai, APIMart, Revana and ByteDance key cards. There is no provider preference (the price menu next to Generate picks one per run), no credits breakdown (the key box shows the balance) and no default-model setting:
   each composer starts on the app's default and then remembers the last model picked. Old `/settings` links (`#fal`,
   `#providers`, `#library`…) open the dialog over the Image view.
-- **fal, kie.ai, APIMart and Revana key cards** (`ProviderKeyCard`): the OpenRouter card's anatomy, titled "fal key" / "kie.ai key" / "APIMart key" / "Revana key" with
+- **fal, kie.ai, APIMart, Revana and ByteDance key cards** (`ProviderKeyCard`): the OpenRouter card's anatomy, titled "fal key" / "kie.ai key" / "APIMart key" / "Revana key" / "ByteDance key" with
   a Connected / Not set badge, a line on what the key opens with a link to the provider's keys page, a monospace
   password field, Save / Test connection / Remove key (confirm dialog). kie's and APIMart's test results add the
   balance ("Balance: 1,234 credits ($6.17)", "Balance: $12.50").

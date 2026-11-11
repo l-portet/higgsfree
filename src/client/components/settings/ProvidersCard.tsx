@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { ProviderId, SettingsResponse } from "@shared/types";
 import * as api from "@/lib/api";
 import { describeApiError } from "@/lib/api";
+import { BYTEDANCE_ACTIVATE_URL } from "@/lib/bytedance";
 import { formatUsd } from "@/lib/format";
 import { KIE_CREDIT_USD } from "@/lib/kie";
 import { PROVIDER_KEYS, PROVIDER_NAME } from "@/lib/providers";
@@ -190,17 +191,18 @@ function ProviderKeyCard({ provider, settings, description, offHint }: { provide
   );
 }
 
-function KeysLink({ provider }: { provider: KeyedProvider }) {
-  const { url } = PROVIDER_KEYS[provider];
+/** A link that opens in a new tab: the provider's keys page by default, its url as the text unless `children` says otherwise. */
+function KeysLink({ provider, href, children }: { provider: KeyedProvider; href?: string; children?: ReactNode }) {
+  const url = href ?? PROVIDER_KEYS[provider].url;
   return (
     <a href={url} target="_blank" rel="noreferrer" className="font-medium text-fg underline-offset-4 hover:underline">
-      {url.replace(/^https:\/\//, "")}
+      {children ?? url.replace(/^https:\/\//, "")}
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
 }
 
-/** The fal, kie.ai, APIMart and Revana keys. */
+/** The fal, kie.ai, APIMart, Revana and ByteDance keys. */
 export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
   return (
     <>
@@ -243,6 +245,21 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
           <>
             Revana runs many of these models through one key at its own prices (Seedance, Veo 3.1, Kling 3.0 and 4.0, Wan, MiniMax H3, Nano Banana Pro,
             GPT Image 2…): with a key, a run goes there whenever it is the cheapest. Get one at <KeysLink provider="revana" />.
+          </>
+        }
+        offHint="No key yet. Runs go to the other providers until one is saved here."
+      />
+      <ProviderKeyCard
+        provider="bytedance"
+        settings={settings}
+        description={
+          <>
+            ByteDance runs its own Seedance models (2.5, 2.0, 2.0 Fast and 2.0 Mini) on BytePlus ModelArk: with a key, a run goes there whenever it is the
+            cheapest. Get a key from <KeysLink provider="bytedance">BytePlus ModelArk</KeysLink>, then activate each Seedance model on its{" "}
+            <KeysLink provider="bytedance" href={BYTEDANCE_ACTIVATE_URL}>
+              activation page
+            </KeysLink>
+            . Not tried with a real key yet: if ModelArk keeps the finished video from the browser, the run gives its link instead.
           </>
         }
         offHint="No key yet. Runs go to the other providers until one is saved here."

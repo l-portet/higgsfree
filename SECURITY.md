@@ -66,6 +66,8 @@ What the app does about it:
     `upload.apimart.ai`);
   - Revana (`api.revana.si`) and the Cloudflare R2 storage its uploads and results use
     (`*.r2.cloudflarestorage.com`);
+  - ByteDance's BytePlus ModelArk (`ark.ap-southeast.bytepluses.com`) and the TOS storage its videos come from
+    (`*.tos-ap-southeast-1.volces.com`);
   - Google Analytics (`*.google-analytics.com`, `*.analytics.google.com`, `*.googletagmanager.com`);
   - Microsoft Clarity (`*.clarity.ms`).
 
@@ -108,8 +110,12 @@ On Revana, each frame, reference and video to edit is uploaded to Revana's stora
 Cloudflare R2) and passed as a keyless `api.revana.si` link, kept 14 days. Its results are read with the key
 from `api.revana.si`, which redirects to a short-lived file url.
 
+On ByteDance (BytePlus ModelArk), frames and reference images travel inline in the request; nothing is uploaded.
+Its videos are presigned urls on its TOS storage for 24 hours, downloaded without the key; when the browser may not
+read one, the run's error shows that url.
+
 The app does not keep these urls, but the providers have them. Treat anything you send to fal, kie.ai,
-APIMart or Revana, and anything they make, as reachable by url.
+APIMart, Revana or ByteDance, and anything they make, as reachable by url.
 
 ## What a hosted copy can see
 

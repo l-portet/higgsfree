@@ -1,14 +1,14 @@
 /**
- * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, Revana, or several. A run goes to the cheapest with a key
+ * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, Revana, ByteDance, or several. A run goes to the cheapest with a key
  * that takes it (`routeQuotes` in `video-cost.ts`), or to the one picked in the composer. A model whose providers have
  * no key cannot run; the composer says why.
  */
-import type { CatalogModel, ProviderId } from "@shared/types";
+import type { CatalogModel, ProviderId, VideoModel } from "@shared/types";
 
 /** Every provider, in the order they are listed (OpenRouter first). */
-export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart", "revana"];
+export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart", "revana", "bytedance"];
 
-export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart", revana: "Revana" };
+export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart", revana: "Revana", bytedance: "ByteDance" };
 
 /** Where to get a key, the host it is sent to, and what one looks like. */
 export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; placeholder: string }> = {
@@ -17,6 +17,8 @@ export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; plac
   kie: { url: "https://kie.ai/api-key", host: "kie.ai", placeholder: "Your kie.ai API key" },
   apimart: { url: "https://apimart.ai/keys", host: "apimart.ai", placeholder: "sk-…" },
   revana: { url: "https://revana.si/signup", host: "api.revana.si", placeholder: "sr_live_…" },
+  // BytePlus ModelArk, ByteDance's own platform; each model must also be activated there (`BYTEDANCE_ACTIVATE_URL`).
+  bytedance: { url: "https://ai.byteplus.com/ark/region:ap-southeast-1/apikey", host: "ark.ap-southeast.bytepluses.com", placeholder: "Your ModelArk API key" },
 };
 
 export function isProviderId(v: unknown): v is ProviderId {
@@ -26,14 +28,18 @@ export function isProviderId(v: unknown): v is ProviderId {
 /** Which providers have a key stored. */
 export type ProviderKeys = Partial<Record<ProviderId, boolean>>;
 
+/** The fields that say who serves a model (ByteDance serves videos only). */
+export type ModelRoutes = Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "offOpenRouter"> & Pick<VideoModel, "bytedance">;
+
 /** Providers that serve the model, OpenRouter first. */
-export function modelProviders(m: Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "offOpenRouter">): ProviderId[] {
+export function modelProviders(m: ModelRoutes): ProviderId[] {
   const out: ProviderId[] = [];
   if (!m.offOpenRouter) out.push("openrouter");
   if (m.fal) out.push("fal");
   if (m.kie) out.push("kie");
   if (m.apimart) out.push("apimart");
   if (m.revana) out.push("revana");
+  if (m.bytedance) out.push("bytedance");
   return out;
 }
 
@@ -44,10 +50,8 @@ export interface ProviderChoice {
   missing: ProviderId[];
 }
 
-type Routed = Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "offOpenRouter">;
-
 /** The first provider of the model with a key (before prices are known), or the ones whose key would let it run. */
-export function chooseProvider(m: Routed, keys: ProviderKeys): ProviderChoice {
+export function chooseProvider(m: ModelRoutes, keys: ProviderKeys): ProviderChoice {
   const offered = modelProviders(m);
   const usable = offered.filter((p) => keys[p]);
   if (usable.length === 0) return { missing: offered };
@@ -58,7 +62,7 @@ export function chooseProvider(m: Routed, keys: ProviderKeys): ProviderChoice {
  * The key to ask for when Generate is pressed and the model cannot run: OpenRouter when it serves
  * the model (the default provider), otherwise the first that does. Undefined when the model can run.
  */
-export function keyToAsk(m: Routed, keys: ProviderKeys): ProviderId | undefined {
+export function keyToAsk(m: ModelRoutes, keys: ProviderKeys): ProviderId | undefined {
   const { provider, missing } = chooseProvider(m, keys);
   if (provider) return undefined;
   return missing.includes("openrouter") ? "openrouter" : missing[0];
@@ -72,7 +76,7 @@ export function keyPhrase(providers: ProviderId[]): string {
 }
 
 /** "Kling 3.0 Motion Control runs on fal. Add a fal key in Settings to use it." (undefined when the model can run). */
-export function providerNotice(m: Pick<CatalogModel, "name"> & Routed, keys: ProviderKeys): string | undefined {
+export function providerNotice(m: Pick<CatalogModel, "name"> & ModelRoutes, keys: ProviderKeys): string | undefined {
   const { provider, missing } = chooseProvider(m, keys);
   if (provider) return undefined;
   if (missing.length === 1 && missing[0]) return `${m.name} runs on ${PROVIDER_NAME[missing[0]]}. Add ${keyPhrase(missing)} in Settings to use it.`;

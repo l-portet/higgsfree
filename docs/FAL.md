@@ -16,7 +16,8 @@ turns out to behave differently, fix the code and this page in the same PR.
 ## Which provider runs a model
 
 - A model is on OpenRouter unless it is `offOpenRouter`, on fal when it has a `fal` route, on kie.ai with a
-  `kie` route and on APIMart with an `apimart` route (`modelProviders`, in that order). Every model is listed in the picker
+  `kie` route, on APIMart with an `apimart` route, on Revana with a `revana` route and on ByteDance (BytePlus
+  ModelArk, videos only) with a `bytedance` route (`modelProviders`, in that order). Every model is listed in the picker
   whichever keys are set.
 - Only providers with a stored key that can take the request count (a provider refuses what its payload
   builder throws on: fal and style references, kie and a clip shorter than the model takes there…). None:
@@ -25,9 +26,11 @@ turns out to behave differently, fix the code and this page in the same PR.
     through `quoteVideo` and `quoteImage`, used by the composer for the price it shows and by the engine to
     route the run, so the two agree). Each provider is priced for the request as it stands: OpenRouter from
     the live catalog (its no-audio price when Sound is off), fal from `FAL_PRICES`, kie.ai from `KIE_PRICES`
-    ([KIE.md](KIE.md)) and APIMart from `APIMART_PRICES` ([APIMART.md](APIMART.md)) for the endpoint or model
-    the inputs pick. Prices within half a cent are a tie, and a tie, or no price known yet (an edit before its
-    video's length is), goes to the first in the catalog's order (OpenRouter, fal, kie.ai, APIMart).
+    ([KIE.md](KIE.md)), APIMart from `APIMART_PRICES` ([APIMART.md](APIMART.md)), Revana from `REVANA_MODELS`
+    ([REVANA.md](REVANA.md)) and ByteDance from the tokens of the clip at `BYTEDANCE_VIDEO_MODELS`' rates
+    ([BYTEDANCE.md](BYTEDANCE.md)), for the endpoint or model the inputs pick. Prices within half a cent are a tie,
+    and a tie, or no price known yet (an edit before its video's length is), goes to the first in the catalog's
+    order (OpenRouter, fal, kie.ai, APIMart, Revana, ByteDance).
   - **A pick overrides it.** The price next to Generate is a menu (`ProviderPicker`): Auto, or any provider
     that offers the model. The pick goes out as `provider` on the request, and `pinQuote` applies it in the
     composer and the engine alike, only while that provider has a key and takes the request; otherwise Auto.

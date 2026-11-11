@@ -72,6 +72,9 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
       const why = refusal(() => buildRevanaImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale }, refs));
       return why ? { refusal: why } : usd(estimateRevanaImageCost(model, req, req.count, withRefs));
     }
+    case "bytedance":
+      // No image model has a ByteDance route: ModelArk's image API does not take a key from a browser (docs/BYTEDANCE.md).
+      return { refusal: "Runs videos only" };
   }
 }
 

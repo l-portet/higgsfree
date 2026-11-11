@@ -13,6 +13,7 @@ export const KEY_STORAGE_BY_PROVIDER: Record<ProviderId, string> = {
   kie: "higgsfree.kieKey",
   apimart: "higgsfree.apimartKey",
   revana: "higgsfree.revanaKey",
+  bytedance: "higgsfree.bytedanceKey",
 };
 /** Survive "Reset local settings": losing a key is never what that button means. */
 export const PROTECTED_STORAGE_KEYS: readonly string[] = Object.values(KEY_STORAGE_BY_PROVIDER);

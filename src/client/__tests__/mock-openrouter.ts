@@ -72,6 +72,7 @@ export interface MockOpenRouter {
     apimartUploads: number;
     revanaGenerations: Record<string, { polls: number; image: boolean }>;
     revanaUploads: number;
+    bytedanceTasks: Record<string, { polls: number; model: string; resolution: string }>;
     falBillingForbidden?: boolean;
   };
   /** Calls to fal hosts (API, uploads, CDN), by path. */
@@ -82,6 +83,8 @@ export interface MockOpenRouter {
   apimart(path: string): Seen[];
   /** Calls to Revana hosts (API, file storage), by path. */
   revana(path: string): Seen[];
+  /** Calls to ByteDance hosts (ModelArk's API, its file storage), by path. */
+  bytedance(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
 }
@@ -91,7 +94,7 @@ const json = (status: number, payload: unknown): Response => new Response(JSON.s
 /** Replace `fetch` for the current test (undone by `vi.unstubAllGlobals()` in the setup's afterEach). */
 export function installMockOpenRouter(): MockOpenRouter {
   const seen: Seen[] = [];
-  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0, revanaGenerations: {}, revanaUploads: 0 };
+  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0, revanaGenerations: {}, revanaUploads: 0, bytedanceTasks: {} };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
     const u = new URL(input instanceof Request ? input.url : String(input));
@@ -111,6 +114,7 @@ export function installMockOpenRouter(): MockOpenRouter {
     if (KIE_HOSTS.includes(u.hostname)) return kieRoute(u, entry, state);
     if (APIMART_HOSTS.includes(u.hostname)) return apimartRoute(u, entry, state);
     if (REVANA_HOSTS.includes(u.hostname)) return revanaRoute(u, entry, state);
+    if (BYTEDANCE_HOSTS.includes(u.hostname)) return bytedanceRoute(u, entry, state);
     if (u.hostname !== "openrouter.ai") return falRoute(u, entry, state);
     // The two catalogs are public: no key needed.
     if (url === "/api/v1/videos/models" || url === "/api/v1/images/models") {
@@ -153,8 +157,10 @@ export function installMockOpenRouter(): MockOpenRouter {
   return {
     seen,
     state,
-    fal: (path) => seen.filter((s) => s.host !== "openrouter.ai" && !KIE_HOSTS.includes(s.host) && !APIMART_HOSTS.includes(s.host) && !REVANA_HOSTS.includes(s.host) && s.url === path),
+    fal: (path) =>
+      seen.filter((s) => s.host !== "openrouter.ai" && ![...KIE_HOSTS, ...APIMART_HOSTS, ...REVANA_HOSTS, ...BYTEDANCE_HOSTS].includes(s.host) && s.url === path),
     revana: (path) => seen.filter((s) => REVANA_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
+    bytedance: (path) => seen.filter((s) => BYTEDANCE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     apimart: (path) => seen.filter((s) => APIMART_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     kie: (path) => seen.filter((s) => KIE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     calls: (url) => seen.filter((s) => s.url === url),
@@ -365,4 +371,54 @@ function revanaRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Respo
     return json(200, { id, status: "succeeded", output: { urls: [`https://api.revana.si/v1/generations/${id}/content`] }, cost_usd: 0.42, error: null });
   }
   return json(404, { error: { message: `no Revana route ${path}` } });
+}
+
+export const BYTEDANCE_KEY = "ark-test-key";
+export const BYTEDANCE_FILES = "https://ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com";
+const BYTEDANCE_HOSTS = ["ark.ap-southeast.bytepluses.com", new URL(BYTEDANCE_FILES).hostname];
+
+/**
+ * ByteDance (BytePlus ModelArk): \`ark.ap-southeast.bytepluses.com\` (video tasks; listing them is the key test) and the
+ * TOS bucket results come from. Errors are HTTP statuses with \`{ error: { code, message, type } }\`. A task is
+ * \`running\` on its first poll and \`succeeded\` after, with 108,900 tokens (5 s at 720p); prompts containing
+ * BYTEDANCE_FAIL make it fail (a real face), BYTEDANCE_NOT_OPEN makes the submit a 404 \`ModelNotOpen\`, and
+ * BYTEDANCE_BLOCKED makes the result's download fail the way a browser blocks it (no CORS on the bucket).
+ */
+function bytedanceRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
+  const path = u.pathname;
+  if (u.hostname !== "ark.ap-southeast.bytepluses.com") {
+    if (entry.auth) return json(403, { Code: "AccessDenied", Message: "the key never goes here" });
+    if (path.includes("blocked")) throw new TypeError("Failed to fetch");
+    return new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } });
+  }
+  if (entry.auth !== `Bearer ${BYTEDANCE_KEY}`) {
+    return json(401, { error: { code: "AuthenticationError", message: "The API key format is incorrect. Request id: x", param: "", type: "Unauthorized" } });
+  }
+  if (path === "/api/v3/contents/generations/tasks" && entry.method === "GET") return json(200, { items: [], total: 0 });
+  if (path === "/api/v3/contents/generations/tasks" && entry.method === "POST") {
+    const content = (entry.body?.content ?? []) as { type?: string; text?: string }[];
+    const prompt = content.find((c) => c.type === "text")?.text ?? "";
+    if (prompt.includes("BYTEDANCE_NOT_OPEN")) {
+      return json(404, { error: { code: "ModelNotOpen", message: `Your account 2100 has not activated the model ${String(entry.body?.model)}. Please activate the model service in the Ark Console.`, type: "NotFound" } });
+    }
+    const id = prompt.includes("BYTEDANCE_FAIL") ? "cgt-fail" : prompt.includes("BYTEDANCE_BLOCKED") ? "cgt-blocked" : `cgt-${Object.keys(state.bytedanceTasks).length + 1}`;
+    state.bytedanceTasks[id] = { polls: 0, model: String(entry.body?.model), resolution: String(entry.body?.resolution) };
+    return json(200, { id });
+  }
+  const t = path.match(/^\/api\/v3\/contents\/generations\/tasks\/([^/]+)$/);
+  if (t && entry.method === "GET") {
+    const id = decodeURIComponent(t[1] ?? "");
+    const task = state.bytedanceTasks[id];
+    if (!task) return json(404, { error: { code: "ResourceNotFound", message: "The requested resource does not exist.", type: "NotFound" } });
+    task.polls++;
+    const base = { id, model: task.model, resolution: task.resolution, ratio: "16:9", duration: 5, framespersecond: 24 };
+    if (id === "cgt-fail") {
+      const error = { code: "InputImageSensitiveContentDetected.PrivacyInformation", message: "The request failed because the input image may contain real person. Request ID: x" };
+      return json(200, { ...base, status: "failed", content: null, error });
+    }
+    if (task.polls === 1) return json(200, { ...base, status: "running", content: null, error: null });
+    const file = id === "cgt-blocked" ? "blocked" : id;
+    return json(200, { ...base, status: "succeeded", content: { video_url: `${BYTEDANCE_FILES}/out/${file}.mp4?X-Tos-Signature=x` }, usage: { completion_tokens: 108900, total_tokens: 108900 }, error: null });
+  }
+  return json(404, { error: { code: "NotFound", message: `no ByteDance route ${path}`, type: "NotFound" } });
 }

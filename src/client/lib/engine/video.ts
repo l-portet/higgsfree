@@ -4,9 +4,10 @@
  * exists, so a pending video without a polling url whose lock is free can only be a submit that
  * died with its tab.
  *
- * Four providers share that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
- * the Bearer key), fal (queue submit, `status_url`, result json with a public CDN url), and kie.ai and
- * APIMart (`task-providers.ts`: inputs uploaded first, a task polled until its result urls and cost are there).
+ * Every provider shares that lifecycle: OpenRouter (`/api/v1/videos`, polling url, download with
+ * the Bearer key), fal (queue submit, `status_url`, result json with a public CDN url), and kie.ai,
+ * APIMart, Revana and ByteDance (`task-providers.ts`: inputs uploaded first, a task polled until its result urls and
+ * cost are there).
  */
 import type { Generation, GenerationInputs, MotionOrientation, ProviderId, VideoGenerateRequest, VideoModel, VideoParams } from "@shared/types";
 import { lookupVideoModel } from "../catalog";
@@ -37,14 +38,14 @@ import { failGeneration, isCancelled, NOT_ACQUIRED, savePublish, tryWithJobLock 
 const fmtCost = (c: number | undefined): string => (c === undefined ? "n/a" : `$${c.toFixed(4)}`);
 
 /**
- * Only a 400 / 404 / 422 (or a url on a foreign origin) ends the job. 401 / 403 are
- * transient: the key may have just been rotated, so keep polling with whatever key
- * is configured until `JOB_TIMEOUT_MS` runs out.
+ * Only a 400 / 404 / 422 (or a url on a foreign origin, or a ByteDance video the browser may not download) ends the
+ * job. 401 / 403 are transient: the key may have just been rotated, so keep polling with whatever key is configured
+ * until `JOB_TIMEOUT_MS` runs out.
  */
 const isPermanent = (err: unknown): boolean =>
   err instanceof or.ForeignOriginError ||
   err instanceof fal.FalOriginError ||
-  Object.values(TASK_PROVIDERS).some((tp) => tp.isOriginError(err)) ||
+  Object.values(TASK_PROVIDERS).some((tp) => tp.endsJob(err)) ||
   (err instanceof ApiClientError && [400, 404, 422].includes(err.status));
 
 // ---------- a pause that ends early when the tab becomes visible or the job is cancelled ----------

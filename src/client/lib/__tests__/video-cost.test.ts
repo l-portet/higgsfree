@@ -17,7 +17,7 @@ describe("quoteVideo", () => {
   it("runs a video on the cheaper provider, whatever the preference", () => {
     const q = quoteVideo(video("bytedance/seedance-2.5"), { duration: 5, resolution: "720p", aspectRatio: "16:9", audio: true }, BOTH, NOW);
     expect(q).toMatchObject({ provider: "openrouter", reason: "cheaper" });
-    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie", "apimart", "revana"]);
+    expect(q.quotes.map((x) => x.provider)).toEqual(["openrouter", "fal", "kie", "apimart", "revana", "bytedance"]);
     expect(usd(q).openrouter).toBeCloseTo(1.1555);
     expect(usd(q).fal).toBeCloseTo(2.838);
     const pricier = { ...video("bytedance/seedance-2.5"), estCostPerSecUsd: { "720p": 1 } };
@@ -132,6 +132,34 @@ describe("quoteVideo", () => {
     const known = quoteVideo(flux, { duration: 5, videoSec: 10 }, BOTH, NOW);
     expect(known).toMatchObject({ provider: "openrouter", reason: "tie" });
     expect(usd(known)).toEqual({ openrouter: expect.closeTo(0.3), fal: expect.closeTo(0.3) });
+  });
+
+  it("ByteDance, on BytePlus ModelArk: OpenRouter's price (a tie goes to OpenRouter), less than fal, kie.ai and at times Revana; APIMart stays cheaper", () => {
+    const sd25 = video("bytedance/seedance-2.5");
+    const req = { prompt: "a fox", duration: 5, resolution: "720p", aspectRatio: "16:9" } as const;
+    // 5 s at 720p: $1.156 on ByteDance (108,000 tokens at $10.70 per million), $1.575 on kie, $2.84 on fal.
+    const q25 = quoteVideo(sd25, req, { fal: true, kie: true, bytedance: true }, NOW);
+    expect(q25).toMatchObject({ provider: "bytedance", reason: "cheaper" });
+    expect(usd(q25)).toMatchObject({ openrouter: expect.closeTo(1.1555), fal: expect.closeTo(2.838), kie: expect.closeTo(1.575), bytedance: expect.closeTo(1.1556) });
+    expect(quoteVideo(sd25, req, { openrouter: true, bytedance: true }, NOW)).toMatchObject({ provider: "openrouter", reason: "tie" });
+    // Style references: fal takes none, ByteDance up to 30.
+    expect(quoteVideo(sd25, { ...req, references: true }, { fal: true, bytedance: true }, NOW)).toMatchObject({ provider: "bytedance", reason: "one-ready" });
+    // Seedance 2.0 at 1080p: $1.87 on ByteDance, $2.00 on Revana, $2.55 on kie; APIMart's $1.77 wins when it has a key.
+    const sd20 = video("bytedance/seedance-2.0");
+    const hd = { prompt: "a fox", duration: 5, resolution: "1080p", aspectRatio: "16:9" } as const;
+    const q20 = quoteVideo(sd20, hd, { kie: true, revana: true, bytedance: true }, NOW);
+    expect(q20).toMatchObject({ provider: "bytedance", reason: "cheaper" });
+    expect(usd(q20)).toMatchObject({ kie: expect.closeTo(2.55), revana: expect.closeTo(2), bytedance: expect.closeTo(1.871) });
+    expect(quoteVideo(sd20, hd, { apimart: true, bytedance: true }, NOW).provider).toBe("apimart");
+    // Seedance 2.0 Fast costs more on ModelArk ($5.60 per million tokens) than on OpenRouter ($4.20).
+    expect(quoteVideo(video("bytedance/seedance-2.0-fast"), { ...req }, { openrouter: true, bytedance: true }, NOW)).toMatchObject({ provider: "openrouter", reason: "cheaper" });
+    // What ModelArk does not take goes elsewhere: 9:21, or a reference video (it takes videos by public link only).
+    const tall = quoteVideo(sd20, { ...hd, aspectRatio: "9:21" }, { openrouter: true, bytedance: true }, NOW);
+    expect(tall).toMatchObject({ provider: "openrouter", reason: "one-ready" });
+    expect(tall.quotes.find((x) => x.provider === "bytedance")).toMatchObject({ refusal: "Takes no 9:21" });
+    const withVideo = quoteVideo(sd20, { ...hd, referenceVideos: true, referenceVideoSec: 4 }, { kie: true, bytedance: true }, NOW);
+    expect(withVideo).toMatchObject({ provider: "kie", reason: "one-ready" });
+    expect(withVideo.quotes.find((x) => x.provider === "bytedance")).toMatchObject({ refusal: "Takes videos by public link only" });
   });
 
   it("sends reference videos and audio to kie.ai only", () => {

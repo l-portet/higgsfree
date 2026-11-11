@@ -355,6 +355,21 @@ since the models' sizes follow OpenRouter's catalog. Not verified end to end.
 With a Revana key, 36 of these models also run on Revana ([REVANA.md](REVANA.md)), at the prices of its public
 list (`REVANA_MODELS`), and a run goes there whenever it is the cheapest. Revana records what each run cost.
 
+### ByteDance
+
+With a ByteDance key, Seedance 2.5, 2.0, 2.0 Fast and 2.0 Mini also run on ByteDance's own platform, BytePlus
+ModelArk ([BYTEDANCE.md](BYTEDANCE.md)), billed per video token at ModelArk's rates (`BYTEDANCE_VIDEO_MODELS`), and a
+run goes there whenever it is the cheapest. That is never the case with every key set (OpenRouter charges the same and
+wins the tie; APIMart and Revana are cheaper), but it beats fal and kie.ai on Seedance 2.5 and 2.0. No image model
+is routed: ModelArk's image API does not take a key from a browser. Not verified with a real key.
+
+| Model | ModelArk id | Resolutions | Durations |
+|---|---|---|---|
+| Seedance 2.5 | `dreamina-seedance-2-5-260628` | 480p, 720p (1080p on ModelArk, not in the catalog) | 4–30 s |
+| Seedance 2.0 | `dreamina-seedance-2-0-260128` | 480p, 720p, 1080p, 4K | 4–15 s |
+| Seedance 2.0 Fast | `dreamina-seedance-2-0-fast-260128` | 480p, 720p | 4–15 s |
+| Seedance 2.0 Mini | `dreamina-seedance-2-0-mini-260615` | 480p, 720p | 4–15 s |
+
 ### APIMart
 
 With an APIMart key, these also run on APIMart ([APIMART.md](APIMART.md)), at its Gold-tier prices
@@ -628,7 +643,9 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `endImageMaxSec` (the longest clip with a last frame, when less than the model's longest); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
 | `kie` | How kie.ai serves the model (`KieVideoRoute`): its `family` (which builder maps the fields), the createTask `model`, an `imageModel` used with a frame where kie splits the two, a `tier` (Veo's `model`, Kling's `mode`). See [KIE.md](KIE.md#video-fields-buildkievideopayload). |
 | `apimart` | How APIMart serves the model (`ApimartVideoRoute`): its `family`, APIMart's `model` id and a `tier` (Kling's `mode`). See [APIMART.md](APIMART.md#video-fields-buildapimartvideopayload). |
-| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with another provider's route that OpenRouter stopped listing. |
+| `revana` | How Revana serves the model (`RevanaRoute`): Revana's `model` id. See [REVANA.md](REVANA.md). |
+| `bytedance` | How ByteDance serves the model on BytePlus ModelArk (`BytedanceRoute`): ModelArk's `model` id, whose options and token prices are in `BYTEDANCE_VIDEO_MODELS`. Videos only. See [BYTEDANCE.md](BYTEDANCE.md). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `bytedance`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with another provider's route that OpenRouter stopped listing. |
 
 ## Verification checklist
 

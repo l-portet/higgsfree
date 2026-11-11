@@ -5,7 +5,7 @@
 
 export type GenerationType = "image" | "video";
 /** Who runs a generation. A model can be offered by several. */
-export type ProviderId = "openrouter" | "fal" | "kie" | "apimart" | "revana";
+export type ProviderId = "openrouter" | "fal" | "kie" | "apimart" | "revana" | "bytedance";
 /** Motion control: whose orientation the character keeps (fal caps the reference video at 30 s for `video`, 10 s for `image`). */
 export type MotionOrientation = "video" | "image";
 export type GenerationStatus = "pending" | "running" | "completed" | "failed";
@@ -263,7 +263,9 @@ export interface VideoModel {
   apimart?: ApimartVideoRoute;
   /** Revana serves it too. */
   revana?: RevanaRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`). */
+  /** ByteDance serves it too, on its own platform (BytePlus ModelArk). */
+  bytedance?: BytedanceRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `bytedance`). */
   offOpenRouter?: boolean;
 }
 
@@ -368,6 +370,15 @@ export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite
  * Revana's id; what it takes (resolutions, ratios, durations, inputs) and costs is in `REVANA_MODELS`.
  */
 export interface RevanaRoute {
+  model: string;
+}
+
+/**
+ * How ByteDance serves its own video models (BytePlus ModelArk): `POST /contents/generations/tasks`
+ * `{ model, content: [text, images…], ratio, duration, resolution, … }`. `model` is ModelArk's id; what it takes and
+ * costs is in `BYTEDANCE_VIDEO_MODELS`. Videos only: ModelArk's image API does not take a key from a browser.
+ */
+export interface BytedanceRoute {
   model: string;
 }
 

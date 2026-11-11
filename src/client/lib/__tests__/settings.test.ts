@@ -1,6 +1,7 @@
 /** The keys and the provider choice in localStorage, never leaked; uploads are sniffed, not trusted. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../api";
+import { BYTEDANCE_UNREADABLE } from "../bytedance";
 import { getMediaBlob } from "../db/media";
 import { resetLiveModels } from "../openrouter";
 import { KEY_STORAGE, PROTECTED_STORAGE_KEYS } from "../settings";
@@ -34,6 +35,15 @@ describe("settings", () => {
     expect(saved).toEqual({ hasKey: false, keys: { kie: "kie-01234…cdef" } });
     expect(localStorage.getItem("higgsfree.kieKey")).toBe(JSON.stringify("kie-0123456789abcdef"));
     expect(PROTECTED_STORAGE_KEYS).toContain("higgsfree.kieKey");
+  });
+
+  it("keeps a ByteDance key too; a key test the browser cannot read says what to check", async () => {
+    const saved = await api.updateSettings({ keys: { bytedance: "ark-0123456789abcdef" } });
+    expect(saved.keys).toEqual({ bytedance: "ark-01234…cdef" });
+    expect(localStorage.getItem("higgsfree.bytedanceKey")).toBe(JSON.stringify("ark-0123456789abcdef"));
+    expect(PROTECTED_STORAGE_KEYS).toContain("higgsfree.bytedanceKey");
+    // fetch fails here, as it does in a browser for every ModelArk error (they carry no CORS headers).
+    await expect(api.testProviderKey("bytedance")).rejects.toMatchObject({ status: 0, error: BYTEDANCE_UNREADABLE });
   });
 
   it("survives 'Reset local settings'", async () => {
