@@ -34,8 +34,8 @@ export function videoListUsd(
 }
 
 /** USD for `count` images at `size`. */
-export function imageListUsd(price: ListPrice | undefined, size: ImageSize, count: number, unitUsd: number): number | undefined {
+export function imageListUsd(price: ListPrice | undefined, size: ImageSize, count: number, unitUsd: number, inputImages = 0): number | undefined {
   if (price?.unit !== "image") return undefined;
   const per = typeof price.amount === "number" ? price.amount : (price.amount[size] ?? price.amount["1K"]);
-  return per === undefined ? undefined : per * unitUsd * count;
+  return per === undefined ? undefined : (per + inputImages * (price.inputImageAmount ?? 0)) * unitUsd * count;
 }

@@ -62,7 +62,7 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
     }
     case "kie": {
       const why = refusal(() => buildKieImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale, creative: req.creative }, refs));
-      return why ? { refusal: why } : usd(estimateKieImageCost(model, req, req.count, withRefs));
+      return why ? { refusal: why } : usd(estimateKieImageCost(model, req, req.count, req.references));
     }
     case "apimart": {
       const why = refusal(() => buildApimartImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));

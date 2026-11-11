@@ -98,6 +98,7 @@ The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@V
 | `nano-banana-lite` | Nano Banana 2 Lite → `nano-banana-2-lite` | `aspect_ratio` (required; `auto` allowed), `image_urls` |
 | `gpt-image-2` | GPT Image 2 → `gpt-image-2-text-to-image`, `gpt-image-2-image-to-image`; GPT Image 2.6 Flare → `gpt-image-2-6/flare-text-to-image`, `gpt-image-2-6/flare-image-to-image`; GPT Image 2.6 Sunburst → `gpt-image-2-6/sunburst-text-to-image`, `gpt-image-2-6/sunburst-image-to-image` | `aspect_ratio`, `resolution`, `input_urls` (≤ 16) |
 | `gpt-image-economy` | GPT Image 2.6 Economy → `gpt-image-2-6/economy-text-to-image`, `gpt-image-2-6/economy-image-to-image` | `aspect_ratio` (no 3:4), `input_urls` (≤ 16), no `resolution` |
+| `seedream` | Seedream 5.5 → `seedream/5-5-text-to-image`, `seedream/5-5-image-to-image` | `aspect_ratio` (`auto` on edits only: 1:1 is sent for it on text to image), `size` 1K / 2K, `image_urls` (≤ 10) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux1-kontext`, `model: "flux-kontext-pro"` | `aspect_ratio` (not `auto`, no 3:2 / 2:3), `input_image` (one reference) |
 | `z-image` | Z-Image Turbo → `z-image` | `aspect_ratio` (required: `auto` becomes 1:1) |
 
@@ -113,6 +114,15 @@ none is sent. `aspect_ratio` is `auto` by default, or 1:1, 16:9, 9:16, 3:2, 2:3,
 to 16 images (JPEG, PNG or WebP, 30 MB each), of which the app sends at most 8. `background`, `output_format` (`png` by
 default; `gif` too on text to image) and text to image's GIF fields (`frame_count`, `frame_duration_ms`) are not sent.
 
+Seedream 5.5 runs on kie and APIMart. Its two doc pages (read 11 Nov 2026) give text to image a required
+`aspect_ratio` with no `auto` (1:1, 4:3, 3:4, 16:9, 9:16, 2:3, 3:2, 21:9), so the app sends 1:1 for `auto` there; image
+to image takes `auto` too, as its default. `size` is 1K, 1.5K or 2K (`2K` by default); the app lists 1K and 2K, the
+sizes it shares with APIMart. Image to image takes 1 to 10 `image_urls` (JPEG, PNG or WebP, 10 MB each), of which the
+app sends at most 8. Both want a prompt of 5 to 5,000 characters; a shorter one is left for kie to refuse, since the
+estimate is built without the prompt. `output_format` (`png` by default), `background` (`auto` by default; `transparent`
+with PNG) and `nsfw_checker` are not sent, and the layer decomposition model (`seedream/5-5-layer-decomposition`) is not
+wired.
+
 An image goes to the cheapest provider with a key that can take the request (`quoteImage`), or to the one
 picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes to fal.
 
@@ -120,16 +130,18 @@ picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes 
 
 `KIE_PRICES` (`src/shared/kie-prices.ts`) has kie's list price in credits ($0.005 each) for every model a
 route sends to, read from kie's pricing page (`kie.ai/pricing`, backed by the public
-`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov); a test checks every route is priced and
+`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov); a test checks every route is priced and
 every price is used. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0
 and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash 1.1, by length),
-or per image (by size). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
+or per image (by size; Seedream 5.5's edits also bill each reference image). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
 and price it, so the estimate follows the model id, tier, resolution, duration and sound sent.
 
 The exceptions are GPT Image 2.6 Flare and Sunburst (6 Nov 2026), which kie bills per million tokens at the same rates,
 with no per-image price: in credits, 900 text input, 225 cached text input, 1,440 image input, 360 cached image input,
 5,400 image output. They have no estimate rather than a guessed one, and the test lists them as unpriced. GPT Image 2.6
-Economy is not one of them: 5 credits ($0.025) an image, with or without references.
+Economy is not one of them: 5 credits ($0.025) an image, with or without references. Seedream 5.5 costs 3.6 credits
+($0.018) an image at 1K (and 1.5K) and 6.3 ($0.0315) at 2K, the same on both models, plus 1.44 ($0.0072) for each
+reference image on an edit (`inputImageAmount`).
 
 ## Known gaps
 

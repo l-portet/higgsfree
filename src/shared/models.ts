@@ -264,18 +264,19 @@ export const IMAGE_MODELS: ImageModel[] = [
     endpoint: "fal",
     featured: false,
     badges: ["new"],
-    // APIMart takes 10 references; the app sends 8 at most.
+    // APIMart and kie.ai take 10 references; the app sends 8 at most.
     caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
-    // APIMart's ratios but 2:1 and 1:2, which the app has no option for.
+    // APIMart's ratios but 2:1 and 1:2, which the app has no option for. kie.ai has the rest, `auto` on edits only.
     aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"],
-    // APIMart also takes 1.5K, which `ImageSize` cannot say, and no 4K.
+    // Both also take 1.5K, which `ImageSize` cannot say, and no 4K.
     sizes: ["1K", "2K"],
-    // APIMart lists no price for it yet (5 Nov 2026): no estimate rather than a guessed one.
+    // Priced from `KIE_PRICES` on kie.ai (read 11 Nov 2026); APIMart has no price in the app, so no estimate there.
     estCostUsd: {},
     supportsImageSize: true,
     verified: false,
-    // Not on OpenRouter, fal nor kie.ai yet.
+    // Not on OpenRouter nor fal yet.
     offOpenRouter: true,
+    kie: { family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" },
     apimart: { family: "seedream", model: "seedream-5.5" },
   },
   {

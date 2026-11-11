@@ -53,6 +53,9 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   // No entry for GPT Image 2.6 Flare and Sunburst: kie bills them per million tokens, with no per-image price (read 6 Nov 2026).
   // GPT Image 2.6 Economy: 5 credits at 1K, its only size, with or without references (read 6 Nov 2026).
   "gpt-image-2-6/economy-text-to-image": { unit: "image", amount: 5 },
+  // Seedream 5.5 (read 11 Nov 2026): 1.5K, which the app has no size for, is 3.6 too. Edits cost the same, plus 1.44 for
+  // each reference image.
+  "seedream/5-5-text-to-image": { unit: "image", amount: { "1K": 3.6, "2K": 6.3 }, inputImageAmount: 1.44 },
   "flux1-kontext#flux-kontext-pro": { unit: "image", amount: 5 },
   "z-image": { unit: "image", amount: 0.8 },
 };

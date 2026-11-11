@@ -12,7 +12,7 @@ import { limits, timing } from "@/lib/engine/constants";
 import { subscribeEvents } from "@/lib/live";
 import { resetLiveModels } from "@/lib/openrouter";
 import { setProviderKey, setStoredFalKey, setStoredKey } from "@/lib/settings";
-import { FAL_KEY, installMockOpenRouter, KIE_KEY, MP4, PNG_2X2, PNG_DATA_URL, sleep, waitFor, type MockOpenRouter } from "./mock-openrouter";
+import { APIMART_KEY, FAL_KEY, installMockOpenRouter, KIE_KEY, MP4, PNG_2X2, PNG_DATA_URL, sleep, waitFor, type MockOpenRouter } from "./mock-openrouter";
 
 let mock: MockOpenRouter;
 const received: Generation[] = [];
@@ -180,6 +180,27 @@ describe("kie.ai images", () => {
       { model: "gpt-image-2-6/economy-text-to-image", input: { prompt: "p", aspect_ratio: "16:9" } },
       { model: "gpt-image-2-6/economy-image-to-image", input: { prompt: "p", aspect_ratio: "16:9", input_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] } },
     ]);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
+  });
+
+  it("Seedream 5.5, on kie.ai and APIMart: kie runs it, being the one priced, with 1:1 for `auto` and the edit model with a reference", async () => {
+    setProviderKey("kie", KIE_KEY);
+    setProviderKey("apimart", APIMART_KEY);
+    const req = { prompt: "a red fox", model: "bytedance/seedream-5.5", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("kie");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    expect(edit.provider).toBe("kie");
+    await waitFor(completed(edit.id));
+    expect(mock.kie("/api/v1/jobs/createTask").map((c) => c.body)).toEqual([
+      { model: "seedream/5-5-text-to-image", input: { prompt: "a red fox", aspect_ratio: "1:1", size: "2K" } },
+      { model: "seedream/5-5-image-to-image", input: { prompt: "a red fox", aspect_ratio: "auto", size: "2K", image_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] } },
+    ]);
+    expect(mock.apimart("/v1/images/generations")).toHaveLength(0);
     expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 

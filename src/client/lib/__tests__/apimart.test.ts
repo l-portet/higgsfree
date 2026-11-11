@@ -264,12 +264,13 @@ describe("APIMart prices", () => {
     expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toEqual({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 
-  it("Seedream 5.5, on APIMart only: it runs there with no price known yet", () => {
+  it("Seedream 5.5, on kie.ai and APIMart: APIMart runs it with no price known yet when its key is the only one", () => {
     const m = image("bytedance/seedream-5.5");
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 4, references: 8 };
-    expect(quoteImage(m, req, { apimart: true })).toEqual({ quotes: [{ provider: "apimart", noKey: false }], provider: "apimart", reason: "only" });
-    // No other key helps.
-    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toEqual({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
+    expect(quoteImage(m, req, { apimart: true })).toMatchObject({ quotes: [{ provider: "kie", noKey: true }, { provider: "apimart", noKey: false }], provider: "apimart", reason: "one-ready" });
+    expect(quoteImage(m, req, { apimart: true }).quotes[1]?.usd).toBeUndefined();
+    // No OpenRouter or fal key helps.
+    expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ quotes: [{ provider: "kie", noKey: true }, { provider: "apimart", noKey: true }], reason: "none" });
   });
 
   it.each(["flare", "sunburst"])("GPT Image 2.6 %s: priced on none of its providers, so OpenRouter runs it when its key is there", (tier) => {

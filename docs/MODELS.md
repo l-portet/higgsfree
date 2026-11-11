@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 25 image models (8 of them fal-only, 2 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
+Curated today: 25 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models), 1 [on kie.ai and APIMart only](#kieai-and-apimart-only)) and 50 video models, of which 48 are offered
 (19 fal-only, 1 [on kie.ai or APIMart only](#kieai-and-apimart-only), 8 of the 48 are
 [video editors](#video-editing)) and 2 are hidden.
 
@@ -78,10 +78,10 @@ GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered 
 model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
 
-Not on OpenRouter: the [fal-only image models](#fal-only-image-models), GPT Image 2.6 and Seedream 5.5, which
-run on APIMart only (see [APIMart-only image models](#apimart-only-image-models)), and GPT Image 2.6 Economy, which
-runs on kie.ai only (see [kie.ai-only image models](#kieai-only-image-models)); GPT Image 2.6 Flare and
-Sunburst, above, are separate models.
+Not on OpenRouter: the [fal-only image models](#fal-only-image-models), GPT Image 2.6, which runs on APIMart only
+(see [APIMart-only image models](#apimart-only-image-models)), GPT Image 2.6 Economy, which runs on kie.ai only (see
+[kie.ai-only image models](#kieai-only-image-models)), and Seedream 5.5, which runs on kie.ai and APIMart (see
+[kie.ai and APIMart only](#kieai-and-apimart-only)); GPT Image 2.6 Flare and Sunburst, above, are separate models.
 
 Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
 
@@ -264,13 +264,12 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 
 ### APIMart-only image models
 
-Not on OpenRouter, fal nor kie.ai: these run only with an APIMart key (fields and rules in
-[APIMART.md](APIMART.md)). The id is the app's own (`<maker>/<name>`). None is verified yet.
+Not on OpenRouter, fal nor kie.ai: this runs only with an APIMart key (fields and rules in
+[APIMART.md](APIMART.md)). The id is the app's own (`<maker>/<name>`). It is not verified yet.
 
 | Model | Id | APIMart model | t2i | i2i (max refs) | Sizes | Aspect ratios |
 |---|---|---|:-:|:-:|---|---|
 | **GPT Image 2.6** <sub>NEW</sub> | `openai/gpt-image-2.6` | `gpt-image-2.6` ¹ | ✓ | ✓ (8, `image_urls`) | 1K / 2K / 4K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 5:4, 4:5, 16:9, 9:16 |
-| **Seedream 5.5** <sub>NEW</sub> | `bytedance/seedream-5.5` | `seedream-5.5` ² | ✓ | ✓ (8, `image_urls`) | 1K / 2K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 |
 
 ¹ OpenAI's GPT Image 2.6, read from APIMart's model page on 30 Oct 2026; not on fal, kie.ai or
 OpenRouter yet. Text to image and edits are one model, with GPT Image 2's APIMart fields: `size` is
@@ -279,12 +278,6 @@ takes 16 references, the app sends 8 at most. Not sent: `quality` (auto / low / 
 picks), `n` (up to 4; the app makes one call per image), `output_format` and `background`
 (transparent). APIMart lists no price for it yet, so there is no estimate; the cost of each run is
 recorded. GPT Image 2.6 Flare and Sunburst, separate models, are on OpenRouter too (see [Image models](#image-models)).
-² ByteDance's Seedream 5.5, read from APIMart's model page on 5 Nov 2026; not on fal, kie.ai or OpenRouter yet
-(they stop at Seedream 5.0). Text to image and edits are one model: `size` is the ratio (`auto` allowed; APIMart's
-2:1 and 1:2 are not listed, the app has no such option), `resolution` `1K` / `2K` (APIMart's 1.5K is not listed
-either), references as `image_urls`. APIMart takes 10 references, the app sends 8 at most. Not sent:
-`output_format`, `background` (transparent), `layer_decomposition`, `optimize_prompt_options`, `watermark` and
-`nsfw_check`. APIMart lists no price for it yet, so there is no estimate; the cost of each run is recorded.
 
 ### kie.ai-only image models
 
@@ -302,9 +295,9 @@ credits ($0.025) an image, with or without references (`KIE_PRICES`).
 
 ### kie.ai and APIMart only
 
-Not on OpenRouter nor fal: this runs only with a kie.ai or APIMart key (fields and rules in
-[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The id is the app's own
-(`<maker>/<name>`). It is not verified yet. `†` = the aspect ratio is sent for text-to-video only.
+Not on OpenRouter nor fal: these run only with a kie.ai or APIMart key (fields and rules in
+[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The ids are the app's own
+(`<maker>/<name>`). None is verified yet. `†` = the aspect ratio is sent for text-to-video only.
 
 | Model | Id | kie models · APIMart model | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
 |---|---|---|:-:|:-:|:-:|:-:|---|---|---|
@@ -316,6 +309,21 @@ providers also offer 360p and 540p, which the app does not list (nor for PixVers
 per second without / with sound: kie 8.8 / 12 credits at 720p, 17.6 / 22.4 at 1080p ($0.044 / $0.06,
 $0.088 / $0.112); APIMart $0.0391 / $0.0533 at 720p, $0.0782 / $0.0996 at 1080p (Gold tier), so
 APIMart is the cheaper. APIMart takes a frame without a prompt, kie does not.
+
+| Model | Id | kie models · APIMart model | t2i | i2i (max refs) | Sizes | Aspect ratios | Est. cost / image |
+|---|---|---|:-:|:-:|---|---|---|
+| **Seedream 5.5** <sub>NEW</sub> | `bytedance/seedream-5.5` | `seedream/5-5-text-to-image` · `5-5-image-to-image` · `seedream-5.5` ² | ✓ | ✓ (8, `image_urls`) | 1K / 2K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | kie: 1K $0.018, 2K $0.0315, + $0.0072 a reference |
+
+² ByteDance's Seedream 5.5, read from APIMart's model page on 5 Nov 2026 and kie's docs and pricing API on
+11 Nov 2026; not on fal or OpenRouter yet (they stop at Seedream 5.0). Both take the ratio (APIMart as `size`, `auto`
+allowed; kie as `aspect_ratio`, `auto` on edits only, so a text-to-image run at `auto` sends 1:1 there), 1K or 2K (as
+`resolution` on APIMart, `size` on kie; their 1.5K and their 2:1 and 1:2 are not listed, the app has no such options)
+and up to 10 references as `image_urls` (kie: 10 MB each), of which the app sends 8 at most. APIMart makes text to image
+and edits with one model, kie with two. Not sent: `output_format`, `background` (transparent), APIMart's
+`layer_decomposition`, `optimize_prompt_options`, `watermark` and `nsfw_check`, and kie's `nsfw_checker`; kie's layer
+decomposition model is not wired. kie charges 3.6 credits ($0.018) an image at 1K (and 1.5K), 6.3 ($0.0315) at 2K,
+plus 1.44 ($0.0072) for each reference image on an edit (`KIE_PRICES`). APIMart has no price for it in the app, so with
+both keys kie runs it; the cost of each run is recorded either way. kie also wants a prompt of 5 characters or more.
 
 ### kie.ai
 
@@ -335,7 +343,7 @@ what each run cost.
 | Gemini Omni Flash 1.1, 1.2 | `google/gemini-omni-flash-1-1`, `google/gemini-omni-flash-1-2` | GPT Image 2.6 Flare ¹ | `gpt-image-2-6/flare-text-to-image` / `flare-image-to-image` |
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | GPT Image 2.6 Sunburst ¹ | `gpt-image-2-6/sunburst-text-to-image` / `sunburst-image-to-image` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
-| Wan 2.7 Edit | `wan/2-7-videoedit` | | |
+| Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 (here and on APIMart) | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
 per-image price, so they have no `KIE_PRICES` entry and no estimate: in credits, 900 text input, 225 cached text input,
@@ -362,7 +370,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare, 2.6 Sunburst | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
-| | | Seedream 5.5 (only here) | `seedream-5.5` |
+| | | Seedream 5.5 (here and on kie.ai) | `seedream-5.5` |
 
 ### Models on both
 
@@ -577,7 +585,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 and Seedream 5.5 on APIMart only, or GPT Image 2.6 Economy on kie.ai only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image and everything discovered are `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 on APIMart only, GPT Image 2.6 Economy on kie.ai only, or Seedream 5.5 on kie.ai and APIMart). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image and everything discovered are `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
