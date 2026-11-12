@@ -1061,7 +1061,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     id: "bytedance/seedance-1-5-pro",
     name: "Seedance 1.5 Pro",
     provider: "bytedance",
-    description: "Previous-gen Seedance. OpenRouter retires it on 11 Nov 2026",
+    description: "Previous-gen Seedance, with sound; on APIMart only",
     featured: false,
     badges: [],
     caps: { textToVideo: true, imageToVideo: true, lastFrame: true, audio: true, realFaces: false },
@@ -1069,11 +1069,14 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultDuration: 5,
     resolutions: ["480p", "720p", "1080p"],
     defaultResolution: "1080p",
-    aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"],
+    // APIMart's ratios: OpenRouter's 9:21 is gone with it.
+    aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
     omitAspectRatioOnI2v: true,
-    estCostPerSecUsd: { "480p": 0.0231, "720p": 0.0518, "1080p": 0.1166 },
-    estCostPerSecNoAudioUsd: { "480p": 0.0115, "720p": 0.0259, "1080p": 0.0583 },
+    // No OpenRouter price any more: APIMart's is in `APIMART_PRICES`.
+    estCostPerSecUsd: {},
     verified: false,
+    // OpenRouter retired it on 11 Nov 2026, and fal its v1.5 Pro endpoints the same day: it runs on APIMart only.
+    offOpenRouter: true,
     apimart: { family: "seedance15", model: "seedance-1-5-pro" },
   },
   // ---------- fal only (need a fal key) ----------

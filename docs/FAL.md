@@ -250,8 +250,8 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 
 - fal-only models are curated in `src/shared/models.ts` (`offOpenRouter: true`, ids `fal/<name>`) and never
   looked up in OpenRouter's catalogs: `src/client/lib/catalog.ts` keeps them whatever OpenRouter lists.
-- A curated video model with a `fal` route that OpenRouter stops listing stays, marked `offOpenRouter`. One
-  without a fal route leaves the picker, as before.
+- A curated video model with a `fal` route (or a kie.ai, APIMart or Revana one) that OpenRouter stops listing
+  stays, marked `offOpenRouter`. One with no other route leaves the picker, as before.
 - Image models are not re-marked: a curated image model OpenRouter stops listing stays as it is.
 - The app reads no catalog from fal. fal-only models use their curated options; a model both offer takes
   OpenRouter's live options, mapped through its fal route.

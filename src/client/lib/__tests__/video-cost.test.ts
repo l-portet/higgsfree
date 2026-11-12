@@ -92,6 +92,15 @@ describe("quoteVideo", () => {
     expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, NOW)).toMatchObject({ provider: "fal" });
   });
 
+  it("Seedance 1.5 Pro, on APIMart only since OpenRouter retired it: APIMart runs it at its price, and no other key helps", () => {
+    const s15 = video("bytedance/seedance-1-5-pro");
+    // 5 s at 720p: $0.22 on APIMart.
+    const q = quoteVideo(s15, { prompt: "a fox", duration: 5, resolution: "720p", aspectRatio: "16:9" }, { openrouter: true, fal: true, kie: true, apimart: true }, NOW);
+    expect(q).toMatchObject({ provider: "apimart", reason: "only" });
+    expect(q.quotes).toEqual([{ provider: "apimart", noKey: false, usd: expect.closeTo(0.22) }]);
+    expect(quoteVideo(s15, { prompt: "a fox", duration: 5 }, { openrouter: true, fal: true, kie: true }, NOW)).toMatchObject({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
+  });
+
   it("Gemini Omni Flash 1.2, on fal, kie.ai and APIMart: kie is the cheapest, fal takes no style references, APIMart no length and no price yet", () => {
     const omni = video("google/gemini-omni-flash-1.2");
     const all = { fal: true, kie: true, apimart: true };

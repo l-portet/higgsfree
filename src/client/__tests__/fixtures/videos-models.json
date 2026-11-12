@@ -1271,53 +1271,6 @@
   },
   {
    "allowed_passthrough_parameters": [
-    "watermark",
-    "req_key"
-   ],
-   "created": 1774277608,
-   "creativity": null,
-   "description": "ByteDance's next-generation audio-visual generation model with a 4.5B parameter ",
-   "generate_audio": true,
-   "id": "bytedance/seedance-1-5-pro",
-   "name": "ByteDance: Seedance 1.5 Pro",
-   "pricing_skus": {
-    "video_tokens": "0.0000024",
-    "video_tokens_without_audio": "0.0000012"
-   },
-   "seed": true,
-   "supported_aspect_ratios": [
-    "1:1",
-    "3:4",
-    "9:16",
-    "9:21",
-    "4:3",
-    "16:9",
-    "21:9"
-   ],
-   "supported_durations": [
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12
-   ],
-   "supported_frame_images": [
-    "first_frame",
-    "last_frame"
-   ],
-   "supported_resolutions": [
-    "480p",
-    "720p",
-    "1080p"
-   ],
-   "upscale_factor": null
-  },
-  {
-   "allowed_passthrough_parameters": [
     "personGeneration",
     "aspectRatio",
     "negativePrompt",
