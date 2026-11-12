@@ -82,7 +82,7 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
   catalog; the real number is `usage.cost` from OpenRouter and is what gets stored. fal reports no
   cost; fal-only models, models a provider lists no price for yet (GPT Image 2.6, Seedream 5.5 and Gemini Omni
   Flash 1.2 on APIMart, though kie.ai prices Seedream 5.5 and fal and kie.ai the latter), and models billed in tokens only (GPT Image 2.6
-  Flare and Sunburst, on every provider; MiniMax H3 Image, on OpenRouter and fal) carry no estimate rather than a guessed one. If you change an
+  Flare and Sunburst, on every provider; MiniMax H3 Image, on OpenRouter and fal, though kie.ai prices it) carry no estimate rather than a guessed one. If you change an
   estimate, say where the number came from.
 
 ## Adding or updating a model

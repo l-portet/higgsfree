@@ -33,7 +33,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
     expect(modelProviders(image("bytedance/seedream-5.5"))).toEqual(["kie", "apimart"]);
-    expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal"]);
+    expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -108,11 +108,12 @@ describe("buildFalImagePayload", () => {
     expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "auto", size: "4K" }, ["data:a", "data:b"]).input).toEqual({ prompt: "p", image_urls: ["data:a", "data:b"] });
   });
 
-  it("MiniMax H3 Image: priced on neither provider, so OpenRouter runs it when its key is there", () => {
+  it("MiniMax H3 Image: priced on neither OpenRouter nor fal, so OpenRouter runs it when its key is there (and no kie.ai key)", () => {
     const h3 = image("minimax/minimax-h3-image");
     const req = { aspectRatio: "16:9" as const, size: "4K" as const, count: 1, references: 2 };
+    // kie.ai prices it ((5.5 + 2 × 0.5) credits at 4K with two references), but has no key here.
     expect(quoteImage(h3, req, { openrouter: true, fal: true })).toEqual({
-      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }],
+      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }, { provider: "kie", noKey: true, usd: expect.closeTo(0.0325) }],
       provider: "openrouter",
       reason: "unpriced",
     });
