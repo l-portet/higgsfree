@@ -214,7 +214,6 @@ describe("fal routes", () => {
       if (m.caps.imageToImage) expect(m.fal.edit, `${m.id} edit endpoint`).toBeTruthy();
     }
     for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
-      // PixVerse 6 Max is only on kie.ai and APIMart.
       if (m.offOpenRouter) expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
       if (!m.fal) continue;
       if (m.caps.motionControl) {
@@ -250,5 +249,14 @@ describe("fal routes", () => {
     expect(m?.offOpenRouter).toBe(true);
     expect(m?.verified).toBe(false);
     expect(m?.fal ?? m?.apimart ?? m?.revana).toBeUndefined();
+  });
+
+  it("PixVerse 6 Max has PixVerse 6's fal route on its own endpoints, next to kie.ai, APIMart and Revana, and is not verified", () => {
+    const m = findVideoModel("pixverse/pixverse-v6-max");
+    const v6 = findVideoModel("fal/pixverse-v6");
+    expect(m?.fal).toEqual({ ...v6?.fal, textToVideo: "pixverse/v6/max/text-to-video", imageToVideo: "pixverse/v6/max/image-to-video" });
+    expect(m?.kie && m.apimart && m.revana).toBeTruthy();
+    expect(m?.offOpenRouter).toBe(true);
+    expect(m?.verified).toBe(false);
   });
 });

@@ -28,6 +28,7 @@ describe("provider choice", () => {
     expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart", "revana"]);
     expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart", "revana"]);
     expect(modelProviders(video("google/gemini-omni-flash-1.2"))).toEqual(["fal", "kie", "apimart"]);
+    expect(modelProviders(video("pixverse/pixverse-v6-max"))).toEqual(["fal", "kie", "apimart", "revana"]);
     expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
@@ -190,6 +191,21 @@ describe("buildFalVideoPayload", () => {
       prompt: "p", duration: 10, image_url: "data:f", end_image_url: "data:l", resolution: "720p",
     });
     expect(() => buildFalVideoPayload(m, { prompt: "p", duration: 11 }, { firstFrame: "data:f", lastFrame: "data:l" })).toThrow("Takes clips of up to 10 s between two frames");
+  });
+
+  it("PixVerse 6 Max: PixVerse 6's fields on its own `pixverse/v6/max` endpoints, a first frame only", () => {
+    const m = video("pixverse/pixverse-v6-max");
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 15, resolution: "1080p", aspectRatio: "2:3", audio: false }, {})).toEqual({
+      endpoint: "pixverse/v6/max/text-to-video",
+      input: { prompt: "p", duration: 15, aspect_ratio: "2:3", resolution: "1080p", generate_audio_switch: false },
+      params: { duration: 15, aspectRatio: "2:3", resolution: "1080p", audio: false },
+    });
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 5, aspectRatio: "16:9", audio: true }, { firstFrame: "data:f" })).toEqual({
+      endpoint: "pixverse/v6/max/image-to-video",
+      input: { prompt: "p", duration: 5, image_url: "data:f", resolution: "720p", generate_audio_switch: true },
+      params: { duration: 5, resolution: "720p", audio: true },
+    });
+    expect(() => buildFalVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "data:f", lastFrame: "data:l" })).toThrow("does not take a last frame");
   });
 
   it("FLUX.3 Max: resolution and audio; aspect ratio only without a frame; the last frame beside the first", () => {

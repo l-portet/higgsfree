@@ -17,8 +17,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
 Curated today: 25 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models), 1 [on kie.ai and APIMart only](#kieai-and-apimart-only)) and 50 video models, of which 48 are offered
-(19 fal-only, 1 [on kie.ai or APIMart only](#kieai-and-apimart-only), 8 of the 48 are
-[video editors](#video-editing)) and 2 are hidden.
+(20 fal-only, 8 of the 48 are [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
 
@@ -141,9 +140,8 @@ Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced abov
 frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` lists `video_url` and `audio_url`
 parts but documents no inline data, and APIMart uploads images only.
 
-Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 on fal, kie.ai and APIMart (see
-[fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only (see
-[kie.ai and APIMart only](#kieai-and-apimart-only)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
+Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 and PixVerse 6 Max on fal, kie.ai and APIMart (see
+[fal models](#fal-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
 Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
@@ -188,6 +186,7 @@ brackets are the values fal receives when they differ from the app's.
 | **Kling O3 Pro** <sub>NEW</sub> | `fal/kling-o3-pro` | `fal-ai/kling-video/o3/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **Kling 3.0 Turbo** <sub>FAST</sub> | `fal/kling-v3-turbo-pro` | `fal-ai/kling-video/v3/turbo/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | – | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **PixVerse 6** <sub>NEW</sub> | `fal/pixverse-v6` | `fal-ai/pixverse/v6/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | ✓ ¹ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
+| **PixVerse 6 Max** <sub>NEW</sub> | `pixverse/pixverse-v6-max` | `pixverse/v6/max/text-to-video` · `…/image-to-video` ⁶ | ✓ | ✓ | – | ✓ ¹ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
 | **Vidu Q4** <sub>NEW</sub> | `fal/vidu-q4` | `fal-ai/vidu/q4/image-to-video` | – | ✓ | – | – | 720p / 1080p / 2K / 4K (default 720p) | 3–16 (default 5) | not sent (follows the frame) |
 | **LTX 2.3** | `fal/ltx-2.3` | `fal-ai/ltx-2.3/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | 1080p / 2K [`1440p`] / 4K [`2160p`] (default 1080p) | 6, 8, 10 (default 6) | 16:9, 9:16 |
 | **Luma Ray 3.2** | `fal/luma-ray-3.2` | `luma/agent/ray/v3.2/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p (default 720p) | 5, 10 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 |
@@ -227,6 +226,15 @@ second), `aspect_ratio: "auto"`, `seeds` and its video-edit mode (`video_list`).
 goes to fal, unless it has style references, which fal does not take.
 OpenRouter's `google/gemini-omni-1.2-flash` (5 Nov 2026) is another slug: like `google/gemini-omni-1.1-flash`, it is
 [discovered](#live-catalog-and-discovered-models) as a model of its own, with OpenRouter's options and prices.
+⁶ The top quality tier of PixVerse 6 (24 Oct 2026), also on kie.ai and APIMart: text-to-video and a first frame only (no
+last frame, references, extension or multi-shot); with a frame the clip follows the image's ratio. fal's endpoints sit
+under `pixverse/`, not `fal-ai/pixverse/`, and take PixVerse 6's fields (schemas read 12 Nov 2026); `style`,
+`thinking_type`, `negative_prompt`, `seed` and `generate_multi_clip_switch` are not sent. Every provider also offers
+360p and 540p, which the app does not list (nor for PixVerse 6). Per second without / with sound, at 720p then 1080p:
+fal $0.099 / $0.135 and $0.198 / $0.252 (read 12 Nov 2026); kie 8.8 / 12 and 17.6 / 22.4 credits ($0.044 / $0.06,
+$0.088 / $0.112); APIMart $0.0391 / $0.0533 and $0.0782 / $0.0996 (Gold tier; kie and APIMart read 26 Oct 2026).
+APIMart is the cheapest and fal the dearest of its four providers (Revana included), so a run goes to fal only when
+none of the others has a key. APIMart takes a frame without a prompt, kie does not.
 
 Durations go out as numbers (Gemini Omni Flash, Kling 4.0, FLUX.3 Max, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
 seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`), except Kling 4.0,
@@ -295,26 +303,15 @@ credits ($0.025) an image, with or without references (`KIE_PRICES`).
 
 ### kie.ai and APIMart only
 
-Not on OpenRouter nor fal: these run only with a kie.ai or APIMart key (fields and rules in
-[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The ids are the app's own
-(`<maker>/<name>`). None is verified yet. `†` = the aspect ratio is sent for text-to-video only.
-
-| Model | Id | kie models · APIMart model | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
-|---|---|---|:-:|:-:|:-:|:-:|---|---|---|
-| **PixVerse 6 Max** <sub>NEW</sub> | `pixverse/pixverse-v6-max` | `pixverse-v6-max/text-to-video` · `…/image-to-video` · `pixverse-v6-max` ¹ | ✓ | ✓ | – | ✓ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
-
-¹ The top quality tier of PixVerse 6 (24 Oct 2026): text-to-video and a first frame only (no last
-frame, references, extension or multi-shot); with a frame the clip follows the image's ratio. Both
-providers also offer 360p and 540p, which the app does not list (nor for PixVerse 6). Read 26 Oct 2026,
-per second without / with sound: kie 8.8 / 12 credits at 720p, 17.6 / 22.4 at 1080p ($0.044 / $0.06,
-$0.088 / $0.112); APIMart $0.0391 / $0.0533 at 720p, $0.0782 / $0.0996 at 1080p (Gold tier), so
-APIMart is the cheaper. APIMart takes a frame without a prompt, kie does not.
+Not on OpenRouter nor fal: this runs only with a kie.ai or APIMart key (fields and rules in
+[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The id is the app's own
+(`<maker>/<name>`). It is not verified yet.
 
 | Model | Id | kie models · APIMart model | t2i | i2i (max refs) | Sizes | Aspect ratios | Est. cost / image |
 |---|---|---|:-:|:-:|---|---|---|
-| **Seedream 5.5** <sub>NEW</sub> | `bytedance/seedream-5.5` | `seedream/5-5-text-to-image` · `5-5-image-to-image` · `seedream-5.5` ² | ✓ | ✓ (8, `image_urls`) | 1K / 2K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | kie: 1K $0.018, 2K $0.0315, + $0.0072 a reference |
+| **Seedream 5.5** <sub>NEW</sub> | `bytedance/seedream-5.5` | `seedream/5-5-text-to-image` · `5-5-image-to-image` · `seedream-5.5` ¹ | ✓ | ✓ (8, `image_urls`) | 1K / 2K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | kie: 1K $0.018, 2K $0.0315, + $0.0072 a reference |
 
-² ByteDance's Seedream 5.5, read from APIMart's model page on 5 Nov 2026 and kie's docs and pricing API on
+¹ ByteDance's Seedream 5.5, read from APIMart's model page on 5 Nov 2026 and kie's docs and pricing API on
 11 Nov 2026; not on fal or OpenRouter yet (they stop at Seedream 5.0). Both take the ratio (APIMart as `size`, `auto`
 allowed; kie as `aspect_ratio`, `auto` on edits only, so a text-to-image run at `auto` sends 1:1 there), 1K or 2K (as
 `resolution` on APIMart, `size` on kie; their 1.5K and their 2:1 and 1:2 are not listed, the app has no such options)

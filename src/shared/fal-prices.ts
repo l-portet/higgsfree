@@ -66,6 +66,8 @@ const KLING_O3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.14 };
 // Read 22 Oct 2026, while fal still says API access is "coming soon".
 const KLING_V4: FalPrice = { unit: "second", usd: { "720p": 0.157, "1080p": 0.235 } };
 const PIXVERSE_6: FalPrice = { unit: "second", usd: { "720p": 0.045, "1080p": 0.09 }, audioUsd: { "720p": 0.06, "1080p": 0.115 } };
+// Read 12 Nov 2026. fal's 360p and 540p are not listed, the app has neither.
+const PIXVERSE_6_MAX: FalPrice = { unit: "second", usd: { "720p": 0.099, "1080p": 0.198 }, audioUsd: { "720p": 0.135, "1080p": 0.252 } };
 // 2K and 4K are fal's 1440p and 2160p.
 const LTX_2_3: FalPrice = { unit: "second", usd: { "1080p": 0.08, "2K": 0.16, "4K": 0.32 } };
 
@@ -121,6 +123,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/kling-video/v3/turbo/pro/image-to-video": { unit: "second", usd: 0.14 },
   "fal-ai/pixverse/v6/text-to-video": PIXVERSE_6,
   "fal-ai/pixverse/v6/image-to-video": PIXVERSE_6,
+  "pixverse/v6/max/text-to-video": PIXVERSE_6_MAX,
+  "pixverse/v6/max/image-to-video": PIXVERSE_6_MAX,
   "fal-ai/vidu/q4/image-to-video": {
     unit: "second",
     usd: { "720p": 0.095, "1080p": 0.12, "2K": 0.19, "4K": 0.39 },

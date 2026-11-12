@@ -75,6 +75,8 @@ describe("estimateFalVideoCost", () => {
     expect(estimateFalVideoCost(kling, { duration: 5, audio: true })).toBeCloseTo(0.84);
     expect(estimateFalVideoCost(video("fal/kling-o3-pro"), { duration: 5, audio: true })).toBeCloseTo(0.7);
     expect(estimateFalVideoCost(video("fal/pixverse-v6"), { duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(1.15);
+    expect(estimateFalVideoCost(video("pixverse/pixverse-v6-max"), { duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(2.52);
+    expect(estimateFalVideoCost(video("pixverse/pixverse-v6-max"), { duration: 5, resolution: "720p", audio: false, firstFrame: true })).toBeCloseTo(0.495);
   });
 
   it("follows the endpoint the frames pick, and refuses what the run would refuse", () => {

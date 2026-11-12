@@ -201,6 +201,16 @@ describe("fal videos", () => {
     await waitFor(completed(g.id));
   });
 
+  it("PixVerse 6 Max on fal: its `pixverse/` endpoints, no ratio with a frame, the sound as `generate_audio_switch`", async () => {
+    setStoredFalKey(FAL_KEY);
+    const frame = await uploadImage();
+    const g = (await api.generateVideo({ prompt: "a fox", model: "pixverse/pixverse-v6-max", duration: 8, resolution: "1080p", aspectRatio: "21:9", firstFrame: frame, audio: true })).generations[0];
+    if (!g) throw new Error("no generation");
+    expect(g).toMatchObject({ provider: "fal", params: { duration: 8, resolution: "1080p", audio: true } });
+    expect(mock.fal("/pixverse/v6/max/image-to-video")[0]?.body).toEqual({ prompt: "a fox", duration: 8, image_url: PNG_DATA_URL, resolution: "1080p", generate_audio_switch: true });
+    await waitFor(completed(g.id));
+  });
+
   it("a job fal reports as failed ends with fal's message", async () => {
     setStoredFalKey(FAL_KEY);
     const { generations } = await api.generateVideo({ prompt: "FAL_FAIL", model: "fal/gemini-omni-flash-1.1", duration: 8, resolution: "1080p", aspectRatio: "16:9" });

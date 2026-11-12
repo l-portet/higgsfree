@@ -1315,7 +1315,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: {},
     verified: false,
-    // Not on fal (nor OpenRouter) yet.
+    // PixVerse 6's fields on fal, under `pixverse/` rather than `fal-ai/pixverse/`.
+    fal: { textToVideo: "pixverse/v6/max/text-to-video", imageToVideo: "pixverse/v6/max/image-to-video", duration: "number", aspect: "text", resolutions: { "720p": "720p", "1080p": "1080p" }, audio: "generate_audio_switch" },
     offOpenRouter: true,
     kie: { family: "pixverse", model: "pixverse-v6-max/text-to-video", imageModel: "pixverse-v6-max/image-to-video" },
     apimart: { family: "pixverse-max", model: "pixverse-v6-max" },
