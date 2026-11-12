@@ -108,6 +108,24 @@ describe("APIMart videos", () => {
     await waitFor(completed(g.id));
   });
 
+  it("Seedance 1.5 Pro, on APIMart only since OpenRouter retired it: an OpenRouter key does not run it, an APIMart key does", async () => {
+    setStoredKey("test-key");
+    await expect(video({ model: "bytedance/seedance-1-5-pro" })).rejects.toMatchObject({ status: 401, error: expect.stringContaining("APIMart") });
+    setProviderKey("apimart", APIMART_KEY);
+    const g = await video({ model: "bytedance/seedance-1-5-pro", resolution: "720p", aspectRatio: "9:16", audio: false });
+    expect(g).toMatchObject({ provider: "apimart", params: { duration: 5, resolution: "720p", aspectRatio: "9:16", audio: false } });
+    expect(mock.apimart("/v1/videos/generations")[0]?.body).toEqual({
+      model: "seedance-1-5-pro",
+      prompt: "a fox in the snow",
+      aspect_ratio: "9:16",
+      resolution: "720p",
+      duration: 5,
+      audio: false,
+    });
+    expect(mock.calls("/api/v1/videos")).toHaveLength(0);
+    await waitFor(completed(g.id));
+  });
+
   it("Gemini Omni Flash 1.2 on APIMart: both frames uploaded, no duration sent, the cost recorded", async () => {
     // No kie.ai key: kie, which has a price, would run it.
     setStoredKey("test-key");

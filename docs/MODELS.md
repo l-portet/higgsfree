@@ -17,7 +17,8 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
 Curated today: 25 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models), 1 [on kie.ai and APIMart only](#kieai-and-apimart-only)) and 50 video models, of which 48 are offered
-(20 fal-only, 8 of the 48 are [video editors](#video-editing)) and 2 are hidden.
+(20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 8 of the 48 are [video editors](#video-editing)) and 2
+are hidden.
 
 **Legend**
 
@@ -128,7 +129,6 @@ picker's: featured first, following Higgsfield's lineup where OpenRouter has the
 | **HappyHorse 1.0** | `alibaba/happyhorse-1.0` | ✓ | ✓ | – | – | ? | 720p / 1080p (default 1080p) | 3–15 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16, 9:21 | 720p $0.0988 · 1080p $0.169 | – |
 | **Grok Imagine Video** <sub>FAST</sub> | `x-ai/grok-imagine-video` | ✓ | ✓ | – | – | ? | 480p / 720p (default 480p) | 1–15 (default 5) | 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 | 480p $0.05 · 720p $0.07 | ✓ |
 | **Runway Gen-4.5** | `runway/gen-4.5` | ✓ | ✓ | – | – | ? | 720p (default 720p) | 2–10 (default 5) | 16:9, 9:16 | 720p $0.12 | – |
-| **Seedance 1.5 Pro** | `bytedance/seedance-1-5-pro` | ✓ | ✓ | ✓ | ✓ | ✗ | 480p / 720p / 1080p (default 1080p) | 4–12 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16, 9:21 † | 480p $0.0231 · 720p $0.0518 · 1080p $0.117 | – |
 
 ¹ The provider answers "does not support image input references" (Sep 2026): `caps.references: false`,
 so the app hides the style-reference strip and rejects `references` with a 400.
@@ -145,7 +145,8 @@ frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` l
 parts but documents no inline data, and APIMart uploads images only.
 
 Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 and PixVerse 6 Max on fal, kie.ai and APIMart (see
-[fal models](#fal-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
+[fal models](#fal-models)); Seedance 1.5 Pro, which OpenRouter retired on 11 Nov 2026, runs on APIMart only (see
+[APIMart-only video models](#apimart-only-video-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
 Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
@@ -291,6 +292,25 @@ picks), `n` (up to 4; the app makes one call per image), `output_format` and `ba
 (transparent). APIMart lists no price for it yet, so there is no estimate; the cost of each run is
 recorded. GPT Image 2.6 Flare and Sunburst, separate models, are on OpenRouter too (see [Image models](#image-models)).
 
+### APIMart-only video models
+
+Not on OpenRouter, fal nor kie.ai: this runs only with an APIMart key (fields and rules in [APIMART.md](APIMART.md)).
+The id is OpenRouter's old slug, kept so that earlier runs still find their model. It is not verified yet. `†` = the
+aspect ratio is sent for text-to-video only.
+
+| Model | Id | APIMart model | t2v | i2v | Last frame | Audio | Real faces | Resolutions | Durations (s) | Aspect ratios | Est. cost / second |
+|---|---|---|:-:|:-:|:-:|:-:|:-:|---|---|---|---|
+| **Seedance 1.5 Pro** | `bytedance/seedance-1-5-pro` | `seedance-1-5-pro` ¹ | ✓ | ✓ | ✓ | ✓ | ✗ | 480p / 720p / 1080p (default 1080p) | 4–12 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † | 480p $0.0204 · 720p $0.044 · 1080p $0.108 |
+
+¹ ByteDance's previous Seedance. OpenRouter retired it on 11 Nov 2026 (`/api/v1/videos/models` no longer lists it,
+read 12 Nov 2026), and fal retired its `fal-ai/bytedance/seedance/v1.5/pro/…` endpoints the same day, so the app no
+longer sends it to OpenRouter, even before the live catalog arrives. On APIMart: `aspect_ratio` (16:9 is sent with a
+frame, APIMart's default), `resolution`, `duration` 4–12, `audio` (on by default), and a first frame, or a first and a
+last, as `image_urls`; no style references. OpenRouter's 9:21 is not listed, APIMart has none. Not sent: `seed`,
+`camerafixed` and `nsfw_check`. The estimate is APIMart's Gold-tier price read on 20 Oct 2026, the same with or
+without sound; APIMart's price catalog no longer lists the model (12 Nov 2026), though its doc page still does. The
+cost of each run is recorded.
+
 ### kie.ai-only image models
 
 Not on OpenRouter, fal nor APIMart: this runs only with a kie.ai key (fields and rules in [KIE.md](KIE.md)). The id is
@@ -366,7 +386,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Video | APIMart model | Image | APIMart model |
 |---|---|---|---|
 | Veo 3.1 / Fast / Lite (8 s) | `veo3.1-quality`, `veo3.1-fast`, `veo3.1-lite` | Nano Banana Pro | `gemini-3-pro-image-preview` |
-| Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
+| Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro (only here) | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
 | MiniMax H3, H3 Max, Hailuo 2.3 | `MiniMax-H3`, `MiniMax-H3-Max`, `MiniMax-Hailuo-2.3` | Nano Banana 2 Lite | `gemini-3.1-flash-lite-image-ext` |
 | Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare, 2.6 Sunburst | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` |
@@ -497,7 +517,9 @@ localStorage, so a model OpenRouter adds shows up within 10 minutes.
 image-to-video and last-frame support, audio and the price. The curated entry keeps the name,
 featured flag, badges, description, `realFaces`, `references`, `omitAspectRatioOnI2v`, `verified`
 and a text-to-video quirk. A curated model OpenRouter no longer lists disappears from the picker,
-unless it has a fal route: it then stays, as a fal-only model. fal-only models are never looked up
+unless it has a fal, kie.ai, APIMart or Revana route: it then stays, off OpenRouter. A model known to be gone
+(Seedance 1.5 Pro) is marked `offOpenRouter` in the catalog itself, so it never goes to OpenRouter, even before
+the live catalog arrives. fal-only models are never looked up
 in OpenRouter's catalogs. A curated editor (`caps.videoEdit`) is the exception to the first rule:
 OpenRouter lists no options for it, so it keeps its own and takes only the price (`cents_per_second_output`,
 and `minimum_cents_per_generation` as `minCostUsd`). Every other listed model is **discovered**:
@@ -622,7 +644,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `aspectRatios` | Subset of `VideoAspectRatio`. |
 | `omitAspectRatioOnI2v` | Set when the provider returns 400 if `aspect_ratio` is sent together with `frame_images` (all Seedance models). The output then follows the input image. |
 | `estCostPerSecUsd` | USD per second keyed by resolution (with audio, for a model that has it). Multiplied by the duration for the estimate. |
-| `estCostPerSecNoAudioUsd` | USD per second with Sound off, where OpenRouter charges less for that (Kling 3.0, Veo 3.1, Seedance 1.5 Pro). Read from the live catalog's without-audio SKUs. |
+| `estCostPerSecNoAudioUsd` | USD per second with Sound off, where OpenRouter charges less for that (Kling 3.0, Veo 3.1). Read from the live catalog's without-audio SKUs. |
 | `minCostUsd` | The provider's minimum charge per run (Runway Aleph 2: $0.56); the estimate never goes below it. |
 | `verified` | `true` only after the checklist below. |
 | `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |

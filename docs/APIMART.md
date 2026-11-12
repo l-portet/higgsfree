@@ -51,7 +51,7 @@ returns a task id, the task url polled until the result urls are there.
 |---|---|---|---|
 | `veo` | Veo 3.1, Fast, Lite → `veo3.1-quality`, `veo3.1-fast`, `veo3.1-lite` | `duration: 8`, `aspect_ratio`, `resolution` 720p / 1080p / `4k`, frames as `image_urls` [first, last] with `generation_type: "frame"` | other durations, sound off (always on), frames on Lite |
 | `seedance` | Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini → `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini` | `size` (`adaptive` when no ratio is sent), `resolution` (`4k`), `duration`, `generate_audio`, `image_with_roles` (`first_frame`, `last_frame`, `reference_image`) | frames and references together |
-| `seedance15` | Seedance 1.5 Pro → `seedance-1-5-pro` | `aspect_ratio`, `resolution`, `duration` 4–12, `audio`, `image_urls` [first, last] | references |
+| `seedance15` | Seedance 1.5 Pro → `seedance-1-5-pro` (APIMart only) | `aspect_ratio` (16:9 with frames), `resolution`, `duration` 4–12, `audio`, `image_urls` [first, last] | references, an empty prompt |
 | `minimax-h3` | MiniMax H3, H3 Max → `MiniMax-H3`, `MiniMax-H3-Max` | `resolution` `2K` / `768P` / `480P` / `1080P`, `duration`, `aspect_ratio` (text-to-video), `first_frame_image`, `last_frame_image` | sound off on H3, an empty prompt |
 | `hailuo23` | Hailuo 2.3 → `MiniMax-Hailuo-2.3` | `resolution` 768p / 1080p, `duration` 6 / 10, `first_frame_image` | 10 s at 1080p |
 | `wan3` | Wan 3.0, Prime → `wan3.0-video`, `wan3.0-video-prime` | `resolution` `480P`–`1080P`, `size` (`adaptive`), `duration` 2–30, `audio`, `image_with_roles` | frames and references together |
@@ -123,7 +123,8 @@ The exceptions are Gemini Omni Flash 1.2 (`gemini-omni-1.2-flash`) and GPT Image
 neither the catalog nor their model pages priced on 30 Oct 2026, Seedream 5.5 (`seedream-5.5`), which neither
 priced on 5 Nov 2026, and GPT Image 2.6 Flare (`gpt-image-2.6-flare`) and Sunburst (`gpt-image-2.6-sunburst`),
 which the catalog bills in tokens only (5 Nov 2026): they have no estimate rather than a guessed one, and the
-test lists them as unpriced.
+test lists them as unpriced. Seedance 1.5 Pro (`seedance-1-5-pro`), on APIMart only since OpenRouter retired it, keeps
+its 20 Oct price: the catalog no longer lists it (12 Nov 2026), though its doc page still does.
 
 ## Known gaps
 

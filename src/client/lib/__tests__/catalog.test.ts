@@ -251,6 +251,16 @@ describe("fal routes", () => {
     expect(m?.fal ?? m?.apimart ?? m?.revana).toBeUndefined();
   });
 
+  it("Seedance 1.5 Pro, retired by OpenRouter and fal, has an APIMart route and no other, no OpenRouter price, and is not verified", () => {
+    const m = findVideoModel("bytedance/seedance-1-5-pro");
+    expect(m?.apimart).toEqual({ family: "seedance15", model: "seedance-1-5-pro" });
+    expect(m?.offOpenRouter).toBe(true);
+    expect(m?.estCostPerSecUsd).toEqual({});
+    expect(m?.estCostPerSecNoAudioUsd).toBeUndefined();
+    expect(m?.verified).toBe(false);
+    expect(m?.fal ?? m?.kie ?? m?.revana).toBeUndefined();
+  });
+
   it("MiniMax H3 Image has OpenRouter, fal and kie.ai routes, and is not verified", () => {
     const m = findImageModel("minimax/minimax-h3-image");
     expect(m?.endpoint).toBe("native");

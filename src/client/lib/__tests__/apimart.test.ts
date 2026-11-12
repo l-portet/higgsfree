@@ -121,6 +121,25 @@ describe("buildApimartVideoPayload", () => {
     expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 8, aspectRatio: "1:1" }, {})).toThrow("Takes no 1:1");
   });
 
+  it("Seedance 1.5 Pro: `aspect_ratio` and `audio`, both frames as `image_urls`, no references", () => {
+    const m = video("bytedance/seedance-1-5-pro");
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 12, aspectRatio: "21:9", resolution: "480p", audio: false }, {})).toEqual({
+      kind: "videos",
+      body: { model: "seedance-1-5-pro", prompt: "p", aspect_ratio: "21:9", resolution: "480p", duration: 12, audio: false },
+      priceKey: "seedance-1-5-pro",
+      params: { duration: 12, resolution: "480p", aspectRatio: "21:9", audio: false },
+    });
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", lastFrame: "https://b" }).body).toMatchObject({
+      resolution: "1080p",
+      audio: true,
+      image_urls: ["https://a", "https://b"],
+    });
+    // Every ratio it offers is one APIMart takes.
+    for (const aspectRatio of m.aspectRatios) expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5, aspectRatio }, {})).not.toThrow();
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { references: ["https://r"] })).toThrow("Takes no style references");
+    expect(() => buildApimartVideoPayload(m, { prompt: "", duration: 5 }, {})).toThrow("Needs a prompt");
+  });
+
   it("maps the other families' own field names", () => {
     expect(buildApimartVideoPayload(video("minimax/hailuo-3"), { prompt: "p", duration: 6 }, { firstFrame: "https://a" }).body).toEqual({
       model: "MiniMax-H3",
@@ -253,6 +272,7 @@ describe("APIMart prices", () => {
     expect(estimateApimartVideoCost(video("fal/kling-v4"), { prompt: "p", duration: 10, resolution: "1080p" })).toBeCloseTo(2.35);
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(0.9956);
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.1956);
+    expect(estimateApimartVideoCost(video("bytedance/seedance-1-5-pro"), { prompt: "p", duration: 10, resolution: "1080p" })).toBeCloseTo(1.08);
     expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, false)).toBeCloseTo(0.12);
   });
 

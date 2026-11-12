@@ -55,7 +55,7 @@ The rules are in [docs/FAL.md](docs/FAL.md).
 
 ## APIMart (optional)
 
-[APIMart](https://apimart.ai) is another provider with its own prices: Veo 3.1 (8 s clips), Seedance, MiniMax H3, Wan, Kling 3.0 and 4.0, PixVerse 6 and 6 Max, Vidu, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Video, and images like Nano Banana Pro and GPT Image 2 for a few cents; GPT Image 2.6 runs only there, and Seedream 5.5 only there and on kie.ai. Add a key in Settings › Keys (get one at [apimart.ai/keys](https://apimart.ai/keys)) and a video goes there whenever it is the cheapest. Estimates use APIMart's Gold-tier prices; the real cost of each run is recorded. Images you send are uploaded to APIMart's file host (public urls, kept 72 hours). The rules are in [docs/APIMART.md](docs/APIMART.md).
+[APIMart](https://apimart.ai) is another provider with its own prices: Veo 3.1 (8 s clips), Seedance, MiniMax H3, Wan, Kling 3.0 and 4.0, PixVerse 6 and 6 Max, Vidu, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Video, and images like Nano Banana Pro and GPT Image 2 for a few cents; GPT Image 2.6 and Seedance 1.5 Pro run only there, and Seedream 5.5 only there and on kie.ai. Add a key in Settings › Keys (get one at [apimart.ai/keys](https://apimart.ai/keys)) and a video goes there whenever it is the cheapest. Estimates use APIMart's Gold-tier prices; the real cost of each run is recorded. Images you send are uploaded to APIMart's file host (public urls, kept 72 hours). The rules are in [docs/APIMART.md](docs/APIMART.md).
 
 ## Revana (optional)
 
@@ -102,9 +102,9 @@ What follows from that:
 
 ## Models
 
-Curated: 25 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 11 of the image models and 20 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, Seedream 5.5 on kie.ai and APIMart only, GPT Image 2.6 on APIMart only, and GPT Image 2.6 Economy on kie.ai only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 25 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 11 of the image models and 21 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, Seedream 5.5 on kie.ai and APIMart only, GPT Image 2.6 and Seedance 1.5 Pro on APIMart only, and GPT Image 2.6 Economy on kie.ai only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
-The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless fal also has them. fal-only models do not depend on OpenRouter's catalogs.
+The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless another provider (fal, kie.ai, APIMart, Revana) also has them. fal-only models do not depend on OpenRouter's catalogs.
 
 Cost estimates are shown before you generate, from the prices of whichever provider will run it; the actual cost reported by OpenRouter is saved with each result. fal reports no cost, so runs on fal record none.
 
