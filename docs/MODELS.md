@@ -63,14 +63,18 @@ reference count come from OpenRouter's image catalog once it arrives (the values
 are left at OpenRouter's defaults. Every provider bills them in tokens and gives no per-image price, so
 there is no estimate; the cost of each run is recorded.
 
-² MiniMax's image model (10 Nov 2026), text to image and edits from up to 16 references, on OpenRouter and fal
-([models on both](#models-on-both)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
+² MiniMax's image model (10 Nov 2026), text to image and edits from up to 16 references, on OpenRouter, fal
+([models on both](#models-on-both)) and kie.ai ([kie.ai](#kieai)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
 Also a curated `native` model: the values here are OpenRouter's catalog on 11 Nov 2026 (`resolution` 1K / 2K / 4K,
 16 references, which the app caps at 8). OpenRouter also lists ratios the app has no option for (1:2, 2:1, 1:3, 3:1,
 2.35:1, 5:2, 5:7, 7:5, 9:19.5, 19.5:9, 9:20, 20:9, 9:21). `n` and `output_format` are left at their defaults, and so
-is prompt enhancement (on; OpenRouter passes `disable_prompt_enhanced` through). Both providers bill it in tokens
-($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens) with no per-image price, so there is
-no estimate; the cost of each run is recorded.
+is prompt enhancement (on; OpenRouter passes `disable_prompt_enhanced` through). OpenRouter and fal bill it in tokens
+($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens) with no per-image price, so neither has
+an estimate. kie.ai (docs and pricing API read 12 Nov 2026) takes `aspect_ratio` (`auto` by default: the prompt
+rewriter's pick on text to image, the first reference's ratio on an edit), `resolution` 1K / 2K / 4K and 1 to 16
+`image_urls` on `minimax-h3/image-edit`, and charges 1.8 credits ($0.009) an image at 1K or 2K, 5.5 ($0.0275) at 4K,
+plus 0.5 ($0.0025) for each reference image on an edit (`KIE_PRICES`); being the one priced, it runs the model whenever
+a kie.ai key is set. The cost of each run is recorded on OpenRouter and kie.ai.
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
@@ -341,6 +345,7 @@ what each run cost.
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | GPT Image 2.6 Sunburst ¹ | `gpt-image-2-6/sunburst-text-to-image` / `sunburst-image-to-image` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 (here and on APIMart) | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
+| | | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
 per-image price, so they have no `KIE_PRICES` entry and no estimate: in credits, 900 text input, 225 cached text input,

@@ -56,6 +56,8 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   // Seedream 5.5 (read 11 Nov 2026): 1.5K, which the app has no size for, is 3.6 too. Edits cost the same, plus 1.44 for
   // each reference image.
   "seedream/5-5-text-to-image": { unit: "image", amount: { "1K": 3.6, "2K": 6.3 }, inputImageAmount: 1.44 },
+  // MiniMax H3 Image (read 12 Nov 2026): 1K and 2K are one tier. Edits cost the same, plus 0.5 for each reference image.
+  "minimax-h3/text-to-image": { unit: "image", amount: { "1K": 1.8, "2K": 1.8, "4K": 5.5 }, inputImageAmount: 0.5 },
   "flux1-kontext#flux-kontext-pro": { unit: "image", amount: 5 },
   "z-image": { unit: "image", amount: 0.8 },
 };

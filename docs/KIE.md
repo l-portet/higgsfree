@@ -99,6 +99,7 @@ The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@V
 | `gpt-image-2` | GPT Image 2 → `gpt-image-2-text-to-image`, `gpt-image-2-image-to-image`; GPT Image 2.6 Flare → `gpt-image-2-6/flare-text-to-image`, `gpt-image-2-6/flare-image-to-image`; GPT Image 2.6 Sunburst → `gpt-image-2-6/sunburst-text-to-image`, `gpt-image-2-6/sunburst-image-to-image` | `aspect_ratio`, `resolution`, `input_urls` (≤ 16) |
 | `gpt-image-economy` | GPT Image 2.6 Economy → `gpt-image-2-6/economy-text-to-image`, `gpt-image-2-6/economy-image-to-image` | `aspect_ratio` (no 3:4), `input_urls` (≤ 16), no `resolution` |
 | `seedream` | Seedream 5.5 → `seedream/5-5-text-to-image`, `seedream/5-5-image-to-image` | `aspect_ratio` (`auto` on edits only: 1:1 is sent for it on text to image), `size` 1K / 2K, `image_urls` (≤ 10) |
+| `minimax-h3-image` | MiniMax H3 Image → `minimax-h3/text-to-image`, `minimax-h3/image-edit` | `aspect_ratio` (`auto` allowed), `resolution` 1K / 2K / 4K, `image_urls` (≤ 16) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux1-kontext`, `model: "flux-kontext-pro"` | `aspect_ratio` (not `auto`, no 3:2 / 2:3), `input_image` (one reference) |
 | `z-image` | Z-Image Turbo → `z-image` | `aspect_ratio` (required: `auto` becomes 1:1) |
 
@@ -123,6 +124,13 @@ estimate is built without the prompt. `output_format` (`png` by default), `backg
 with PNG) and `nsfw_checker` are not sent, and the layer decomposition model (`seedream/5-5-layer-decomposition`) is not
 wired.
 
+MiniMax H3 Image runs on kie, OpenRouter and fal. Its two doc pages (read 12 Nov 2026) take `aspect_ratio` (`auto` by
+default, or every other ratio the app has) and `resolution` (1K, 2K or 4K, about 1, 4 and 16 MP; `2K` by default) on both
+models. `auto` is the prompt rewriter's pick on text to image and the first reference's ratio on an edit. The edit model
+takes 1 to 16 `image_urls` (JPG, PNG, WebP, HEIC or BMP, 20 MB and 64 MP each), of which the app sends at most 8. Both want a
+prompt of 1 to 5,000 characters. `seed`, `expand_prompt` (on by default), `output_format` (`png` by default) and the
+custom `width` / `height` (which exclude `aspect_ratio` and `resolution`) are not sent.
+
 An image goes to the cheapest provider with a key that can take the request (`quoteImage`), or to the one
 picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes to fal.
 
@@ -130,10 +138,10 @@ picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes 
 
 `KIE_PRICES` (`src/shared/kie-prices.ts`) has kie's list price in credits ($0.005 each) for every model a
 route sends to, read from kie's pricing page (`kie.ai/pricing`, backed by the public
-`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov); a test checks every route is priced and
+`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov, MiniMax H3 Image on 12 Nov); a test checks every route is priced and
 every price is used. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0
 and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash 1.1, by length),
-or per image (by size; Seedream 5.5's edits also bill each reference image). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
+or per image (by size; Seedream 5.5's and MiniMax H3 Image's edits also bill each reference image). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
 and price it, so the estimate follows the model id, tier, resolution, duration and sound sent.
 
 The exceptions are GPT Image 2.6 Flare and Sunburst (6 Nov 2026), which kie bills per million tokens at the same rates,
@@ -141,7 +149,9 @@ with no per-image price: in credits, 900 text input, 225 cached text input, 1,44
 5,400 image output. They have no estimate rather than a guessed one, and the test lists them as unpriced. GPT Image 2.6
 Economy is not one of them: 5 credits ($0.025) an image, with or without references. Seedream 5.5 costs 3.6 credits
 ($0.018) an image at 1K (and 1.5K) and 6.3 ($0.0315) at 2K, the same on both models, plus 1.44 ($0.0072) for each
-reference image on an edit (`inputImageAmount`).
+reference image on an edit (`inputImageAmount`). MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
+($0.0275) at 4K, the same on both models, plus 0.5 ($0.0025) for each reference image on an edit. OpenRouter and fal
+bill it in tokens with no per-image price, so with a kie.ai key it runs on kie.
 
 ## Known gaps
 

@@ -183,6 +183,29 @@ describe("kie.ai images", () => {
     expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
+  it("MiniMax H3 Image, on OpenRouter, fal and kie.ai: kie runs it, being the one priced, with `auto` kept and the edit model with a reference", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const req = { prompt: "a red fox", model: "minimax/minimax-h3-image", aspectRatio: "auto" as const, size: "4K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("kie");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, aspectRatio: "9:16", referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    expect(edit.provider).toBe("kie");
+    await waitFor(completed(edit.id));
+    expect(mock.kie("/api/v1/jobs/createTask").map((c) => c.body)).toEqual([
+      { model: "minimax-h3/text-to-image", input: { prompt: "a red fox", aspect_ratio: "auto", resolution: "4K" } },
+      { model: "minimax-h3/image-edit", input: { prompt: "a red fox", aspect_ratio: "9:16", resolution: "4K", image_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] } },
+    ]);
+    expect(mock.calls("/api/v1/images")).toHaveLength(0);
+    expect(mock.fal("/minimax/h3-image/text-to-image")).toHaveLength(0);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
+  });
+
   it("Seedream 5.5, on kie.ai and APIMart: kie runs it, being the one priced, with 1:1 for `auto` and the edit model with a reference", async () => {
     setProviderKey("kie", KIE_KEY);
     setProviderKey("apimart", APIMART_KEY);
