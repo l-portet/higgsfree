@@ -261,7 +261,7 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 The composer estimates a run on fal from fal's list prices, not the catalog's (those are OpenRouter's).
 
 - `FAL_PRICES` (`src/shared/fal-prices.ts`) has a price for every endpoint a route names, read from the
-  endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026; a test checks it covers every
+  endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026 (PixVerse 6 Max's on 12 Nov); a test checks it covers every
   endpoint, size and resolution the catalog offers. The exceptions are GPT Image 2.6 Flare and Sunburst: their
   pages (5 Nov 2026) give token rates only, with no per-size figure, so they have no estimate on fal and the
   test lists their four endpoints as unpriced. MiniMax H3 Image's two endpoints are the same (11 Nov 2026: $2.30 /
