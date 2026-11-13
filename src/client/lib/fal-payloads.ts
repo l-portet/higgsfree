@@ -63,8 +63,12 @@ export function buildFalImagePayload(model: ImageModel, req: FalImageParams, ref
     else input.image_urls = referenceUrls;
   }
   if (route.scaledSize) {
+    const auto = req.aspectRatio === "auto" ? route.autoSizes?.[req.size] : undefined;
     const ratio = req.aspectRatio === "auto" ? (edit ? undefined : "1:1") : req.aspectRatio;
-    if (ratio && model.aspectRatios.includes(req.aspectRatio) && model.sizes.includes(req.size)) input.image_size = falScaledSize(ratio, req.size);
+    if (model.aspectRatios.includes(req.aspectRatio) && model.sizes.includes(req.size)) {
+      if (auto) input.image_size = auto;
+      else if (ratio) input.image_size = falScaledSize(ratio, req.size);
+    }
   } else if (req.aspectRatio !== "auto" && model.aspectRatios.includes(req.aspectRatio)) {
     if (route.aspect === "aspect_ratio") input.aspect_ratio = req.aspectRatio;
     else if (route.aspect === "image_size") {

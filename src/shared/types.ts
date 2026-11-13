@@ -173,6 +173,8 @@ export interface ImageModel {
   sizes: ImageSize[];
   /** Rough USD per image by size, shown as "~$0.13" before generating. */
   estCostUsd: Partial<Record<ImageSize, number>>;
+  /** Rough USD for each reference image sent, on top of `estCostUsd` (OpenRouter's Seedream 5.5). */
+  estCostPerReferenceUsd?: number;
   /** Whether the size choice is sent (`image_config.image_size` on chat, `resolution` on native). */
   supportsImageSize: boolean;
   /** True when this exact slug + payload shape has been verified end-to-end. */
@@ -288,6 +290,8 @@ export interface FalImageRoute {
    * square for `auto` without references; with references, `auto` sends none and the output follows the first one.
    */
   scaledSize?: boolean;
+  /** With `scaledSize`: fal's own `image_size` for `auto` at each size (Seedream 5.5's `auto_1K` / `auto_2K`), sent with or without references. */
+  autoSizes?: Partial<Record<ImageSize, string>>;
   /** `resolution: "1K" | "2K" | "4K"` is accepted. */
   resolution?: boolean;
   /** Fixed fields sent with every request. */

@@ -25,6 +25,8 @@ export type FalPrice =
       usd: number | Partial<Record<ImageSize, number>>;
       /** When the price depends on the output size: by the aspect ratio the app asks for (`auto`: fal's default size). */
       byAspect?: Partial<Record<ImageAspectRatio, number>>;
+      /** Each reference image sent is billed on top, for every image made (Seedream 5.5's edits). */
+      inputImageUsd?: number;
     }
   | {
       /** Per megapixel of output (1024 x 1024 pixels), rounded up, at least one. */
@@ -42,6 +44,8 @@ const GPT_IMAGE_2: FalPrice = {
 };
 // High quality (fal's default): 1024 x 1024 (also the default size) or any other size.
 const GPT_IMAGE_1_5: FalPrice = { unit: "image", usd: 0.2, byAspect: { auto: 0.133, "1:1": 0.133 } };
+// Read 13 Nov 2026: up to 2.61 MP (1K, and fal's 1.5K) or above it (2K). Edits add $0.012 for each reference image.
+const SEEDREAM_5_5: FalPrice = { unit: "image", usd: { "1K": 0.03, "2K": 0.0405 } };
 const KLING_V3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.168 };
 const KLING_V3_STANDARD: FalPrice = { unit: "second", usd: 0.084, audioUsd: 0.126 };
 // The US-hosted endpoints (read 22 Oct 2026), 20% above the ones fal stopped listing.
@@ -87,6 +91,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "ideogram/v4.5/edit": { unit: "image", usd: 0.06 },
   "fal-ai/gpt-image-1.5": GPT_IMAGE_1_5,
   "fal-ai/gpt-image-1.5/edit": GPT_IMAGE_1_5,
+  "bytedance/seedream/v5.5/text-to-image": SEEDREAM_5_5,
+  "bytedance/seedream/v5.5/edit": { ...SEEDREAM_5_5, inputImageUsd: 0.012 },
   "fal-ai/qwen-image-edit-2511": { unit: "megapixel", usd: 0.03 },
   "fal-ai/z-image/turbo": { unit: "megapixel", usd: 0.005 },
   "fal-ai/flux/dev": { unit: "megapixel", usd: 0.025 },

@@ -123,20 +123,29 @@ describe("estimateFalVideoCost", () => {
 
 describe("estimateFalImageCost", () => {
   it("per image, by size or by the output size the ratio asks for", () => {
-    expect(estimateFalImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "4K" }, 2, false)).toBeCloseTo(0.6);
-    expect(estimateFalImageCost(image("google/gemini-3.1-flash-image"), { aspectRatio: "16:9", size: "2K" }, 1, true)).toBeCloseTo(0.12);
+    expect(estimateFalImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "4K" }, 2, 0)).toBeCloseTo(0.6);
+    expect(estimateFalImageCost(image("google/gemini-3.1-flash-image"), { aspectRatio: "16:9", size: "2K" }, 1, 1)).toBeCloseTo(0.12);
     const gpt15 = image("fal/gpt-image-1.5");
-    expect(estimateFalImageCost(gpt15, { aspectRatio: "1:1", size: "1K" }, 1, false)).toBeCloseTo(0.133);
-    expect(estimateFalImageCost(gpt15, { aspectRatio: "3:2", size: "1K" }, 1, false)).toBeCloseTo(0.2);
-    expect(estimateFalImageCost(gpt15, { aspectRatio: "auto", size: "1K" }, 1, false)).toBeCloseTo(0.133);
-    expect(estimateFalImageCost(image("fal/flux-kontext-pro"), { aspectRatio: "auto", size: "1K" }, 3, true)).toBeCloseTo(0.12);
+    expect(estimateFalImageCost(gpt15, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeCloseTo(0.133);
+    expect(estimateFalImageCost(gpt15, { aspectRatio: "3:2", size: "1K" }, 1, 0)).toBeCloseTo(0.2);
+    expect(estimateFalImageCost(gpt15, { aspectRatio: "auto", size: "1K" }, 1, 0)).toBeCloseTo(0.133);
+    expect(estimateFalImageCost(image("fal/flux-kontext-pro"), { aspectRatio: "auto", size: "1K" }, 3, 1)).toBeCloseTo(0.12);
+  });
+
+  it("Seedream 5.5: by size, plus $0.012 for each reference image of every image made", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    expect(estimateFalImageCost(m, { aspectRatio: "16:9", size: "1K" }, 1, 0)).toBeCloseTo(0.03);
+    expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "2K" }, 2, 0)).toBeCloseTo(0.081);
+    // fal's own examples, with two references: one image at 1.5K (the 1K rate) $0.054, two at 2K $0.129.
+    expect(estimateFalImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 2)).toBeCloseTo(0.054);
+    expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "2K" }, 2, 2)).toBeCloseTo(0.129);
   });
 
   it("per started megapixel of 1024 x 1024", () => {
     const dev = image("fal/flux-dev");
-    expect(estimateFalImageCost(dev, { aspectRatio: "1:1", size: "1K" }, 4, false)).toBeCloseTo(0.1);
-    expect(estimateFalImageCost(dev, { aspectRatio: "16:9", size: "1K" }, 1, false)).toBeCloseTo(0.025);
-    expect(estimateFalImageCost(image("fal/flux-schnell"), { aspectRatio: "auto", size: "1K" }, 1, false)).toBeCloseTo(0.003);
-    expect(estimateFalImageCost(dev, { aspectRatio: "1:1", size: "1K" }, 1, true)).toBeUndefined();
+    expect(estimateFalImageCost(dev, { aspectRatio: "1:1", size: "1K" }, 4, 0)).toBeCloseTo(0.1);
+    expect(estimateFalImageCost(dev, { aspectRatio: "16:9", size: "1K" }, 1, 0)).toBeCloseTo(0.025);
+    expect(estimateFalImageCost(image("fal/flux-schnell"), { aspectRatio: "auto", size: "1K" }, 1, 0)).toBeCloseTo(0.003);
+    expect(estimateFalImageCost(dev, { aspectRatio: "1:1", size: "1K" }, 1, 1)).toBeUndefined();
   });
 });
