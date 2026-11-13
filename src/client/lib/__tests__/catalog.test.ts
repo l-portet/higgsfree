@@ -248,7 +248,7 @@ describe("fal routes", () => {
       autoSizes: { "1K": "auto_1K", "2K": "auto_2K" },
     });
     expect(m.kie).toEqual({ family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" });
-    expect(m.apimart).toEqual({ family: "seedream", model: "seedream-5.5" });
+    expect(m.apimart).toEqual({ family: "seedream", model: "seedream-5-5" });
     expect(m.revana).toBeUndefined();
     expect(m.verified).toBe(false);
     // OpenRouter bills each reference image on top: two images at 2K from three references.

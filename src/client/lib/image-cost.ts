@@ -66,7 +66,7 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
     }
     case "apimart": {
       const why = refusal(() => buildApimartImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size }, refs));
-      return why ? { refusal: why } : usd(estimateApimartImageCost(model, req, req.count, withRefs));
+      return why ? { refusal: why } : usd(estimateApimartImageCost(model, req, req.count, req.references));
     }
     case "revana": {
       const why = refusal(() => buildRevanaImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale }, refs));

@@ -272,8 +272,8 @@ export const IMAGE_MODELS: ImageModel[] = [
     aspectRatios: ALL_IMAGE_AR,
     // Every provider also takes 1.5K, which `ImageSize` cannot say, and none 4K.
     sizes: ["1K", "2K"],
-    // OpenRouter (13 Nov 2026): $0.02 an image at 1K, $0.035 at 2K (its `high_resolution` rate), plus $0.008 for each reference. fal and
-    // kie.ai are priced from `FAL_PRICES` and `KIE_PRICES`; APIMart has no price in the app, so no estimate there.
+    // OpenRouter (13 Nov 2026): $0.02 an image at 1K, $0.035 at 2K (its `high_resolution` rate), plus $0.008 for each reference. fal,
+    // kie.ai and APIMart are priced from `FAL_PRICES`, `KIE_PRICES` and `APIMART_PRICES`.
     estCostUsd: { "1K": 0.02, "2K": 0.035 },
     estCostPerReferenceUsd: 0.008,
     supportsImageSize: true,
@@ -281,7 +281,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     // fal takes an exact size (0.92 to 4.6 MP) rather than a ratio and a resolution, and its own `auto_1K` / `auto_2K` for `auto`.
     fal: { textToImage: "bytedance/seedream/v5.5/text-to-image", edit: "bytedance/seedream/v5.5/edit", refs: "image_urls", aspect: "image_size", scaledSize: true, autoSizes: { "1K": "auto_1K", "2K": "auto_2K" } },
     kie: { family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" },
-    apimart: { family: "seedream", model: "seedream-5.5" },
+    apimart: { family: "seedream", model: "seedream-5-5" },
   },
   {
     kind: "image",

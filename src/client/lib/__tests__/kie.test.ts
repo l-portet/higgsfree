@@ -338,15 +338,17 @@ describe("kie prices", () => {
     expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.0315);
     // Two references, four images: (6.3 + 2 × 1.44) × 4 credits.
     expect(estimateKieImageCost(m, { aspectRatio: "auto", size: "2K" }, 4, 2)).toBeCloseTo(0.1836);
-    // With an APIMart key too, kie.ai runs it: APIMart has no price for it in the app.
+    // With an APIMart key too, APIMart runs it, being cheaper; against OpenRouter and fal, kie.ai is.
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 3 };
     const quote = quoteImage(m, req, { kie: true, apimart: true });
     expect(quote).toMatchObject({
       quotes: [{ provider: "openrouter", noKey: true }, { provider: "fal", noKey: true }, { provider: "kie", noKey: false }, { provider: "apimart", noKey: false }],
-      provider: "kie",
+      provider: "apimart",
       reason: "cheaper",
     });
     expect(quote.quotes[2]?.usd).toBeCloseTo((6.3 + 3 * 1.44) * 0.005);
+    expect(quote.quotes[3]?.usd).toBeCloseTo(0.02275 + 3 * 0.0052);
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toMatchObject({ provider: "kie", reason: "cheaper" });
   });
 
   it("MiniMax H3 Image: 1.8 credits at 1K and 2K, 5.5 at 4K, plus 0.5 for each reference image", () => {

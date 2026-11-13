@@ -213,19 +213,26 @@ describe("buildApimartImagePayload", () => {
     });
   });
 
-  it("Seedream 5.5: the ratio as `size` (`auto` too), an uppercase `resolution`, and APIMart's limits", () => {
+  it("Seedream 5.5: `seedream-5-5`, the ratio as `size` with an uppercase `resolution`, the tier alone for `auto`, and APIMart's limits", () => {
     const m = image("bytedance-seed/seedream-5-5");
     expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "2K" }, ["https://r", "https://s"])).toEqual({
       kind: "images",
-      body: { model: "seedream-5.5", prompt: "p", n: 1, image_urls: ["https://r", "https://s"], size: "21:9", resolution: "2K" },
-      priceKey: "seedream-5.5",
+      body: { model: "seedream-5-5", prompt: "p", n: 1, image_urls: ["https://r", "https://s"], size: "21:9", resolution: "2K" },
+      priceKey: "seedream-5-5",
     });
+    // APIMart reads `size: "auto"` as 2K whatever the `resolution`: a tier as `size` keeps 1K, the model picking the ratio.
     expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).body).toEqual({
-      model: "seedream-5.5",
+      model: "seedream-5-5",
       prompt: "p",
       n: 1,
-      size: "auto",
-      resolution: "1K",
+      size: "1K",
+    });
+    expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "2K" }, ["https://r"]).body).toEqual({
+      model: "seedream-5-5",
+      prompt: "p",
+      n: 1,
+      image_urls: ["https://r"],
+      size: "2K",
     });
     expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array<string>(10).fill("https://r")).body.image_urls).toHaveLength(10);
     expect(() => buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array<string>(11).fill("https://r"))).toThrow("Takes up to 10 reference images");
@@ -262,9 +269,9 @@ describe("resultUrls", () => {
 
 describe("APIMart prices", () => {
   it("price every route at its defaults, and nothing else", () => {
-    // APIMart lists no price for these yet (read 30 Oct 2026; Seedream 5.5, 5 Nov 2026), or bills them in tokens only
-    // (GPT Image 2.6 Flare and Sunburst, read 5 Nov 2026; MiniMax H3 Image, 13 Nov 2026): no estimate rather than a guessed one.
-    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6", "gpt-image-2.6-flare", "gpt-image-2.6-sunburst", "seedream-5.5", "minimax-h3-image"]);
+    // APIMart lists no price for these yet (read 30 Oct 2026), or bills them in tokens only (GPT Image 2.6 Flare and
+    // Sunburst, read 5 Nov 2026; MiniMax H3 Image, 13 Nov 2026): no estimate rather than a guessed one.
+    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6", "gpt-image-2.6-flare", "gpt-image-2.6-sunburst", "minimax-h3-image"]);
     const used = new Set<string>();
     for (const m of VIDEO_MODELS.filter((v) => v.apimart && !v.hidden)) {
       const durations: Partial<Record<string, number>> = { veo: 8, "gemini-omni": 8 };
@@ -277,8 +284,8 @@ describe("APIMart prices", () => {
     for (const m of IMAGE_MODELS.filter((i) => i.apimart)) {
       const { priceKey } = buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []);
       used.add(priceKey);
-      if (unpriced.has(priceKey)) expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on APIMart`).toBeUndefined();
-      else expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, false), `${m.id} on APIMart`).toBeGreaterThan(0);
+      if (unpriced.has(priceKey)) expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0), `${m.id} on APIMart`).toBeUndefined();
+      else expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0), `${m.id} on APIMart`).toBeGreaterThan(0);
     }
     expect(Object.keys(APIMART_PRICES).filter((k) => !used.has(k))).toEqual([]);
   });
@@ -292,7 +299,19 @@ describe("APIMart prices", () => {
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(0.9956);
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.1956);
     expect(estimateApimartVideoCost(video("bytedance/seedance-1-5-pro"), { prompt: "p", duration: 10, resolution: "1080p" })).toBeCloseTo(1.08);
-    expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, false)).toBeCloseTo(0.12);
+    expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, 0)).toBeCloseTo(0.12);
+    // A model with no reference fee costs the same with references.
+    expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, 3)).toBeCloseTo(0.12);
+  });
+
+  it("Seedream 5.5: $0.013 at 1K and $0.02275 at 2K (`auto` too), plus $0.0052 for each reference image", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    expect(estimateApimartImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeCloseTo(0.013);
+    expect(estimateApimartImageCost(m, { aspectRatio: "auto", size: "1K" }, 1, 0)).toBeCloseTo(0.013);
+    expect(estimateApimartImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.02275);
+    // Every reference is billed, the first included, for each image made.
+    expect(estimateApimartImageCost(m, { aspectRatio: "auto", size: "2K" }, 4, 2)).toBeCloseTo(4 * (0.02275 + 2 * 0.0052));
+    expect(estimateApimartImageCost(m, { aspectRatio: "4:5", size: "1K" }, 1, 0)).toBeUndefined();
   });
 
   it("GPT Image 2.6, on APIMart only: it runs there with no price known yet", () => {
@@ -303,7 +322,7 @@ describe("APIMart prices", () => {
     expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toEqual({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 
-  it("Seedream 5.5, on OpenRouter, fal, kie.ai and APIMart: APIMart runs it with no price known yet when its key is the only one", () => {
+  it("Seedream 5.5, on OpenRouter, fal, kie.ai and APIMart: APIMart, the cheapest, runs it whenever its key is set", () => {
     const m = image("bytedance-seed/seedream-5-5");
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 4, references: 8 };
     expect(quoteImage(m, req, { apimart: true })).toMatchObject({
@@ -311,9 +330,8 @@ describe("APIMart prices", () => {
       provider: "apimart",
       reason: "one-ready",
     });
-    expect(quoteImage(m, req, { apimart: true }).quotes[3]?.usd).toBeUndefined();
-    // Any priced provider with a key runs it instead.
-    expect(quoteImage(m, req, { fal: true, apimart: true })).toMatchObject({ provider: "fal", reason: "cheaper" });
+    expect(quoteImage(m, req, { apimart: true }).quotes[3]?.usd).toBeCloseTo(4 * (0.02275 + 8 * 0.0052));
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true, apimart: true })).toMatchObject({ provider: "apimart", reason: "cheaper" });
   });
 
   it.each(["flare", "sunburst"])("GPT Image 2.6 %s: priced on none of its providers, so OpenRouter runs it when its key is there", (tier) => {

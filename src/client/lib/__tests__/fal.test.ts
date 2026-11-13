@@ -173,12 +173,13 @@ describe("buildFalImagePayload", () => {
     const m = image("bytedance-seed/seedream-5-5");
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 2 };
     const all = quoteImage(m, req, { openrouter: true, fal: true, kie: true, apimart: true });
-    expect(all).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(all).toMatchObject({ provider: "apimart", reason: "cheaper" });
     expect(all.quotes.map((q) => q.provider)).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(all.quotes[0]?.usd).toBeCloseTo(0.035 + 2 * 0.008);
     expect(all.quotes[1]?.usd).toBeCloseTo(0.0405 + 2 * 0.012);
     expect(all.quotes[2]?.usd).toBeCloseTo((6.3 + 2 * 1.44) * 0.005);
-    expect(all.quotes[3]?.usd).toBeUndefined();
+    expect(all.quotes[3]?.usd).toBeCloseTo(0.02275 + 2 * 0.0052);
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toMatchObject({ provider: "kie", reason: "cheaper" });
     expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ provider: "openrouter", reason: "cheaper" });
     expect(quoteImage(m, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
     // kie.ai and APIMart have no 4:5: OpenRouter runs it.

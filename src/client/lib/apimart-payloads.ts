@@ -275,10 +275,13 @@ export function buildApimartImagePayload(model: ImageModel, req: ApimartImagePar
   if (referenceUrls.length) body.image_urls = referenceUrls;
   switch (route.family) {
     case "gemini":
-    case "seedream":
     case "minimax-h3-image":
       // `resolution` always goes: MiniMax H3 Image's default on APIMart is 4K. `auto` lets the model pick the ratio.
       Object.assign(body, { size: req.aspectRatio, resolution: req.size });
+      break;
+    case "seedream":
+      // `size: "auto"` is 2K whatever `resolution` says; the tier alone as `size` lets the model pick the ratio at that size.
+      Object.assign(body, req.aspectRatio === "auto" ? { size: req.size } : { size: req.aspectRatio, resolution: req.size });
       break;
     case "gpt-image-2":
       Object.assign(body, { size: req.aspectRatio, resolution: req.size.toLowerCase() });
