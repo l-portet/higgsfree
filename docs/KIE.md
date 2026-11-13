@@ -124,7 +124,7 @@ estimate is built without the prompt. `output_format` (`png` by default), `backg
 with PNG) and `nsfw_checker` are not sent, and the layer decomposition model (`seedream/5-5-layer-decomposition`) is not
 wired.
 
-MiniMax H3 Image runs on kie, OpenRouter and fal. Its two doc pages (read 12 Nov 2026) take `aspect_ratio` (`auto` by
+MiniMax H3 Image runs on kie, OpenRouter, fal and APIMart. Its two doc pages (read 12 Nov 2026) take `aspect_ratio` (`auto` by
 default, or every other ratio the app has) and `resolution` (1K, 2K or 4K, about 1, 4 and 16 MP; `2K` by default) on both
 models. `auto` is the prompt rewriter's pick on text to image and the first reference's ratio on an edit. The edit model
 takes 1 to 16 `image_urls` (JPG, PNG, WebP, HEIC or BMP, 20 MB and 64 MP each), of which the app sends at most 8. Both want a
@@ -151,8 +151,8 @@ Economy is not one of them: 5 credits ($0.025) an image, with or without referen
 ($0.018) an image at 1K (and 1.5K) and 6.3 ($0.0315) at 2K, the same on both models, plus 1.44 ($0.0072) for each
 reference image on an edit (`inputImageAmount`), under OpenRouter's ($0.02 / $0.035, + $0.008 a reference) and fal's, so
 with a kie.ai key it runs on kie. MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
-($0.0275) at 4K, the same on both models, plus 0.5 ($0.0025) for each reference image on an edit. OpenRouter and fal
-bill it in tokens with no per-image price, so with a kie.ai key it runs on kie.
+($0.0275) at 4K, the same on both models, plus 0.5 ($0.0025) for each reference image on an edit. OpenRouter, fal
+and APIMart bill it in tokens with no per-image price, so with a kie.ai key it runs on kie.
 
 ## Known gaps
 

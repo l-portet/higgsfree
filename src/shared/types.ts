@@ -394,7 +394,7 @@ export interface ApimartImageRoute {
   model: string;
 }
 
-export type ApimartImageFamily = "gemini" | "gpt-image-2" | "flux-kontext" | "z-image" | "seedream";
+export type ApimartImageFamily = "gemini" | "gpt-image-2" | "flux-kontext" | "z-image" | "seedream" | "minimax-h3-image";
 
 export interface ModelsResponse {
   image: ImageModel[];

@@ -83,6 +83,7 @@ upload page's example shows `{ url }` objects).
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux-kontext-pro` | `size`, `output_format: "png"`, up to 4 references |
 | `z-image` | Z-Image Turbo → `z-image-turbo` | `size` (`auto` becomes 1:1), `resolution: "1K"`, `prompt_extend: false` (it doubles the price) |
 | `seedream` | Seedream 5.5 → `seedream-5.5` | `size` (the ratio, `auto` allowed), `resolution` `1K` / `2K`, up to 10 references (the app sends 8 at most) |
+| `minimax-h3-image` | MiniMax H3 Image → `minimax-h3-image` | `size` (the ratio, `auto` allowed), `resolution` `1K` / `2K` / `4K` (always sent: the default is 4K), up to 16 references (the app sends 8 at most) |
 
 GPT Image 2.6 (`gpt-image-2.6`) runs on APIMart only. Its model page (read 30 Oct 2026) lists GPT Image 2's
 fields, with ratios `auto`, 1:1, 3:2, 2:3, 16:9, 9:16, 4:3, 3:4, 4:5, 5:4 (no 21:9, which its catalog entry
@@ -111,6 +112,20 @@ image and transparent layers, with `size` only `auto`, 1K, 1.5K or 2K, no `resol
 the model page priced it on 5 Nov 2026: it has no estimate rather than a guessed one, and the price test lists
 it as unpriced.
 
+MiniMax H3 Image (`minimax-h3-image`) also runs on OpenRouter, fal and kie.ai (see [KIE.md](KIE.md)). Its doc page
+(`docs.apimart.ai/en/api-reference/images/minimax-h3-image/generation.md`, read 13 Nov 2026) has text to image and
+edits in one model: `image_urls` (up to 16; JPG, PNG, WebP or HEIC, 64 MB each, sides 128 to 8192 px) switches it to
+editing. `size` is `auto` (the model picks the ratio) or any ratio from 1:3 to 3:1, so every one the app has;
+`resolution` is `1K`, `2K` or `4K` (about 1, 4.2 and 16 MP) and is always sent, since APIMart's default is 4K, about
+three times the price. The prompt takes 1 to 32,000 characters, and `n` up to 10 (the app sends 1). Not sent, so
+APIMart's defaults apply: `size` in pixels (which excludes `resolution`), `prompt_optimizer` (on; it can be turned
+off on text to image only), `output_format` (`jpeg`), `output_compression` (95), `watermark` (`false`) and
+`nsfw_check` (`false`). The catalog bills it per million tokens ($2.14 / $1.43 / $3.57 input text / input image /
+output image at Gold, 13 Nov 2026); its per-size figures ($0.024 at 1K or 2K, $0.08 at 4K) are only what APIMart
+holds while the task runs (`precharge_hold`). So it has no estimate rather than a guessed one, the price test lists
+it as unpriced, and with a kie.ai key the run goes to kie, which has a price. The Highspeed variant
+(`minimax-h3-image-highspeed`) is not wired.
+
 ## Cost estimates
 
 `APIMART_PRICES` (`src/shared/apimart-prices.ts`) has APIMart's price in USD for every model a route sends to,
@@ -123,8 +138,8 @@ PixVerse), per clip (Veo, 8 s; Gemini Omni Flash 1.1 by length), or per image (b
 The exceptions are Gemini Omni Flash 1.2 (`gemini-omni-1.2-flash`) and GPT Image 2.6 (`gpt-image-2.6`), which
 neither the catalog nor their model pages priced on 30 Oct 2026, Seedream 5.5 (`seedream-5.5`), which neither
 priced on 5 Nov 2026, and GPT Image 2.6 Flare (`gpt-image-2.6-flare`) and Sunburst (`gpt-image-2.6-sunburst`),
-which the catalog bills in tokens only (5 Nov 2026): they have no estimate rather than a guessed one, and the
-test lists them as unpriced. Seedance 1.5 Pro (`seedance-1-5-pro`), on APIMart only since OpenRouter retired it, keeps
+which the catalog bills in tokens only (5 Nov 2026), as it does MiniMax H3 Image (`minimax-h3-image`, 13 Nov 2026):
+they have no estimate rather than a guessed one, and the test lists them as unpriced. Seedance 1.5 Pro (`seedance-1-5-pro`), on APIMart only since OpenRouter retired it, keeps
 its 20 Oct price: the catalog no longer lists it (12 Nov 2026), though its doc page still does.
 
 ## Known gaps
@@ -142,6 +157,8 @@ its 20 Oct price: the catalog no longer lists it (12 Nov 2026), though its doc p
 - **Real faces on Seedance** need APIMart's asset library, which the app does not use; such a run may be refused.
 - **GPT Image 2.6, 2.6 Flare and 2.6 Sunburst have no price to show.** APIMart lists none for 2.6 and bills Flare
   and Sunburst in tokens; the recorded cost is still right.
+- **MiniMax H3 Image has no price to show.** APIMart bills it in tokens, so with a kie.ai key it goes to kie, and
+  otherwise to the first of OpenRouter, fal and APIMart with a key (unless picked); the recorded cost is still right.
 - **Seedream 5.5 has no price to show, and text to image and edits only.** APIMart has no price for it in the app, so
   with an OpenRouter, fal or kie.ai key too it goes to one of those, which have one; the recorded cost is still right. Transparent backgrounds and
   layer decomposition are not wired.

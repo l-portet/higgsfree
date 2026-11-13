@@ -231,6 +231,25 @@ describe("buildApimartImagePayload", () => {
     expect(() => buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array<string>(11).fill("https://r"))).toThrow("Takes up to 10 reference images");
     expect(() => buildApimartImagePayload(m, { prompt: "p", aspectRatio: "5:4", size: "1K" }, [])).toThrow("Takes no 5:4");
   });
+
+  it("MiniMax H3 Image: the ratio as `size` (`auto` too), an uppercase `resolution` always sent, and 16 references", () => {
+    const m = image("minimax/minimax-h3-image");
+    expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "4K" }, ["https://r", "https://s"])).toEqual({
+      kind: "images",
+      body: { model: "minimax-h3-image", prompt: "p", n: 1, image_urls: ["https://r", "https://s"], size: "21:9", resolution: "4K" },
+      priceKey: "minimax-h3-image",
+    });
+    expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).body).toEqual({
+      model: "minimax-h3-image",
+      prompt: "p",
+      n: 1,
+      size: "auto",
+      resolution: "1K",
+    });
+    for (const aspectRatio of m.aspectRatios) for (const size of m.sizes) expect(() => buildApimartImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
+    expect(buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "2K" }, Array<string>(16).fill("https://r")).body.image_urls).toHaveLength(16);
+    expect(() => buildApimartImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "2K" }, Array<string>(17).fill("https://r"))).toThrow("Takes up to 16 reference images");
+  });
 });
 
 describe("resultUrls", () => {
@@ -244,8 +263,8 @@ describe("resultUrls", () => {
 describe("APIMart prices", () => {
   it("price every route at its defaults, and nothing else", () => {
     // APIMart lists no price for these yet (read 30 Oct 2026; Seedream 5.5, 5 Nov 2026), or bills them in tokens only
-    // (GPT Image 2.6 Flare and Sunburst, read 5 Nov 2026): no estimate rather than a guessed one.
-    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6", "gpt-image-2.6-flare", "gpt-image-2.6-sunburst", "seedream-5.5"]);
+    // (GPT Image 2.6 Flare and Sunburst, read 5 Nov 2026; MiniMax H3 Image, 13 Nov 2026): no estimate rather than a guessed one.
+    const unpriced = new Set(["gemini-omni-1.2-flash", "gpt-image-2.6", "gpt-image-2.6-flare", "gpt-image-2.6-sunburst", "seedream-5.5", "minimax-h3-image"]);
     const used = new Set<string>();
     for (const m of VIDEO_MODELS.filter((v) => v.apimart && !v.hidden)) {
       const durations: Partial<Record<string, number>> = { veo: 8, "gemini-omni": 8 };
@@ -306,6 +325,16 @@ describe("APIMart prices", () => {
       provider: "openrouter",
       reason: "unpriced",
     });
+    expect(quoteImage(m, req, { apimart: true })).toMatchObject({ provider: "apimart", reason: "one-ready" });
+  });
+
+  it("MiniMax H3 Image: billed in tokens on APIMart, OpenRouter and fal, so kie.ai runs it when its key is there, then OpenRouter", () => {
+    const m = image("minimax/minimax-h3-image");
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 2 };
+    const all = quoteImage(m, req, { openrouter: true, fal: true, kie: true, apimart: true });
+    expect(all).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(all.quotes.map((q) => [q.provider, q.usd])).toEqual([["openrouter", undefined], ["fal", undefined], ["kie", expect.closeTo((1.8 + 2 * 0.5) * 0.005)], ["apimart", undefined]]);
+    expect(quoteImage(m, req, { openrouter: true, fal: true, apimart: true })).toMatchObject({ provider: "openrouter", reason: "unpriced" });
     expect(quoteImage(m, req, { apimart: true })).toMatchObject({ provider: "apimart", reason: "one-ready" });
   });
 });

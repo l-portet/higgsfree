@@ -356,10 +356,14 @@ describe("kie prices", () => {
     expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "4K" }, 1, 0)).toBeCloseTo(0.0275);
     // Three references, two images: (5.5 + 3 × 0.5) × 2 credits.
     expect(estimateKieImageCost(m, { aspectRatio: "auto", size: "4K" }, 2, 3)).toBeCloseTo(0.07);
-    // OpenRouter and fal bill it in tokens with no per-image price: with a kie.ai key, kie runs it.
+    // OpenRouter, fal and APIMart bill it in tokens with no per-image price: with a kie.ai key, kie runs it.
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 2 };
     const quote = quoteImage(m, req, { openrouter: true, fal: true, kie: true });
-    expect(quote).toMatchObject({ quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }, { provider: "kie", noKey: false }], provider: "kie", reason: "cheaper" });
+    expect(quote).toMatchObject({
+      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }, { provider: "kie", noKey: false }, { provider: "apimart", noKey: true }],
+      provider: "kie",
+      reason: "cheaper",
+    });
     expect(quote.quotes[2]?.usd).toBeCloseTo((1.8 + 2 * 0.5) * 0.005);
     expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ provider: "openrouter", reason: "unpriced" });
   });
