@@ -150,7 +150,7 @@ with no per-image price: in credits, 900 text input, 225 cached text input, 1,44
 Economy is not one of them: 5 credits ($0.025) an image, with or without references. Seedream 5.5 costs 3.6 credits
 ($0.018) an image at 1K (and 1.5K) and 6.3 ($0.0315) at 2K, the same on both models, plus 1.44 ($0.0072) for each
 reference image on an edit (`inputImageAmount`), under OpenRouter's ($0.02 / $0.035, + $0.008 a reference) and fal's, so
-with a kie.ai key it runs on kie. MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
+with a kie.ai key it runs on kie, unless an APIMart key is set too: APIMart's price is lower still ([APIMART.md](APIMART.md)). MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
 ($0.0275) at 4K, the same on both models, plus 0.5 ($0.0025) for each reference image on an edit. OpenRouter, fal
 and APIMart bill it in tokens with no per-image price, so with a kie.ai key it runs on kie.
 

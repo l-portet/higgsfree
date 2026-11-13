@@ -29,6 +29,6 @@ export type ListPrice =
   | {
       unit: "image";
       amount: number | Partial<Record<ImageSize, number>>;
-      /** Each reference image sent is billed on top, at this rate (kie.ai's Seedream 5.5). */
+      /** Each reference image sent is billed on top, at this rate (Seedream 5.5 on kie.ai and APIMart). */
       inputImageAmount?: number;
     };

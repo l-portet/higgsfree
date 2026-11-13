@@ -12,7 +12,7 @@ import { limits, timing } from "@/lib/engine/constants";
 import { subscribeEvents } from "@/lib/live";
 import { resetLiveModels } from "@/lib/openrouter";
 import { setProviderKey, setStoredFalKey, setStoredKey } from "@/lib/settings";
-import { APIMART_KEY, FAL_KEY, installMockOpenRouter, KIE_KEY, MP4, PNG_2X2, PNG_DATA_URL, sleep, waitFor, type MockOpenRouter } from "./mock-openrouter";
+import { FAL_KEY, installMockOpenRouter, KIE_KEY, MP4, PNG_2X2, PNG_DATA_URL, sleep, waitFor, type MockOpenRouter } from "./mock-openrouter";
 
 let mock: MockOpenRouter;
 const received: Generation[] = [];
@@ -206,9 +206,9 @@ describe("kie.ai images", () => {
     expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
-  it("Seedream 5.5, with kie.ai and APIMart keys: kie runs it, being the one priced, with 1:1 for `auto` and the edit model with a reference", async () => {
+  it("Seedream 5.5, with kie.ai and fal keys: kie runs it, being the cheaper, with 1:1 for `auto` and the edit model with a reference", async () => {
     setProviderKey("kie", KIE_KEY);
-    setProviderKey("apimart", APIMART_KEY);
+    setStoredFalKey(FAL_KEY);
     const req = { prompt: "a red fox", model: "bytedance-seed/seedream-5-5", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
     const plain = (await api.generateImage(req)).generations[0];
     if (!plain) throw new Error("no generation");
@@ -223,7 +223,8 @@ describe("kie.ai images", () => {
       { model: "seedream/5-5-text-to-image", input: { prompt: "a red fox", aspect_ratio: "1:1", size: "2K" } },
       { model: "seedream/5-5-image-to-image", input: { prompt: "a red fox", aspect_ratio: "auto", size: "2K", image_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] } },
     ]);
-    expect(mock.apimart("/v1/images/generations")).toHaveLength(0);
+    expect(mock.fal("/bytedance/seedream/v5.5/text-to-image")).toHaveLength(0);
+    expect(mock.fal("/bytedance/seedream/v5.5/edit")).toHaveLength(0);
     expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 

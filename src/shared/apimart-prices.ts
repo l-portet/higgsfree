@@ -57,4 +57,8 @@ export const APIMART_PRICES: Record<string, ListPrice> = {
   "flux-kontext-pro": { unit: "image", amount: 0.032 },
   // Without prompt_extend, which doubles it.
   "z-image-turbo": { unit: "image", amount: 0.01 },
+  // Seedream 5.5 (read 13 Nov 2026 from `api.apimart.ai/api/pricing/model?model=seedream-5-5`; the catalog has no
+  // reference fee): Gold is 65% of the list price here. 1.5K, which the app has no size for, is 0.013 too. Every
+  // reference image is billed on top, the first included.
+  "seedream-5-5": { unit: "image", amount: { "1K": 0.013, "2K": 0.02275 }, inputImageAmount: 0.0052 },
 };

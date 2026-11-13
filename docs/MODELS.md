@@ -89,15 +89,17 @@ model, and older runs keep it. Also a curated `native` model: the values here ar
 OpenRouter also lists ratios the app has no option for (1:2, 2:1, 9:19.5, 19.5:9, 9:20, 20:9, 9:21). `background`
 (`transparent` too), `output_format` and `seed` are left at their defaults. OpenRouter's price (its `/endpoints`, 13 Nov
 2026) is $0.02 an image, $0.035 at its `high_resolution` rate (2K), plus $0.008 for each reference image
-(`estCostPerReferenceUsd`). kie.ai and APIMart (APIMart's model page read 5 Nov 2026, kie's docs and pricing API
-11 Nov 2026) take the ratio (APIMart as `size`, `auto` allowed; kie as `aspect_ratio`, `auto` on edits only, so a
+(`estCostPerReferenceUsd`). kie.ai and APIMart (APIMart's docs and pricing API read 13 Nov 2026, as `seedream-5-5`;
+kie's docs and pricing API 11 Nov 2026) take the ratio (APIMart as `size` with `resolution`, and for `auto` the size
+alone as `size`, since APIMart reads `size: "auto"` as 2K; kie as `aspect_ratio`, `auto` on edits only, so a
 text-to-image run at `auto` sends 1:1 there), but neither 4:5 nor 5:4, so those run on OpenRouter or fal; 1K or 2K (as
 `resolution` on APIMart, `size` on kie); and up to 10 references as `image_urls` (kie: 10 MB each). APIMart makes text
 to image and edits with one model, kie with two. Not sent there: `output_format`, `background`, APIMart's
 `layer_decomposition`, `optimize_prompt_options`, `watermark` and `nsfw_check`, and kie's `nsfw_checker`; kie's layer
 decomposition model is not wired. kie charges 3.6 credits ($0.018) an image at 1K (and 1.5K), 6.3 ($0.0315) at 2K,
-plus 1.44 ($0.0072) for each reference image on an edit (`KIE_PRICES`), the cheapest of the four: with a kie.ai key it
-runs there. APIMart has no price for it in the app. kie also wants a prompt of 5 characters or more.
+plus 1.44 ($0.0072) for each reference image on an edit (`KIE_PRICES`). APIMart charges $0.013 at 1K (and 1.5K),
+$0.02275 at 2K, plus $0.0052 for each reference image, the first included (`APIMART_PRICES`), the cheapest of the four:
+with an APIMart key it runs there, and otherwise with a kie.ai key on kie. kie also wants a prompt of 5 characters or more.
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
@@ -392,7 +394,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare, 2.6 Sunburst | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
-| | | Seedream 5.5 | `seedream-5.5` |
+| | | Seedream 5.5 | `seedream-5-5` |
 | | | MiniMax H3 Image | `minimax-h3-image` |
 
 ### Models on both
