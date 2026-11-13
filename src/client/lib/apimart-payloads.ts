@@ -261,6 +261,8 @@ const IMAGE_LIMITS: Record<ApimartImageRoute["family"], { aspects: ImageAspectRa
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3"], maxRefs: 0 },
   // Seedream 5.5: also 2:1 and 1:2, which the app has no option for, and 10 references (the app sends 8 at most).
   seedream: { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], maxRefs: 10 },
+  // MiniMax H3 Image: any ratio from 1:3 to 3:1 (so every one the app has), and 16 references (the app sends 8 at most).
+  "minimax-h3-image": { aspects: ["auto", "1:1", "5:4", "4:3", "3:2", "16:9", "21:9", "4:5", "3:4", "2:3", "9:16"], maxRefs: 16 },
 };
 
 export function buildApimartImagePayload(model: ImageModel, req: ApimartImageParams, referenceUrls: string[]): ApimartPayload {
@@ -274,6 +276,8 @@ export function buildApimartImagePayload(model: ImageModel, req: ApimartImagePar
   switch (route.family) {
     case "gemini":
     case "seedream":
+    case "minimax-h3-image":
+      // `resolution` always goes: MiniMax H3 Image's default on APIMart is 4K. `auto` lets the model pick the ratio.
       Object.assign(body, { size: req.aspectRatio, resolution: req.size });
       break;
     case "gpt-image-2":

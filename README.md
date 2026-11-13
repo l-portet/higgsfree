@@ -55,7 +55,7 @@ The rules are in [docs/FAL.md](docs/FAL.md).
 
 ## APIMart (optional)
 
-[APIMart](https://apimart.ai) is another provider with its own prices: Veo 3.1 (8 s clips), Seedance, MiniMax H3, Wan, Kling 3.0 and 4.0, PixVerse 6 and 6 Max, Vidu, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Video, and images like Nano Banana Pro and GPT Image 2 for a few cents; GPT Image 2.6 and Seedance 1.5 Pro run only there, and Seedream 5.5 only there and on kie.ai. Add a key in Settings › Keys (get one at [apimart.ai/keys](https://apimart.ai/keys)) and a video goes there whenever it is the cheapest. Estimates use APIMart's Gold-tier prices; the real cost of each run is recorded. Images you send are uploaded to APIMart's file host (public urls, kept 72 hours). The rules are in [docs/APIMART.md](docs/APIMART.md).
+[APIMart](https://apimart.ai) is another provider with its own prices: Veo 3.1 (8 s clips), Seedance, MiniMax H3, Wan, Kling 3.0 and 4.0, PixVerse 6 and 6 Max, Vidu, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Video, and images like Nano Banana Pro and GPT Image 2 for a few cents, plus MiniMax H3 Image; GPT Image 2.6 and Seedance 1.5 Pro run only there, and Seedream 5.5 only there and on kie.ai. Add a key in Settings › Keys (get one at [apimart.ai/keys](https://apimart.ai/keys)) and a video goes there whenever it is the cheapest. Estimates use APIMart's Gold-tier prices; the real cost of each run is recorded. Images you send are uploaded to APIMart's file host (public urls, kept 72 hours). The rules are in [docs/APIMART.md](docs/APIMART.md).
 
 ## Revana (optional)
 

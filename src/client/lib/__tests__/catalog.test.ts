@@ -261,14 +261,15 @@ describe("fal routes", () => {
     expect(m?.fal ?? m?.kie ?? m?.revana).toBeUndefined();
   });
 
-  it("MiniMax H3 Image has OpenRouter, fal and kie.ai routes, and is not verified", () => {
+  it("MiniMax H3 Image has OpenRouter, fal, kie.ai and APIMart routes, and is not verified", () => {
     const m = findImageModel("minimax/minimax-h3-image");
     expect(m?.endpoint).toBe("native");
     expect(m?.offOpenRouter).toBeUndefined();
     expect(m?.fal?.textToImage).toBe("minimax/h3-image/text-to-image");
     expect(m?.kie).toEqual({ family: "minimax-h3-image", model: "minimax-h3/text-to-image", editModel: "minimax-h3/image-edit" });
+    expect(m?.apimart).toEqual({ family: "minimax-h3-image", model: "minimax-h3-image" });
     expect(m?.verified).toBe(false);
-    expect(m?.apimart ?? m?.revana).toBeUndefined();
+    expect(m?.revana).toBeUndefined();
   });
 
   it("PixVerse 6 Max has PixVerse 6's fal route on its own endpoints, next to kie.ai, APIMart and Revana, and is not verified", () => {

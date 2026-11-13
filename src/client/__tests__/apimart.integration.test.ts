@@ -198,6 +198,26 @@ describe("APIMart images", () => {
     });
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
   });
+
+  it("MiniMax H3 Image, on OpenRouter, fal, kie.ai and APIMart: an APIMart key alone runs it, `auto` and the resolution sent, the references uploaded", async () => {
+    setProviderKey("apimart", APIMART_KEY);
+    const req = { prompt: "a red fox", model: "minimax/minimax-h3-image", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("apimart");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, aspectRatio: "9:16", size: "4K", referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    expect(edit.provider).toBe("apimart");
+    await waitFor(completed(edit.id));
+    expect(mock.apimart("/v1/images/generations").map((c) => c.body)).toEqual([
+      { model: "minimax-h3-image", prompt: "a red fox", n: 1, size: "auto", resolution: "2K" },
+      { model: "minimax-h3-image", prompt: "a red fox", n: 1, image_urls: ["https://upload.apimart.ai/f/image/up-1.png"], size: "9:16", resolution: "4K" },
+    ]);
+    expect(mock.calls("/api/v1/images")).toHaveLength(0);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
+  });
 });
 
 describe("APIMart key", () => {

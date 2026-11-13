@@ -65,7 +65,7 @@ are left at OpenRouter's defaults. Every provider bills them in tokens and gives
 there is no estimate; the cost of each run is recorded.
 
 ² MiniMax's image model (10 Nov 2026), text to image and edits from up to 16 references, on OpenRouter, fal
-([models on both](#models-on-both)) and kie.ai ([kie.ai](#kieai)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
+([models on both](#models-on-both)), kie.ai ([kie.ai](#kieai)) and APIMart ([APIMart](#apimart)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
 Also a curated `native` model: the values here are OpenRouter's catalog on 11 Nov 2026 (`resolution` 1K / 2K / 4K,
 16 references, which the app caps at 8). OpenRouter also lists ratios the app has no option for (1:2, 2:1, 1:3, 3:1,
 2.35:1, 5:2, 5:7, 7:5, 9:19.5, 19.5:9, 9:20, 20:9, 9:21). `n` and `output_format` are left at their defaults, and so
@@ -75,7 +75,10 @@ an estimate. kie.ai (docs and pricing API read 12 Nov 2026) takes `aspect_ratio`
 rewriter's pick on text to image, the first reference's ratio on an edit), `resolution` 1K / 2K / 4K and 1 to 16
 `image_urls` on `minimax-h3/image-edit`, and charges 1.8 credits ($0.009) an image at 1K or 2K, 5.5 ($0.0275) at 4K,
 plus 0.5 ($0.0025) for each reference image on an edit (`KIE_PRICES`); being the one priced, it runs the model whenever
-a kie.ai key is set. The cost of each run is recorded on OpenRouter and kie.ai.
+a kie.ai key is set. APIMart (docs and price catalog read 13 Nov 2026) takes `size` (the ratio, `auto` allowed),
+`resolution` 1K / 2K / 4K (always sent: its default is 4K) and up to 16 `image_urls` on its one `minimax-h3-image`
+model, and bills it in tokens too ($2.14 / $1.43 / $3.57 at Gold), so it has no estimate either. The cost of each run
+is recorded on OpenRouter, kie.ai and APIMart.
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
@@ -393,6 +396,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
 | | | Seedream 5.5 (here and on kie.ai) | `seedream-5.5` |
+| | | MiniMax H3 Image | `minimax-h3-image` |
 
 ### Models on both
 
