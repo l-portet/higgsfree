@@ -115,9 +115,9 @@ none is sent. `aspect_ratio` is `auto` by default, or 1:1, 16:9, 9:16, 3:2, 2:3,
 to 16 images (JPEG, PNG or WebP, 30 MB each), of which the app sends at most 8. `background`, `output_format` (`png` by
 default; `gif` too on text to image) and text to image's GIF fields (`frame_count`, `frame_duration_ms`) are not sent.
 
-Seedream 5.5 runs on kie and APIMart. Its two doc pages (read 11 Nov 2026) give text to image a required
+Seedream 5.5 runs on kie, OpenRouter, fal and APIMart. Its two doc pages (read 11 Nov 2026) give text to image a required
 `aspect_ratio` with no `auto` (1:1, 4:3, 3:4, 16:9, 9:16, 2:3, 3:2, 21:9), so the app sends 1:1 for `auto` there; image
-to image takes `auto` too, as its default. `size` is 1K, 1.5K or 2K (`2K` by default); the app lists 1K and 2K, the
+to image takes `auto` too, as its default. 4:5 and 5:4, which OpenRouter and fal take, are refused here, so they run there. `size` is 1K, 1.5K or 2K (`2K` by default); the app lists 1K and 2K, the
 sizes it shares with APIMart. Image to image takes 1 to 10 `image_urls` (JPEG, PNG or WebP, 10 MB each), of which the
 app sends at most 8. Both want a prompt of 5 to 5,000 characters; a shorter one is left for kie to refuse, since the
 estimate is built without the prompt. `output_format` (`png` by default), `background` (`auto` by default; `transparent`
@@ -149,7 +149,8 @@ with no per-image price: in credits, 900 text input, 225 cached text input, 1,44
 5,400 image output. They have no estimate rather than a guessed one, and the test lists them as unpriced. GPT Image 2.6
 Economy is not one of them: 5 credits ($0.025) an image, with or without references. Seedream 5.5 costs 3.6 credits
 ($0.018) an image at 1K (and 1.5K) and 6.3 ($0.0315) at 2K, the same on both models, plus 1.44 ($0.0072) for each
-reference image on an edit (`inputImageAmount`). MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
+reference image on an edit (`inputImageAmount`), under OpenRouter's ($0.02 / $0.035, + $0.008 a reference) and fal's, so
+with a kie.ai key it runs on kie. MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
 ($0.0275) at 4K, the same on both models, plus 0.5 ($0.0025) for each reference image on an edit. OpenRouter, fal
 and APIMart bill it in tokens with no per-image price, so with a kie.ai key it runs on kie.
 

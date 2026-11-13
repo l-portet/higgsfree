@@ -99,11 +99,12 @@ included, `auto` by default), `resolution`, up to 16 `image_urls`, so they share
 catalog bills them per million tokens with no per-image price: no estimate, and the price test lists them as
 unpriced.
 
-Seedream 5.5 (`seedream-5.5`) runs on APIMart and kie.ai (see [KIE.md](KIE.md)). Its model page (`apimart.ai/model/seedream-5-5`, read 5 Nov
+Seedream 5.5 (`seedream-5.5`) runs on APIMart, kie.ai (see [KIE.md](KIE.md)), OpenRouter and fal. Its model page (`apimart.ai/model/seedream-5-5`, read 5 Nov
 2026) is the only source: it links no reference page of its own on `docs.apimart.ai`. Text to image and edits are
 one model, with `size` (the ratio, `auto` allowed), `resolution` (uppercase, as in the page's examples) and up to
 10 `image_urls`; `n` takes only 1. The app lists 1K and 2K: APIMart's 1.5K is not an `ImageSize` and there is no
 4K. It also leaves out the ratios 2:1 and 1:2 (the app has no such option) and `size` as a tier or in pixels.
+APIMart has no 4:5 nor 5:4, which the model takes on OpenRouter and fal: those are refused here and run there.
 Not sent, so APIMart's defaults apply: `output_format` (`jpeg`), `background` (`opaque`; `transparent` needs one
 input with an alpha channel and PNG output), `layer_decomposition` (`false`; it splits one reference into a base
 image and transparent layers, with `size` only `auto`, 1K, 1.5K or 2K, no `resolution` and an optional prompt),
@@ -159,5 +160,5 @@ its 20 Oct price: the catalog no longer lists it (12 Nov 2026), though its doc p
 - **MiniMax H3 Image has no price to show.** APIMart bills it in tokens, so with a kie.ai key it goes to kie, and
   otherwise to the first of OpenRouter, fal and APIMart with a key (unless picked); the recorded cost is still right.
 - **Seedream 5.5 has no price to show, and text to image and edits only.** APIMart has no price for it in the app, so
-  with a kie.ai key too it goes to kie, which has one; the recorded cost is still right. Transparent backgrounds and
+  with an OpenRouter, fal or kie.ai key too it goes to one of those, which have one; the recorded cost is still right. Transparent backgrounds and
   layer decomposition are not wired.

@@ -257,25 +257,29 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
-    id: "bytedance/seedream-5.5",
+    id: "bytedance-seed/seedream-5-5",
     name: "Seedream 5.5",
     provider: "bytedance",
     description: "ByteDance's flagship image model, strong on precise edits and transparency",
-    endpoint: "fal",
+    // OpenRouter's native images API: the live catalog replaces the ratios, sizes and reference count below.
+    endpoint: "native",
     featured: false,
     badges: ["new"],
-    // APIMart and kie.ai take 10 references; the app sends 8 at most.
+    // Every provider takes 10 references; the app sends 8 at most.
     caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
-    // APIMart's ratios but 2:1 and 1:2, which the app has no option for. kie.ai has the rest, `auto` on edits only.
-    aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"],
-    // Both also take 1.5K, which `ImageSize` cannot say, and no 4K.
+    // Every ratio the app has, on OpenRouter and fal; kie.ai and APIMart have no 4:5 nor 5:4 (and kie.ai `auto` on edits only).
+    // OpenRouter also lists 1:2, 2:1, 9:19.5, 19.5:9, 9:20, 20:9 and 9:21, which the app has no option for.
+    aspectRatios: ALL_IMAGE_AR,
+    // Every provider also takes 1.5K, which `ImageSize` cannot say, and none 4K.
     sizes: ["1K", "2K"],
-    // Priced from `KIE_PRICES` on kie.ai (read 11 Nov 2026); APIMart has no price in the app, so no estimate there.
-    estCostUsd: {},
+    // OpenRouter (13 Nov 2026): $0.02 an image at 1K, $0.035 at 2K (its `high_resolution` rate), plus $0.008 for each reference. fal and
+    // kie.ai are priced from `FAL_PRICES` and `KIE_PRICES`; APIMart has no price in the app, so no estimate there.
+    estCostUsd: { "1K": 0.02, "2K": 0.035 },
+    estCostPerReferenceUsd: 0.008,
     supportsImageSize: true,
     verified: false,
-    // Not on OpenRouter nor fal yet.
-    offOpenRouter: true,
+    // fal takes an exact size (0.92 to 4.6 MP) rather than a ratio and a resolution, and its own `auto_1K` / `auto_2K` for `auto`.
+    fal: { textToImage: "bytedance/seedream/v5.5/text-to-image", edit: "bytedance/seedream/v5.5/edit", refs: "image_urls", aspect: "image_size", scaledSize: true, autoSizes: { "1K": "auto_1K", "2K": "auto_2K" } },
     kie: { family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" },
     apimart: { family: "seedream", model: "seedream-5.5" },
   },
@@ -1693,9 +1697,10 @@ export function snapDuration(m: VideoModel, requested: number): number {
   return best;
 }
 
-export function estimateImageCost(m: ImageModel, size: ImageModel["sizes"][number], count: number): number | undefined {
+/** `references`: how many reference images each image is made from (a model with `estCostPerReferenceUsd` bills them). */
+export function estimateImageCost(m: ImageModel, size: ImageModel["sizes"][number], count: number, references = 0): number | undefined {
   const per = m.estCostUsd[size] ?? m.estCostUsd["1K"];
-  return per === undefined ? undefined : per * count;
+  return per === undefined ? undefined : (per + references * (m.estCostPerReferenceUsd ?? 0)) * count;
 }
 
 /** `audio: false` takes the no-audio price where the model has one. */

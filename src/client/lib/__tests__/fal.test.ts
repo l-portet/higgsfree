@@ -33,7 +33,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
-    expect(modelProviders(image("bytedance/seedream-5.5"))).toEqual(["kie", "apimart"]);
+    expect(modelProviders(image("bytedance-seed/seedream-5-5"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
   });
 
@@ -139,6 +139,52 @@ describe("buildFalImagePayload", () => {
         expect(Math.max(width, height) / Math.min(width, height), `${ar} ${size}`).toBeLessThanOrEqual(3);
       }
     }
+  });
+
+  it("Seedream 5.5: the ratio and the size in one explicit `image_size`, and fal's own `auto_1K` / `auto_2K` for `auto`", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "2K" }, [])).toEqual({
+      endpoint: "bytedance/seedream/v5.5/text-to-image",
+      input: { prompt: "p", image_size: { width: 2752, height: 1536 } },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: { width: 896, height: 1152 } });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: "auto_1K" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "2K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "bytedance/seedream/v5.5/edit",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"], image_size: "auto_2K" },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "1K" }, ["data:a"]).input).toEqual({ prompt: "p", image_urls: ["data:a"], image_size: { width: 1536, height: 640 } });
+  });
+
+  it("Seedream 5.5: every ratio and size it offers is within fal's limits (921,600 to 4,624,220 px), and 1K stays in fal's lower price tier", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    for (const ar of m.aspectRatios.filter((a) => a !== "auto")) {
+      for (const size of m.sizes) {
+        const { width, height } = falScaledSize(ar, size);
+        expect(width * height, `${ar} ${size}`).toBeGreaterThanOrEqual(921_600);
+        expect(width * height, `${ar} ${size}`).toBeLessThanOrEqual(4_624_220);
+        // fal bills up to 2.61 MP at its 1K rate, and above that at its 2K one.
+        expect(width * height > 2_610_000, `${ar} ${size}`).toBe(size === "2K");
+      }
+    }
+  });
+
+  it("Seedream 5.5: the cheapest provider with a key runs it, each reference image counted", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 2 };
+    const all = quoteImage(m, req, { openrouter: true, fal: true, kie: true, apimart: true });
+    expect(all).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(all.quotes.map((q) => q.provider)).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(all.quotes[0]?.usd).toBeCloseTo(0.035 + 2 * 0.008);
+    expect(all.quotes[1]?.usd).toBeCloseTo(0.0405 + 2 * 0.012);
+    expect(all.quotes[2]?.usd).toBeCloseTo((6.3 + 2 * 1.44) * 0.005);
+    expect(all.quotes[3]?.usd).toBeUndefined();
+    expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ provider: "openrouter", reason: "cheaper" });
+    expect(quoteImage(m, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
+    // kie.ai and APIMart have no 4:5: OpenRouter runs it.
+    const portrait = quoteImage(m, { ...req, aspectRatio: "4:5" }, { openrouter: true, kie: true, apimart: true });
+    expect(portrait).toMatchObject({ provider: "openrouter", reason: "one-ready" });
+    expect(portrait.quotes[2]?.refusal).toBe("Takes no 4:5");
   });
 });
 

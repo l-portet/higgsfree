@@ -55,10 +55,10 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
   const usd = (v: number | undefined): Pick<ProviderQuote, "usd"> => (v === undefined ? {} : { usd: v });
   switch (provider) {
     case "openrouter":
-      return usd(estimateImageCost(model, req.size, req.count));
+      return usd(estimateImageCost(model, req.size, req.count, req.references));
     case "fal": {
       const why = refusal(() => buildFalImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale, creative: req.creative }, refs));
-      return why ? { refusal: why } : usd(estimateFalImageCost(model, req, req.count, withRefs, { width: req.inputWidth, height: req.inputHeight }));
+      return why ? { refusal: why } : usd(estimateFalImageCost(model, req, req.count, req.references, { width: req.inputWidth, height: req.inputHeight }));
     }
     case "kie": {
       const why = refusal(() => buildKieImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale, creative: req.creative }, refs));

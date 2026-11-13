@@ -204,7 +204,7 @@ describe("video models (hidden)", () => {
 describe("fal routes", () => {
   it("every fal-only model has a route, and every route covers what the model offers", () => {
     for (const m of IMAGE_MODELS) {
-      // GPT Image 2.6 is only on APIMart, GPT Image 2.6 Economy only on kie.ai, Seedream 5.5 on both.
+      // GPT Image 2.6 is only on APIMart, GPT Image 2.6 Economy only on kie.ai.
       if (m.offOpenRouter) {
         expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
         expect(m.endpoint).toBe("fal");
@@ -234,13 +234,26 @@ describe("fal routes", () => {
     }
   });
 
-  it("Seedream 5.5 has kie.ai and APIMart routes and no other, and is not verified", () => {
-    const m = findImageModel("bytedance/seedream-5.5");
-    expect(m?.kie).toEqual({ family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" });
-    expect(m?.apimart).toEqual({ family: "seedream", model: "seedream-5.5" });
-    expect(m?.offOpenRouter).toBe(true);
-    expect(m?.verified).toBe(false);
-    expect(m?.fal ?? m?.revana).toBeUndefined();
+  it("Seedream 5.5 is on OpenRouter under its own slug, and on fal, kie.ai and APIMart, and is not verified", () => {
+    const m = findImageModel("bytedance-seed/seedream-5-5");
+    if (!m) throw new Error("catalog changed");
+    expect(m.endpoint).toBe("native");
+    expect(m.offOpenRouter).toBeUndefined();
+    expect(m.fal).toEqual({
+      textToImage: "bytedance/seedream/v5.5/text-to-image",
+      edit: "bytedance/seedream/v5.5/edit",
+      refs: "image_urls",
+      aspect: "image_size",
+      scaledSize: true,
+      autoSizes: { "1K": "auto_1K", "2K": "auto_2K" },
+    });
+    expect(m.kie).toEqual({ family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" });
+    expect(m.apimart).toEqual({ family: "seedream", model: "seedream-5.5" });
+    expect(m.revana).toBeUndefined();
+    expect(m.verified).toBe(false);
+    // OpenRouter bills each reference image on top: two images at 2K from three references.
+    expect(estimateImageCost(m, "2K", 2, 3)).toBeCloseTo((0.035 + 3 * 0.008) * 2);
+    expect(estimateImageCost(m, "1K", 1)).toBeCloseTo(0.02);
   });
 
   it("GPT Image 2.6 Economy has a kie.ai route and no other, and is not verified", () => {

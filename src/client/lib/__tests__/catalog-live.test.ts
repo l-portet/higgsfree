@@ -157,6 +157,30 @@ describe("buildImageModel", () => {
     expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
   });
 
+  it("Seedream 5.5: a curated native model under OpenRouter's slug, with the catalog's 1K / 2K, its price and its fal, kie.ai and APIMart routes", () => {
+    const curated = findImageModel("bytedance-seed/seedream-5-5");
+    if (!curated) throw new Error("catalog changed");
+    const m = buildImageModel(imageSpec("bytedance-seed/seedream-5-5"), curated);
+    expect(m).toMatchObject({
+      endpoint: "native",
+      name: "Seedream 5.5",
+      provider: "bytedance",
+      badges: ["new"],
+      verified: false,
+      sizes: ["1K", "2K"],
+      supportsImageSize: true,
+      caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+      estCostUsd: { "1K": 0.02, "2K": 0.035 },
+      estCostPerReferenceUsd: 0.008,
+      fal: curated.fal,
+      kie: curated.kie,
+      apimart: curated.apimart,
+    });
+    expect(m?.discovered).toBeUndefined();
+    // The catalog's 1.5K and extra ratios (1:2, 9:19.5 and more) are dropped; the ones the app has match the curated list.
+    expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
+  });
+
   it("builds a native model from the catalog: ratios, sizes, reference limits", () => {
     const m = buildImageModel(imageSpec("bytedance-seed/seedream-5-0-pro"));
     expect(m).toMatchObject({
