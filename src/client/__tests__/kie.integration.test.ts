@@ -206,10 +206,10 @@ describe("kie.ai images", () => {
     expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
-  it("Seedream 5.5, on kie.ai and APIMart: kie runs it, being the one priced, with 1:1 for `auto` and the edit model with a reference", async () => {
+  it("Seedream 5.5, with kie.ai and APIMart keys: kie runs it, being the one priced, with 1:1 for `auto` and the edit model with a reference", async () => {
     setProviderKey("kie", KIE_KEY);
     setProviderKey("apimart", APIMART_KEY);
-    const req = { prompt: "a red fox", model: "bytedance/seedream-5.5", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
+    const req = { prompt: "a red fox", model: "bytedance-seed/seedream-5-5", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
     const plain = (await api.generateImage(req)).generations[0];
     if (!plain) throw new Error("no generation");
     expect(plain.provider).toBe("kie");
