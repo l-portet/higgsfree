@@ -35,6 +35,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
     expect(modelProviders(image("bytedance-seed/seedream-5-5"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(modelProviders(image("fal/kling-image-v4"))).toEqual(["fal"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -190,6 +191,34 @@ describe("buildFalImagePayload", () => {
 });
 
 describe("buildFalVideoPayload", () => {
+  it("Kling Image 4.0: `aspect_ratio` and `resolution` (2K or 4K), references as `image_urls` on image-to-image", () => {
+    const m = image("fal/kling-image-v4");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "2K" }, [])).toEqual({
+      endpoint: "kling/v4/text-to-image",
+      input: { prompt: "p", aspect_ratio: "16:9", resolution: "2K" },
+    });
+    // `auto` is fal's default: no ratio goes out.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "4K" }, []).input).toEqual({ prompt: "p", resolution: "4K" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "4K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "kling/v4/image-to-image",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"], aspect_ratio: "21:9", resolution: "4K" },
+    });
+    // A ratio or a size it does not offer is never sent: fal has no 4:5 and no 1K.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "1K" }, []).input).toEqual({ prompt: "p" });
+  });
+
+  it("Kling Image 4.0: runs on fal only, priced at 2K, not at 4K", () => {
+    const m = image("fal/kling-image-v4");
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 2, references: 1 };
+    expect(quoteImage(m, req, { fal: true })).toEqual({
+      quotes: [{ provider: "fal", noKey: false, usd: expect.closeTo(0.126) }],
+      provider: "fal",
+      reason: "only",
+    });
+    expect(quoteImage(m, { ...req, size: "4K" }, { fal: true })).toEqual({ quotes: [{ provider: "fal", noKey: false }], provider: "fal", reason: "only" });
+    expect(quoteImage(m, req, { openrouter: true, kie: true, apimart: true, revana: true })).toMatchObject({ reason: "none" });
+  });
+
   it("Kling 3.0 on fal: start_image_url, string durations, aspect ratio only without a frame", () => {
     const kling = video("kwaivgi/kling-v3.0-pro");
     expect(buildFalVideoPayload(kling, { prompt: "p", duration: 7.4, aspectRatio: "9:16", audio: false }, {})).toEqual({

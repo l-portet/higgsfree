@@ -46,6 +46,10 @@ const GPT_IMAGE_2: FalPrice = {
 const GPT_IMAGE_1_5: FalPrice = { unit: "image", usd: 0.2, byAspect: { auto: 0.133, "1:1": 0.133 } };
 // Read 13 Nov 2026: up to 2.61 MP (1K, and fal's 1.5K) or above it (2K). Edits add $0.012 for each reference image.
 const SEEDREAM_5_5: FalPrice = { unit: "image", usd: { "1K": 0.03, "2K": 0.0405 } };
+// Read 18 Nov 2026: $0.063 per "unit" on both endpoints, which is Kling's own price for one image at 2K (fal's default).
+// Kling's own list also charges $0.094 at 4K, $0.157 at 8K and $0.003 for each reference image; fal says neither how many
+// units a 4K image takes nor whether it bills references, so 4K has no estimate and references add nothing.
+const KLING_IMAGE_V4: FalPrice = { unit: "image", usd: { "2K": 0.063 } };
 const KLING_V3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.168 };
 const KLING_V3_STANDARD: FalPrice = { unit: "second", usd: 0.084, audioUsd: 0.126 };
 // The US-hosted endpoints (read 22 Oct 2026), 20% above the ones fal stopped listing.
@@ -93,6 +97,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/gpt-image-1.5/edit": GPT_IMAGE_1_5,
   "bytedance/seedream/v5.5/text-to-image": SEEDREAM_5_5,
   "bytedance/seedream/v5.5/edit": { ...SEEDREAM_5_5, inputImageUsd: 0.012 },
+  "kling/v4/text-to-image": KLING_IMAGE_V4,
+  "kling/v4/image-to-image": KLING_IMAGE_V4,
   "fal-ai/qwen-image-edit-2511": { unit: "megapixel", usd: 0.03 },
   "fal-ai/z-image/turbo": { unit: "megapixel", usd: 0.005 },
   "fal-ai/flux/dev": { unit: "megapixel", usd: 0.025 },

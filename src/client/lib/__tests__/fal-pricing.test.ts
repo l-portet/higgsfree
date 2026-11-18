@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { FAL_PRICES } from "@shared/fal-prices";
 import { findImageModel, findVideoModel, IMAGE_MODELS, VIDEO_MODELS } from "@shared/models";
-import type { ImageModel, VideoModel } from "@shared/types";
+import type { ImageModel, ImageSize, VideoModel } from "@shared/types";
 import { estimateFalImageCost, estimateFalVideoCost } from "../fal-pricing";
 
 const image = (id: string): ImageModel => {
@@ -27,6 +27,8 @@ describe("fal prices", () => {
       "openai/gpt-image-2.6/flare/text-to-image", "openai/gpt-image-2.6/flare/edit", "openai/gpt-image-2.6/sunburst/text-to-image", "openai/gpt-image-2.6/sunburst/edit",
       "minimax/h3-image/text-to-image", "minimax/h3-image/edit",
     ]);
+    // fal gives Kling Image 4.0's price at 2K only (read 18 Nov 2026): 4K has no estimate rather than a guessed one.
+    const unpricedSizes: Record<string, ImageSize[]> = { "kling/v4/text-to-image": ["4K"], "kling/v4/image-to-image": ["4K"] };
     // Upscalers are priced in `upscale.ts` (by the output's size, or a flat rate), not from `FAL_PRICES`.
     for (const m of IMAGE_MODELS.filter((i) => !i.caps.upscale)) {
       for (const e of [m.fal?.textToImage, m.fal?.edit]) {
@@ -38,7 +40,11 @@ describe("fal prices", () => {
         }
         const p = FAL_PRICES[e];
         expect(p, `${e} has no price`).toBeDefined();
-        if (p?.unit === "image" && typeof p.usd !== "number") for (const s of m.sizes) expect(p.usd[s], `${e} at ${s}`).toBeDefined();
+        if (p?.unit !== "image" || typeof p.usd === "number") continue;
+        for (const s of m.sizes) {
+          if (unpricedSizes[e]?.includes(s)) expect(p.usd[s], `${e} at ${s} is listed as unpriced`).toBeUndefined();
+          else expect(p.usd[s], `${e} at ${s}`).toBeDefined();
+        }
       }
     }
     for (const m of VIDEO_MODELS.filter((v) => !v.hidden && !v.caps.upscale)) {
@@ -139,6 +145,14 @@ describe("estimateFalImageCost", () => {
     // fal's own examples, with two references: one image at 1.5K (the 1K rate) $0.054, two at 2K $0.129.
     expect(estimateFalImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 2)).toBeCloseTo(0.054);
     expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "2K" }, 2, 2)).toBeCloseTo(0.129);
+  });
+
+  it("Kling Image 4.0: $0.063 an image at 2K, references not billed; no estimate at 4K", () => {
+    const m = image("fal/kling-image-v4");
+    expect(estimateFalImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.063);
+    expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "2K" }, 4, 3)).toBeCloseTo(0.252);
+    expect(estimateFalImageCost(m, { aspectRatio: "1:1", size: "4K" }, 1, 0)).toBeUndefined();
+    expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "4K" }, 2, 2)).toBeUndefined();
   });
 
   it("per started megapixel of 1024 x 1024", () => {

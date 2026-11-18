@@ -196,7 +196,8 @@ Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint 
 `src/shared/fal-prices.ts`, read from each endpoint's page on 15 Oct 2026), not the catalog's
 OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
 times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst, and MiniMax H3 Image, have no fal price: fal
-bills them in tokens and gives no per-size figure for them. Seedream 5.5's edits also bill each reference image. fal reports no cost with a result, so runs on fal record none.
+bills them in tokens and gives no per-size figure for them. Seedream 5.5's edits also bill each reference image. Kling
+Image 4.0 has a fal price at 2K only, so a 4K run has no estimate. fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -283,12 +284,13 @@ Video editors that run only on fal are listed under [Video editing](#video-editi
 
 ### fal-only image models
 
-All are 1K only (no size choice). References are sent as a list (`image_urls`) or a single
-`image_url`. "preset" = the aspect ratio goes out as one of fal's `image_size` presets
+All are 1K only (no size choice), except Kling Image 4.0 (2K / 4K, sent as `resolution`). References are sent as a
+list (`image_urls`) or a single `image_url`. "preset" = the aspect ratio goes out as one of fal's `image_size` presets
 (`square_hd`, `landscape_4_3`, `portrait_4_3`, `landscape_16_9`, `portrait_16_9`).
 
 | Model | Id | fal endpoints (text-to-image · edit) | t2i | i2i (max refs) | Aspect ratios | Aspect sent as |
 |---|---|---|:-:|:-:|---|---|
+| **Kling Image 4.0** <sub>NEW</sub> ¹ | `fal/kling-image-v4` | `kling/v4/text-to-image` · `kling/v4/image-to-image` | ✓ | ✓ (8, `image_urls`) | auto, 1:1, 3:4, 4:3, 2:3, 3:2, 9:16, 16:9, 21:9 | `aspect_ratio` |
 | **FLUX.1 Kontext Pro** | `fal/flux-kontext-pro` | `fal-ai/flux-pro/kontext/text-to-image` · `fal-ai/flux-pro/kontext` | ✓ | ✓ (1, `image_url`) | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
 | **FLUX 1.1 Pro Ultra** | `fal/flux-1.1-pro-ultra` | `fal-ai/flux-pro/v1.1-ultra` | ✓ | – | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
 | **Ideogram 4.5** <sub>NEW</sub> | `fal/ideogram-4.5` | `ideogram/v4.5` · `ideogram/v4.5/edit` | ✓ | ✓ (1, `image_url`) | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
@@ -297,6 +299,14 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 | **Z-Image Turbo** <sub>FAST</sub> | `fal/z-image-turbo` | `fal-ai/z-image/turbo` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [dev]** | `fal/flux-dev` | `fal-ai/flux/dev` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [schnell]** <sub>FAST</sub> | `fal/flux-schnell` | `fal-ai/flux/schnell` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+
+¹ Kuaishou's Kling Image 4.0 (17 Nov 2026), read from fal's schemas on 18 Nov 2026; not on OpenRouter, kie.ai or APIMart
+yet. 2K (fal's default) or 4K as `resolution`; fal's 8K is not offered (`ImageSize` has no 8K). fal takes 10 references
+(each at least 300 px a side, 2:5 to 5:2), which the app caps at 8; the prompt can name them `@Image1`, `@Image2`, ….
+`result_type: "series"` / `series_amount` (a coherent set of 2 to 10), `num_images`, `elements` and the
+`kling/v4/long-image` endpoint are not wired. fal lists $0.063 an image, Kling's own 2K price, and no 4K figure, so a
+4K run has no estimate; Kling's own list also charges $0.094 at 4K and $0.003 for each reference image, which fal may
+pass on.
 
 ### APIMart-only image models
 

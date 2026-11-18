@@ -256,6 +256,22 @@ describe("fal routes", () => {
     expect(estimateImageCost(m, "1K", 1)).toBeCloseTo(0.02);
   });
 
+  it("Kling Image 4.0 is fal-only, at 2K or 4K, and is not verified", () => {
+    const m = findImageModel("fal/kling-image-v4");
+    if (!m) throw new Error("catalog changed");
+    expect(m.endpoint).toBe("fal");
+    expect(m.offOpenRouter).toBe(true);
+    expect(m.fal).toEqual({ textToImage: "kling/v4/text-to-image", edit: "kling/v4/image-to-image", refs: "image_urls", aspect: "aspect_ratio", resolution: true });
+    expect(m.kie ?? m.apimart ?? m.revana).toBeUndefined();
+    expect(m.sizes).toEqual(["2K", "4K"]);
+    expect(m.supportsImageSize).toBe(true);
+    expect(m.caps).toEqual({ textToImage: true, imageToImage: true, maxReferenceImages: 8 });
+    expect(m.aspectRatios).not.toContain("4:5");
+    expect(m.estCostUsd).toEqual({});
+    expect(m.badges).toEqual(["new"]);
+    expect(m.verified).toBe(false);
+  });
+
   it("GPT Image 2.6 Economy has a kie.ai route and no other, and is not verified", () => {
     const m = findImageModel("openai/gpt-image-2.6-economy");
     expect(m?.kie).toEqual({ family: "gpt-image-economy", model: "gpt-image-2-6/economy-text-to-image", editModel: "gpt-image-2-6/economy-image-to-image" });
