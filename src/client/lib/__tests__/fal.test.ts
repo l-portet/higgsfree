@@ -36,6 +36,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("bytedance-seed/seedream-5-5"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("fal/kling-image-v4"))).toEqual(["fal"]);
+    expect(modelProviders(image("microsoft/mai-image-2.7"))).toEqual(["openrouter", "fal"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -140,6 +141,42 @@ describe("buildFalImagePayload", () => {
         expect(Math.max(width, height) / Math.min(width, height), `${ar} ${size}`).toBeLessThanOrEqual(3);
       }
     }
+  });
+
+  it("MAI-Image-2.7: every ratio as one of fal's seven `image_size` presets, none for `auto`, no `resolution`", () => {
+    const m = image("microsoft/mai-image-2.7");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "1K" }, [])).toEqual({
+      endpoint: "microsoft/mai-image-2.7/text-to-image",
+      input: { prompt: "p", image_size: "landscape_16_9" },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "3:2", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: "landscape_3_2" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "2:3", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: "portrait_3_2" });
+    // `auto`: fal's default (square) without references, a size close to the first reference with them.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).input).toEqual({ prompt: "p" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "microsoft/mai-image-2.7/edit",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"] },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "9:16", size: "1K" }, ["data:a"]).input).toEqual({ prompt: "p", image_urls: ["data:a"], image_size: "portrait_16_9" });
+    // fal's presets (read 18 Nov 2026). A custom size must be at least 768 px a side, which the app's fallback for 21:9 (1536×640) is not.
+    const presets = ["square_hd", "portrait_4_3", "landscape_4_3", "portrait_3_2", "landscape_3_2", "portrait_16_9", "landscape_16_9"];
+    for (const ar of m.aspectRatios.filter((a) => a !== "auto")) {
+      expect(presets, ar).toContain(buildFalImagePayload(m, { prompt: "p", aspectRatio: ar, size: "1K" }, []).input.image_size);
+    }
+  });
+
+  it("MAI-Image-2.7: priced on neither OpenRouter nor fal, so OpenRouter runs it when its key is there", () => {
+    const m = image("microsoft/mai-image-2.7");
+    const req = { aspectRatio: "4:3" as const, size: "1K" as const, count: 1, references: 3 };
+    expect(quoteImage(m, req, { openrouter: true, fal: true })).toEqual({
+      quotes: [
+        { provider: "openrouter", noKey: false },
+        { provider: "fal", noKey: false },
+      ],
+      provider: "openrouter",
+      reason: "unpriced",
+    });
+    expect(quoteImage(m, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
   });
 
   it("Seedream 5.5: the ratio and the size in one explicit `image_size`, and fal's own `auto_1K` / `auto_2K` for `auto`", () => {

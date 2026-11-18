@@ -311,6 +311,37 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "microsoft/mai-image-2.7",
+    name: "MAI-Image-2.7",
+    provider: "microsoft",
+    description: "Microsoft AI's image model, for design-ready visuals and edits from up to 5 images",
+    // OpenRouter's native images API: the live catalog replaces the ratios, sizes and reference count below.
+    endpoint: "native",
+    featured: false,
+    badges: ["new"],
+    // OpenRouter and fal's edit schema (`maxItems: 5`) take 5 references; fal's catalog blurb says "up to two input images".
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 5 },
+    // OpenRouter's and fal's ratios (read 18 Nov 2026): no 21:9, 4:5 nor 5:4.
+    aspectRatios: ["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"],
+    // OpenRouter lists no `resolution` for it. fal also takes 2K (its `resolution` on a preset size), not offered here.
+    sizes: ["1K"],
+    // Billed in tokens on OpenRouter and fal ($5 / $8 / $34 per 1M input text / input image / output image tokens,
+    // 18 Nov 2026), neither with a per-image price: no estimate rather than a guessed one.
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    // fal takes one of its seven presets (3:2 and 2:3 are its own) or a custom size of at least 768 px a side; `auto`
+    // sends none (square on text to image, close to the first reference on an edit). `background` is left opaque.
+    fal: {
+      textToImage: "microsoft/mai-image-2.7/text-to-image",
+      edit: "microsoft/mai-image-2.7/edit",
+      refs: "image_urls",
+      aspect: "image_size",
+      imageSizes: { "3:2": "landscape_3_2", "2:3": "portrait_3_2" },
+    },
+  },
+  {
+    kind: "image",
     id: "krea/krea-2-large",
     name: "Krea 2 Large",
     provider: "krea",

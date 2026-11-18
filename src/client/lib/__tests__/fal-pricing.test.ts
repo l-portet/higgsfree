@@ -22,10 +22,12 @@ describe("fal prices", () => {
   it("cover every endpoint the catalog routes to, at every size and resolution it offers, and nothing else", () => {
     const routed = new Set<string>();
     // fal bills these in tokens and gives no per-size figure for them (read 5 Nov 2026): no estimate rather than a guessed one.
-    // MiniMax H3 Image likewise (read 11 Nov 2026).
+    // MiniMax H3 Image likewise (read 11 Nov 2026), and MAI-Image-2.7 (read 18 Nov 2026: $5 / $8 / $34 per 1M input text /
+    // input image / output image tokens; fal's only figure is $0.034816 for a 1024×1024 output, before input tokens).
     const unpriced = new Set([
       "openai/gpt-image-2.6/flare/text-to-image", "openai/gpt-image-2.6/flare/edit", "openai/gpt-image-2.6/sunburst/text-to-image", "openai/gpt-image-2.6/sunburst/edit",
       "minimax/h3-image/text-to-image", "minimax/h3-image/edit",
+      "microsoft/mai-image-2.7/text-to-image", "microsoft/mai-image-2.7/edit",
     ]);
     // fal gives Kling Image 4.0's price at 2K only (read 18 Nov 2026): 4K has no estimate rather than a guessed one.
     const unpricedSizes: Record<string, ImageSize[]> = { "kling/v4/text-to-image": ["4K"], "kling/v4/image-to-image": ["4K"] };

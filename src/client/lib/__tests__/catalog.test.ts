@@ -13,8 +13,8 @@ import { IMAGES_SIZE_BY_ASPECT } from "../payloads";
 
 const VISIBLE_VIDEO = VIDEO_MODELS.filter((m) => !m.hidden);
 const HIDDEN_VIDEO = VIDEO_MODELS.filter((m) => m.hidden);
-// On OpenRouter but billed in tokens there, with no per-image price (read 5 Nov 2026): no estimate rather than a guessed one.
-const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare", "openai/gpt-image-2.6-sunburst", "minimax/minimax-h3-image"]);
+// On OpenRouter but billed in tokens there, with no per-image price (read 5 Nov 2026; MAI-Image-2.7, 18 Nov 2026): no estimate rather than a guessed one.
+const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare", "openai/gpt-image-2.6-sunburst", "minimax/minimax-h3-image", "microsoft/mai-image-2.7"]);
 
 describe("catalog shape", () => {
   it("has unique slugs and unique display names across image + video", () => {
@@ -299,6 +299,30 @@ describe("fal routes", () => {
     expect(m?.apimart).toEqual({ family: "minimax-h3-image", model: "minimax-h3-image" });
     expect(m?.verified).toBe(false);
     expect(m?.revana).toBeUndefined();
+  });
+
+  it("MAI-Image-2.7 is on OpenRouter and fal (not kie.ai nor APIMart), at 1K with 5 references, unpriced, and is not verified", () => {
+    const m = findImageModel("microsoft/mai-image-2.7");
+    if (!m) throw new Error("catalog changed");
+    expect(m.endpoint).toBe("native");
+    expect(m.offOpenRouter).toBeUndefined();
+    expect(m.provider).toBe("microsoft");
+    expect(m.fal).toEqual({
+      textToImage: "microsoft/mai-image-2.7/text-to-image",
+      edit: "microsoft/mai-image-2.7/edit",
+      refs: "image_urls",
+      aspect: "image_size",
+      imageSizes: { "3:2": "landscape_3_2", "2:3": "portrait_3_2" },
+    });
+    expect(m.kie ?? m.apimart ?? m.revana).toBeUndefined();
+    expect(m.sizes).toEqual(["1K"]);
+    expect(m.supportsImageSize).toBe(false);
+    expect(m.caps).toEqual({ textToImage: true, imageToImage: true, maxReferenceImages: 5 });
+    expect(m.aspectRatios).toEqual(["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"]);
+    expect(m.estCostUsd).toEqual({});
+    expect(estimateImageCost(m, "1K", 1)).toBeUndefined();
+    expect(m.badges).toEqual(["new"]);
+    expect(m.verified).toBe(false);
   });
 
   it("PixVerse 6 Max has PixVerse 6's fal route on its own endpoints, next to kie.ai, APIMart and Revana, and is not verified", () => {
