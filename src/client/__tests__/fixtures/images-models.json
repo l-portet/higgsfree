@@ -280,6 +280,54 @@
      "image"
     ]
    },
+   "created": 1794938261,
+   "description": "MAI-Image-2.7 is an image generation and editing model from Microsoft AI, the pr",
+   "id": "microsoft/mai-image-2.7",
+   "name": "Microsoft AI: MAI-Image-2.7",
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3",
+      "auto"
+     ]
+    },
+    "background": {
+     "type": "enum",
+     "values": [
+      "opaque",
+      "transparent"
+     ]
+    },
+    "input_references": {
+     "max": 5,
+     "min": 0,
+     "type": "range"
+    },
+    "n": {
+     "max": 1,
+     "min": 1,
+     "type": "range"
+    }
+   },
+   "supports_streaming": false
+  },
+  {
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
    "created": 1794517601,
    "description": "Seedream 5.5 is an image generation and editing model from ByteDance Seed. It is",
    "id": "bytedance-seed/seedream-5-5",

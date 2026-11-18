@@ -181,6 +181,30 @@ describe("buildImageModel", () => {
     expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
   });
 
+  it("MAI-Image-2.7: a curated native model at 1K (the catalog lists no resolution), 5 references, and its fal route", () => {
+    const curated = findImageModel("microsoft/mai-image-2.7");
+    if (!curated) throw new Error("catalog changed");
+    const m = buildImageModel(imageSpec("microsoft/mai-image-2.7"), curated);
+    expect(m).toMatchObject({
+      endpoint: "native",
+      name: "MAI-Image-2.7",
+      provider: "microsoft",
+      badges: ["new"],
+      verified: false,
+      sizes: ["1K"],
+      supportsImageSize: false,
+      caps: { textToImage: true, imageToImage: true, maxReferenceImages: 5 },
+      estCostUsd: {},
+      fal: curated.fal,
+    });
+    expect(m?.discovered).toBeUndefined();
+    expect(m?.kie).toBeUndefined();
+    expect(m?.apimart).toBeUndefined();
+    // The curated options are OpenRouter's, so the picker does not change when the catalog arrives.
+    expect(m?.aspectRatios).toEqual(curated.aspectRatios);
+    expect(m?.caps).toEqual(curated.caps);
+  });
+
   it("builds a native model from the catalog: ratios, sizes, reference limits", () => {
     const m = buildImageModel(imageSpec("bytedance-seed/seedream-5-0-pro"));
     expect(m).toMatchObject({

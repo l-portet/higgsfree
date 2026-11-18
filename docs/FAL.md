@@ -104,7 +104,8 @@ The model's `fal` route (`FalImageRoute`) says how each option is spelled.
 - Aspect ratio, only when it is not `auto` and the model lists it:
   - `aspect: "aspect_ratio"` → `aspect_ratio: "16:9"`.
   - `aspect: "image_size"` → `image_size`: the model's own `imageSizes` value if it has one (GPT Image
-    1.5: `"1536x1024"`), else fal's preset (`1:1` `square_hd`, `4:3` `landscape_4_3`, `3:4`
+    1.5: `"1536x1024"`; MAI-Image-2.7: fal's `landscape_3_2` / `portrait_3_2` presets, since its custom sizes
+    must be at least 768 px a side), else fal's preset (`1:1` `square_hd`, `4:3` `landscape_4_3`, `3:4`
     `portrait_4_3`, `16:9` `landscape_16_9`, `9:16` `portrait_16_9`), else an explicit
     `{ width, height }` of about one megapixel in multiples of 64 (`2:3` 832×1216, `3:2` 1216×832, `4:5`
     896×1152, `5:4` 1152×896, `21:9` 1536×640).
@@ -268,7 +269,9 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   endpoint, size and resolution the catalog offers. The exceptions are GPT Image 2.6 Flare and Sunburst: their
   pages (5 Nov 2026) give token rates only, with no per-size figure, so they have no estimate on fal and the
   test lists their four endpoints as unpriced. MiniMax H3 Image's two endpoints are the same (11 Nov 2026: $2.30 /
-  $1.50 / $3.80 per 1M input text / input image / output image tokens). Seedream 5.5's were read on 13 Nov 2026.
+  $1.50 / $3.80 per 1M input text / input image / output image tokens), and so are MAI-Image-2.7's (18 Nov 2026: $5 /
+  $8 / $34; the page's one figure, $0.034816 for a 1024 × 1024 output before input tokens, is not a per-size price).
+  Seedream 5.5's were read on 13 Nov 2026.
   Kling Image 4.0's (18 Nov 2026) say "$0.063 per units", Kling's own price for one image at 2K (fal's default),
   and nothing about 4K: the test lists its 4K as unpriced, so a 4K run has no estimate (Kling's own list charges
   $0.094 at 4K and $0.003 for each reference image; fal does not say whether it passes either on). fal's
