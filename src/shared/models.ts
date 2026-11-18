@@ -360,6 +360,31 @@ export const IMAGE_MODELS: ImageModel[] = [
   // ---------- fal only (need a fal key) ----------
   {
     kind: "image",
+    id: "fal/kling-image-v4",
+    name: "Kling Image 4.0",
+    provider: "kwaivgi",
+    description: "Kling's newest image model: 2K or 4K, edits from up to 8 images",
+    endpoint: "fal",
+    featured: false,
+    badges: ["new"],
+    // fal takes 10 references (images and elements together); the app sends 8 at most. Each must be at least 300 px a
+    // side and between 2:5 and 5:2; fal refuses the rest with its own message.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    // fal's ratios (read 18 Nov 2026): no 4:5 nor 5:4. `auto` sends none, and fal picks one from the prompt or the references.
+    aspectRatios: ["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9", "21:9"],
+    // fal's `resolution` is 2K (its default), 4K or 8K: no 1K, and `ImageSize` cannot say 8K.
+    sizes: ["2K", "4K"],
+    // Priced from `FAL_PRICES` (2K only; fal does not say what 4K costs), like the other fal-only models.
+    estCostUsd: {},
+    supportsImageSize: true,
+    verified: false,
+    // Not on OpenRouter, kie.ai nor APIMart yet. `result_type: "series"` / `series_amount`, `num_images`, `elements` and the
+    // `kling/v4/long-image` endpoint are not wired: every image is one `single` request.
+    fal: { textToImage: "kling/v4/text-to-image", edit: "kling/v4/image-to-image", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
+    offOpenRouter: true,
+  },
+  {
+    kind: "image",
     id: "fal/flux-kontext-pro",
     name: "FLUX.1 Kontext Pro",
     revana: { model: "flux-kontext-pro" },

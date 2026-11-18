@@ -116,7 +116,8 @@ The model's `fal` route (`FalImageRoute`) says how each option is spelled.
     references.
   - No `aspect`: never sent.
 - `resolution: "1K" | "2K" | "4K"` only when the route has `resolution: true`, the model has
-  `supportsImageSize` and lists the size (Nano Banana Pro, Nano Banana 2).
+  `supportsImageSize` and lists the size (Nano Banana Pro, Nano Banana 2; Kling Image 4.0 at 2K / 4K, with
+  fal's default 2K for a size it does not list).
 
 ## Videos
 
@@ -267,7 +268,10 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   endpoint, size and resolution the catalog offers. The exceptions are GPT Image 2.6 Flare and Sunburst: their
   pages (5 Nov 2026) give token rates only, with no per-size figure, so they have no estimate on fal and the
   test lists their four endpoints as unpriced. MiniMax H3 Image's two endpoints are the same (11 Nov 2026: $2.30 /
-  $1.50 / $3.80 per 1M input text / input image / output image tokens). Seedream 5.5's were read on 13 Nov 2026. fal's
+  $1.50 / $3.80 per 1M input text / input image / output image tokens). Seedream 5.5's were read on 13 Nov 2026.
+  Kling Image 4.0's (18 Nov 2026) say "$0.063 per units", Kling's own price for one image at 2K (fal's default),
+  and nothing about 4K: the test lists its 4K as unpriced, so a 4K run has no estimate (Kling's own list charges
+  $0.094 at 4K and $0.003 for each reference image; fal does not say whether it passes either on). fal's
   pricing API needs a key and gives one unit price per endpoint, without the tiers below, so the app does not read it.
 - A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on
   Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4 and FLUX.3 Max), per image (by size, or by the
@@ -284,7 +288,7 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   at the resolution sent. A video handed over with **Edit video** brings its length from its record.
   Grok Imagine's price counts the input second as well ($0.05 / $0.07 per output second plus $0.01).
 - Quality and size defaults are fal's (GPT Image at high, Ideogram at medium); GPT Image edits also pay
-  for their input images, which the estimate leaves out.
+  for their input images, which the estimate leaves out (as Kling Image 4.0's may).
 
 ## Known gaps
 
