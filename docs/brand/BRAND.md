@@ -83,7 +83,7 @@ all-caps display headings (`text-display`), where it is set in caps with the res
 | `apple-touch-icon.png` (180) | `mark-square.svg` | iOS applies its own corner mask |
 | `icon-192.png`, `icon-512.png` | `mark.svg` | Rounded tile, transparent corners |
 | `icon-maskable-512.png` | `icon-maskable.svg` | Full bleed, glyph scaled 0.8x so its farthest point (the wave's tip) sits at 34.5 % of the side from the centre, inside the 40 % safe circle |
-| `og-image.png` | `og-image.svg` | Lockup, headline and pitch on `#0a0a0a`, beside a stack of `public/samples` cards with their info badges (images embedded, text outlined) |
+| `og-image.png` | `og-image.svg` | Lockup at 92 px over the headline "The open-source AI studio at provider price." (Inter Tight 700 at 88 px, outlined), centred on `#0a0a0b` above a horizon: a dark body with a lit rim and a green glow behind it, under a light grain. No imagery |
 
 Regenerate by rasterising the vectors, never by resampling a PNG:
 
