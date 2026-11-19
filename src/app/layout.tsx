@@ -43,14 +43,17 @@ const CLARITY_PIXEL = "https://c.bing.com";
  * Production only (Next dev needs eval and websockets). The keys live in this browser, so the one
  * thing worth locking down is where a script on this origin may send data: OpenRouter, fal, kie.ai, APIMart, Revana
  * (their API hosts, upload targets and the CDNs their results come from), plus the Google Analytics
- * and Microsoft Clarity endpoints, and nothing else. ByteDance is reached through this origin's own pass-through
- * (`/api/bytedance/…`, covered by 'self'), never from the browser directly.
+ * and Microsoft Clarity endpoints, and nothing else. ByteDance and Replicate are reached through this origin's own
+ * pass-throughs (`/api/bytedance/…`, `/api/replicate/…`, covered by 'self'), never from the browser directly; only
+ * Replicate's finished files come straight from its CDN.
  */
 const FAL_ORIGINS = "https://fal.run https://queue.fal.run https://rest.fal.ai https://api.fal.ai https://fal.media https://*.fal.media https://storage.googleapis.com";
 const KIE_ORIGINS = "https://api.kie.ai https://kieai.redpandaai.co https://*.aiquickdraw.com";
 const APIMART_ORIGINS = "https://api.apimart.ai https://upload.apimart.ai";
 // Revana's API, and the Cloudflare R2 storage its uploads go to and its results redirect to.
 const REVANA_ORIGINS = "https://api.revana.si https://*.r2.cloudflarestorage.com";
+// Replicate's file CDN, where finished images and videos are read from (no key). Its API is not here: the server calls it.
+const REPLICATE_ORIGINS = "https://replicate.delivery https://*.replicate.delivery";
 const OPENROUTER_ORIGIN = (process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL ?? "").trim().replace(/\/+$/, "") || "https://openrouter.ai";
 const CSP = [
   "default-src 'self'",
@@ -59,7 +62,7 @@ const CSP = [
   `img-src 'self' blob: data: ${GA_CONNECT} ${CLARITY_ORIGIN} ${CLARITY_PIXEL}`,
   "media-src 'self' blob:",
   "font-src 'self'",
-  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${APIMART_ORIGINS} ${REVANA_ORIGINS} ${GA_CONNECT} ${CLARITY_ORIGIN}`,
+  `connect-src 'self' ${OPENROUTER_ORIGIN} ${FAL_ORIGINS} ${KIE_ORIGINS} ${APIMART_ORIGINS} ${REVANA_ORIGINS} ${REPLICATE_ORIGINS} ${GA_CONNECT} ${CLARITY_ORIGIN}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

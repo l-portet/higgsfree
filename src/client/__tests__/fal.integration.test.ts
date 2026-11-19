@@ -79,7 +79,7 @@ describe("who runs a model", () => {
     expect(mock.fal("/fal-ai/nano-banana-pro")[0]?.body).toEqual({ prompt: "p", aspect_ratio: "16:9", resolution: "2K" });
     expect(mock.calls("/api/v1/chat/completions")).toHaveLength(0);
 
-    await expect(image({ model: "krea/krea-2-large", aspectRatio: "1:1" })).rejects.toMatchObject({ status: 401, error: "Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it." });
+    await expect(image({ model: "krea/krea-2-medium-turbo", aspectRatio: "1:1" })).rejects.toMatchObject({ status: 401, error: "Krea 2 Turbo runs on OpenRouter. Add an OpenRouter key in Settings to use it." });
   });
 
   it("both keys: an image on both goes to the cheaper one, or to the one picked", async () => {
@@ -280,7 +280,7 @@ describe("fal videos", () => {
     await expect(api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, references: [character] })).rejects.toMatchObject({ status: 400, error: expect.stringContaining("does not take style references") });
     await expect(api.generateVideo({ prompt: "p", model: "fal/kling-v4", duration: 5, references: [character] })).rejects.toMatchObject({
       status: 400,
-      error: "Kling 4.0 on fal does not take style references. Remove them, or add a kie.ai, APIMart or Revana key in Settings.",
+      error: "Kling 4.0 on fal does not take style references. Remove them, or add a kie.ai, APIMart, Revana or Replicate key in Settings.",
     });
     await expect(api.generateVideo({ prompt: "p", model: "kwaivgi/kling-v3.0-pro", duration: 5, motionVideo: await uploadVideo() })).rejects.toMatchObject({ status: 400, error: "Kling 3.0 Pro does not take a reference video" });
   });

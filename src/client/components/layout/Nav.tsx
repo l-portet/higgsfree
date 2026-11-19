@@ -6,7 +6,7 @@ import { HEART_ICON, IMAGE_ICON, KeyIcon, tabIconStyle, VIDEO_ICON } from "@/com
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import type { ProviderId } from "@shared/types";
-import { NO_BALANCE_API, totalBalance } from "@/lib/balances";
+import { NO_BALANCE_API, REPLICATE_NO_BALANCE_API, totalBalance } from "@/lib/balances";
 import { formatUsd } from "@/lib/format";
 import { PROVIDER_IDS, PROVIDER_NAME } from "@/lib/providers";
 import { useSettings } from "@/store/settings";
@@ -59,7 +59,7 @@ function BalanceList({ balances, providers }: { balances: Balances; providers: P
               </span>
             ) : (
               <span className="max-w-[150px] truncate text-right text-fg-subtle" title={entry.error}>
-                {entry.error === NO_BALANCE_API ? "In its console" : entry.error.includes("billing access") ? "Key can't read it" : "Couldn't read"}
+                {entry.error === NO_BALANCE_API ? "In its console" : entry.error === REPLICATE_NO_BALANCE_API ? "On replicate.com" : entry.error.includes("billing access") ? "Key can't read it" : "Couldn't read"}
               </span>
             )}
           </div>

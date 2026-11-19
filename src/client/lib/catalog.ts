@@ -281,7 +281,7 @@ function merge(live: LiveModels): Merged {
   for (const curated of VIDEO_MODELS) {
     const spec = curated.offOpenRouter ? undefined : videoSpecs.get(curated.id);
     if (spec) video.push(buildVideoModel(spec, curated));
-    else if (curated.fal || curated.kie || curated.apimart || curated.revana || curated.bytedance) video.push(curated.offOpenRouter ? curated : { ...curated, offOpenRouter: true }); // another provider still serves it
+    else if (curated.fal || curated.kie || curated.apimart || curated.revana || curated.bytedance || curated.replicate) video.push(curated.offOpenRouter ? curated : { ...curated, offOpenRouter: true }); // another provider still serves it
     // a curated OpenRouter-only slug OpenRouter dropped is gone
   }
   const newestFirst = <T extends { created?: number }>(a: T, b: T): number => (b.created ?? 0) - (a.created ?? 0);

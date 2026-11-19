@@ -1,14 +1,14 @@
 /**
- * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, Revana, ByteDance, or several. A run goes to the cheapest with a key
+ * Which provider runs a model: OpenRouter, fal, kie.ai, APIMart, Revana, ByteDance, Replicate, or several. A run goes to the cheapest with a key
  * that takes it (`routeQuotes` in `video-cost.ts`), or to the one picked in the composer. A model whose providers have
  * no key cannot run; the composer says why.
  */
 import type { CatalogModel, ProviderId, VideoModel } from "@shared/types";
 
 /** Every provider, in the order they are listed (OpenRouter first). */
-export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart", "revana", "bytedance"];
+export const PROVIDER_IDS: readonly ProviderId[] = ["openrouter", "fal", "kie", "apimart", "revana", "bytedance", "replicate"];
 
-export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart", revana: "Revana", bytedance: "ByteDance" };
+export const PROVIDER_NAME: Record<ProviderId, string> = { openrouter: "OpenRouter", fal: "fal", kie: "kie.ai", apimart: "APIMart", revana: "Revana", bytedance: "ByteDance", replicate: "Replicate" };
 
 /** Where to get a key, the host it is sent to, and what one looks like. */
 export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; placeholder: string }> = {
@@ -19,16 +19,20 @@ export const PROVIDER_KEYS: Record<ProviderId, { url: string; host: string; plac
   revana: { url: "https://revana.si/signup", host: "api.revana.si", placeholder: "sr_live_…" },
   // BytePlus ModelArk, ByteDance's own platform; each model must also be activated there (`BYTEDANCE_ACTIVATE_URL`).
   bytedance: { url: "https://ai.byteplus.com/ark/region:ap-southeast-1/apikey", host: "ark.ap-southeast.bytepluses.com", placeholder: "Your ModelArk API key" },
+  replicate: { url: "https://replicate.com/account/api-tokens", host: "api.replicate.com", placeholder: "r8_…" },
 };
 
 /**
  * Shown next to the key field of a provider whose key goes through this site's server instead of straight from the
- * browser: ByteDance, whose API blocks browser calls (`src/server/bytedance-proxy.ts` forwards each call and keeps
- * nothing). Every other key is only ever sent from the browser to its provider.
+ * browser: ByteDance and Replicate, whose APIs block browser calls (`src/server/bytedance-proxy.ts` and
+ * `replicate-proxy.ts` forward each call and keep nothing). Every other key is only ever sent from the browser to its
+ * provider.
  */
 export const KEY_VIA_SERVER: Partial<Record<ProviderId, string>> = {
   bytedance:
     "Unlike the other providers, your ByteDance key is sent to the higgsfree server so it can call ByteDance's API (it blocks direct browser calls). It is only used to forward your request and is never stored or logged.",
+  replicate:
+    "Like ByteDance's, your Replicate key is sent to the higgsfree server so it can call Replicate's API (it blocks direct browser calls). It is only used to forward your request and is never stored or logged.",
 };
 
 export function isProviderId(v: unknown): v is ProviderId {
@@ -39,7 +43,7 @@ export function isProviderId(v: unknown): v is ProviderId {
 export type ProviderKeys = Partial<Record<ProviderId, boolean>>;
 
 /** The fields that say who serves a model (ByteDance serves videos only). */
-export type ModelRoutes = Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "offOpenRouter"> & Pick<VideoModel, "bytedance">;
+export type ModelRoutes = Pick<CatalogModel, "fal" | "kie" | "apimart" | "revana" | "replicate" | "offOpenRouter"> & Pick<VideoModel, "bytedance">;
 
 /** Providers that serve the model, OpenRouter first. */
 export function modelProviders(m: ModelRoutes): ProviderId[] {
@@ -50,6 +54,7 @@ export function modelProviders(m: ModelRoutes): ProviderId[] {
   if (m.apimart) out.push("apimart");
   if (m.revana) out.push("revana");
   if (m.bytedance) out.push("bytedance");
+  if (m.replicate) out.push("replicate");
   return out;
 }
 

@@ -1,6 +1,6 @@
 /**
  * What a video costs on each provider that offers its model, and who runs it: the cheapest of OpenRouter,
- * fal, kie.ai, APIMart, Revana and ByteDance that can take the request (`routeQuotes`, the same rule as images). The composer shows the
+ * fal, kie.ai, APIMart, Revana, ByteDance and Replicate that can take the request (`routeQuotes`, the same rule as images). The composer shows the
  * comparison next to Generate and the engine routes the run with the same rule, so the two always agree.
  */
 import type { ProviderId, VideoAspectRatio, VideoModel, VideoResolution } from "@shared/types";
@@ -10,6 +10,7 @@ import { apimartVideoPayloadFor, estimateApimartVideoCost } from "./apimart-pric
 import { bytedanceVideoPayloadFor, estimateBytedanceVideoCost } from "./bytedance-pricing";
 import { estimateKieVideoCost, kieVideoPayloadFor } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
+import { estimateReplicateVideoCost, replicateVideoPayloadFor } from "./replicate-pricing";
 import { upscaleVideoUsd } from "./upscale";
 import { estimateRevanaVideoCost, revanaVideoPayloadFor } from "./revana-pricing";
 
@@ -105,6 +106,8 @@ function priceOn(provider: ProviderId, model: VideoModel, req: VideoQuoteRequest
       return quoted(() => revanaVideoPayloadFor(model, req), () => estimateRevanaVideoCost(model, req));
     case "bytedance":
       return quoted(() => bytedanceVideoPayloadFor(model, req), () => estimateBytedanceVideoCost(model, req));
+    case "replicate":
+      return quoted(() => replicateVideoPayloadFor(model, req), () => estimateReplicateVideoCost(model, req));
   }
 }
 

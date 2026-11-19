@@ -37,6 +37,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     fal: { textToImage: "fal-ai/nano-banana-pro", edit: "fal-ai/nano-banana-pro/edit", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
     kie: { family: "nano-banana-2", model: "nano-banana-pro" },
     apimart: { family: "gemini", model: "gemini-3-pro-image-preview" },
+    replicate: { model: "google/nano-banana-pro" },
   },
   {
     kind: "image",
@@ -57,6 +58,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     fal: { textToImage: "fal-ai/nano-banana-2", edit: "fal-ai/nano-banana-2/edit", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
     kie: { family: "nano-banana-2", model: "nano-banana-2" },
     apimart: { family: "gemini", model: "gemini-3.1-flash-image-preview" },
+    replicate: { model: "google/nano-banana-2" },
   },
   {
     kind: "image",
@@ -76,6 +78,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
     kie: { family: "nano-banana-lite", model: "nano-banana-2-lite" },
     apimart: { family: "gemini", model: "gemini-3.1-flash-lite-image-ext" },
+    replicate: { model: "google/nano-banana-2-lite" },
   },
   {
     kind: "image",
@@ -95,6 +98,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: true,
     kie: { family: "nano-banana", model: "google/nano-banana", editModel: "google/nano-banana-edit" },
     apimart: { family: "gemini", model: "gemini-2.5-flash-image-preview" },
+    replicate: { model: "google/nano-banana" },
   },
   {
     kind: "image",
@@ -163,6 +167,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     fal: { textToImage: "openai/gpt-image-2", edit: "openai/gpt-image-2/edit", refs: "image_urls", aspect: "image_size" },
     kie: { family: "gpt-image-2", model: "gpt-image-2-text-to-image", editModel: "gpt-image-2-image-to-image" },
     apimart: { family: "gpt-image-2", model: "gpt-image-2" },
+    replicate: { model: "openai/gpt-image-2" },
   },
   {
     kind: "image",
@@ -355,6 +360,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     estCostUsd: { "1K": 0.06 },
     supportsImageSize: false,
     verified: true,
+    replicate: { model: "krea/krea-2-large" },
   },
   {
     kind: "image",
@@ -371,6 +377,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     estCostUsd: { "1K": 0.04 },
     supportsImageSize: false,
     verified: false,
+    replicate: { model: "krea/krea-2-medium" },
   },
   {
     kind: "image",
@@ -434,6 +441,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     offOpenRouter: true,
     kie: { family: "flux-kontext", model: "flux1-kontext", tier: "flux-kontext-pro" },
     apimart: { family: "flux-kontext", model: "flux-kontext-pro" },
+    replicate: { model: "black-forest-labs/flux-kontext-pro" },
   },
   {
     kind: "image",
@@ -452,6 +460,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
     fal: { textToImage: "fal-ai/flux-pro/v1.1-ultra", aspect: "aspect_ratio" },
     offOpenRouter: true,
+    replicate: { model: "black-forest-labs/flux-1.1-pro-ultra" },
   },
   {
     kind: "image",
@@ -488,6 +497,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
     fal: { textToImage: "fal-ai/gpt-image-1.5", edit: "fal-ai/gpt-image-1.5/edit", refs: "image_urls", aspect: "image_size", imageSizes: { "1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536" } },
     offOpenRouter: true,
+    replicate: { model: "openai/gpt-image-1.5" },
   },
   {
     kind: "image",
@@ -506,6 +516,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
     fal: { edit: "fal-ai/qwen-image-edit-2511", refs: "image_urls", aspect: "image_size" },
     offOpenRouter: true,
+    replicate: { model: "qwen/qwen-image-edit-2511" },
   },
   {
     kind: "image",
@@ -545,6 +556,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
     fal: { textToImage: "fal-ai/flux/dev", aspect: "image_size" },
     offOpenRouter: true,
+    replicate: { model: "black-forest-labs/flux-dev" },
   },
   {
     kind: "image",
@@ -563,6 +575,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
     fal: { textToImage: "fal-ai/flux/schnell", aspect: "image_size" },
     offOpenRouter: true,
+    replicate: { model: "black-forest-labs/flux-schnell" },
   },
   // Upscalers: one image in, the same image larger out, no prompt. Prices: `lib/upscale.ts`.
   {
@@ -603,6 +616,7 @@ export const IMAGE_MODELS: ImageModel[] = [
     fal: { edit: "fal-ai/recraft/upscale/crisp", refs: "image_url", upscale: { png: true } },
     offOpenRouter: true,
     kie: { family: "recraft-upscale", model: "recraft/crisp-upscale" },
+    replicate: { model: "recraft-ai/recraft-crisp-upscale" },
   },
   {
     kind: "image",
@@ -647,6 +661,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     kie: { family: "seedance", model: "bytedance/seedance-2-5" },
     apimart: { family: "seedance", model: "seedance-2.5" },
     bytedance: { model: "dreamina-seedance-2-5-260628" },
+    replicate: { model: "bytedance/seedance-2.5" },
   },
   {
     kind: "video",
@@ -669,6 +684,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     kie: { family: "seedance", model: "bytedance/seedance-2" },
     apimart: { family: "seedance", model: "seedance-2.0" },
     bytedance: { model: "dreamina-seedance-2-0-260128" },
+    replicate: { model: "bytedance/seedance-2.0" },
   },
   {
     kind: "video",
@@ -691,6 +707,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     kie: { family: "seedance", model: "bytedance/seedance-2-fast" },
     apimart: { family: "seedance", model: "seedance-2.0-fast" },
     bytedance: { model: "dreamina-seedance-2-0-fast-260128" },
+    replicate: { model: "bytedance/seedance-2.0-fast" },
   },
   {
     kind: "video",
@@ -713,6 +730,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     kie: { family: "seedance", model: "bytedance/seedance-2-mini" },
     apimart: { family: "seedance", model: "seedance-2.0-mini" },
     bytedance: { model: "dreamina-seedance-2-0-mini-260615" },
+    replicate: { model: "bytedance/seedance-2.0-mini" },
   },
   {
     kind: "video",
@@ -734,6 +752,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     fal: { textToVideo: "minimax/h3/text-to-video", imageToVideo: "minimax/h3/image-to-video", endImage: true, duration: "number", aspect: "text", resolutions: { "2K": "2K" } },
     kie: { family: "minimax-h3", model: "minimax-h3/text-to-video", imageModel: "minimax-h3/image-to-video" },
     apimart: { family: "minimax-h3", model: "MiniMax-H3" },
+    replicate: { model: "minimax/h3" },
   },
   {
     kind: "video",
@@ -775,6 +794,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     fal: { textToVideo: "fal-ai/kling-video/v3/pro/text-to-video", imageToVideo: "fal-ai/kling-video/v3/pro/image-to-video", imageField: "start_image_url", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
     kie: { family: "kling3", model: "kling-3.0/video", tier: "pro" },
     apimart: { family: "kling", model: "kling-v3", tier: "pro" },
+    replicate: { model: "kwaivgi/kling-v3-video", variant: "pro" },
   },
   {
     kind: "video",
@@ -794,6 +814,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "720p": 0.17, "1080p": 0.29 },
     verified: false,
     apimart: { family: "flux3", model: "flux-3-video" },
+    replicate: { model: "black-forest-labs/flux-3" },
   },
   {
     kind: "video",
@@ -830,6 +851,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "480p": 0.08, "720p": 0.14, "1080p": 0.25 },
     verified: true,
     kie: { family: "grok15", model: "grok-imagine-video-1-5-preview" },
+    replicate: { model: "xai/grok-imagine-video-1.5" },
   },
   {
     kind: "video",
@@ -850,6 +872,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: false,
     kie: { family: "wan3", model: "wan/3-0-video" },
     apimart: { family: "wan3", model: "wan3.0-video" },
+    replicate: { model: "alibaba/wan-3" },
   },
   {
     kind: "video",
@@ -871,6 +894,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: true,
     kie: { family: "veo", model: "veo-3-1", tier: "veo3" },
     apimart: { family: "veo", model: "veo3.1-quality" },
+    replicate: { model: "google/veo-3.1" },
   },
   {
     kind: "video",
@@ -892,6 +916,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: false,
     kie: { family: "veo", model: "veo-3-1", tier: "veo3_fast" },
     apimart: { family: "veo", model: "veo3.1-fast" },
+    replicate: { model: "google/veo-3.1-fast" },
   },
   {
     kind: "video",
@@ -933,6 +958,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     verified: false,
     kie: { family: "wan3", model: "wan/3-0-video-prime" },
     apimart: { family: "wan3", model: "wan3.0-video-prime" },
+    replicate: { model: "alibaba/wan-3-prime" },
   },
   {
     kind: "video",
@@ -994,6 +1020,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     fal: { textToVideo: "fal-ai/kling-video/v3/standard/text-to-video", imageToVideo: "fal-ai/kling-video/v3/standard/image-to-video", imageField: "start_image_url", endImage: true, duration: "string", aspect: "text", audio: "generate_audio" },
     kie: { family: "kling3", model: "kling-3.0/video", tier: "std" },
     apimart: { family: "kling", model: "kling-v3", tier: "std" },
+    replicate: { model: "kwaivgi/kling-v3-video", variant: "standard" },
   },
   {
     kind: "video",
@@ -1032,6 +1059,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "1080p": 0.0817 },
     verified: false,
     apimart: { family: "hailuo23", model: "MiniMax-Hailuo-2.3" },
+    replicate: { model: "minimax/hailuo-2.3" },
   },
   {
     kind: "video",
@@ -1067,6 +1095,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"],
     estCostPerSecUsd: { "720p": 0.0988, "1080p": 0.1278 },
     verified: false,
+    replicate: { model: "alibaba/happyhorse-1.1" },
   },
   {
     kind: "video",
@@ -1085,6 +1114,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"],
     estCostPerSecUsd: { "720p": 0.0988, "1080p": 0.1694 },
     verified: false,
+    replicate: { model: "alibaba/happyhorse-1.0" },
   },
   {
     kind: "video",
@@ -1104,6 +1134,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     estCostPerSecUsd: { "480p": 0.05, "720p": 0.07 },
     verified: true,
     kie: { family: "grok", model: "grok-imagine/text-to-video", imageModel: "grok-imagine/image-to-video" },
+    replicate: { model: "xai/grok-imagine-video" },
   },
   {
     kind: "video",
@@ -1121,6 +1152,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     aspectRatios: ["16:9", "9:16"],
     estCostPerSecUsd: { "720p": 0.12 },
     verified: false,
+    replicate: { model: "runwayml/gen-4.5" },
   },
   {
     kind: "video",
@@ -1186,6 +1218,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     offOpenRouter: true,
     kie: { family: "gemini-omni12", model: "google/gemini-omni-flash-1-2" },
     apimart: { family: "gemini-omni12", model: "gemini-omni-1.2-flash" },
+    replicate: { model: "google/gemini-omni-1.2-flash" },
   },
   {
     kind: "video",
@@ -1233,6 +1266,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     // Text-to-video and style references (images, videos) on reference-to-video, frames on keyframe-to-video.
     kie: { family: "kling4", model: "kling-4.0/reference-to-video", imageModel: "kling-4.0/keyframe-to-video" },
     apimart: { family: "kling4", model: "kling-v4" },
+    replicate: { model: "kwaivgi/kling-v4.0" },
   },
   {
     kind: "video",
@@ -1286,6 +1320,7 @@ export const VIDEO_MODELS: VideoModel[] = [
       audio: "generate_audio",
     },
     offOpenRouter: true,
+    replicate: { model: "black-forest-labs/flux-3", variant: "draft" },
   },
   {
     kind: "video",
@@ -1366,6 +1401,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     offOpenRouter: true,
     kie: { family: "pixverse", model: "pixverse-v6/text-to-video", imageModel: "pixverse-v6/image-to-video" },
     apimart: { family: "pixverse", model: "pixverse-v6" },
+    replicate: { model: "pixverse/pixverse-v6" },
   },
   {
     kind: "video",
@@ -1390,6 +1426,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     offOpenRouter: true,
     kie: { family: "pixverse", model: "pixverse-v6-max/text-to-video", imageModel: "pixverse-v6-max/image-to-video" },
     apimart: { family: "pixverse-max", model: "pixverse-v6-max" },
+    replicate: { model: "pixverse/pixverse-v6-max" },
   },
   {
     kind: "video",
@@ -1806,6 +1843,7 @@ export const PROVIDER_LABEL: Record<string, string> = {
   kie: "kie.ai",
   apimart: "APIMart",
   revana: "Revana",
+  replicate: "Replicate",
 };
 
 /** OpenRouter vendor prefixes that belong to a provider listed under another name. */

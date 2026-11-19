@@ -401,13 +401,22 @@ since the models' sizes follow OpenRouter's catalog. Not verified end to end.
 With a Revana key, 36 of these models also run on Revana ([REVANA.md](REVANA.md)), at the prices of its public
 list (`REVANA_MODELS`), and a run goes there whenever it is the cheapest. Revana records what each run cost.
 
+### Replicate
+
+With a Replicate key, 37 of these models also run on Replicate as official models ([REPLICATE.md](REPLICATE.md)), at
+the list prices on its model pages (`REPLICATE_MODELS`), and a run goes there whenever it is the cheapest. That is
+rare: most of its prices equal OpenRouter's or fal's, which win the tie, and Kling 3.0 costs twice as much there.
+Like ByteDance's, its calls go through the app's server (Replicate refuses browser calls). It takes images as
+inputs only, 4 MB a request, so no video editor, upscaler or motion-control model is routed. Replicate does not
+report what a run cost.
+
 ### ByteDance
 
 With a ByteDance key, Seedance 2.5, 2.0, 2.0 Fast and 2.0 Mini also run on ByteDance's own platform, BytePlus
 ModelArk ([BYTEDANCE.md](BYTEDANCE.md)), billed per video token at ModelArk's rates (`BYTEDANCE_VIDEO_MODELS`), and a
 run goes there whenever it is the cheapest. That is never the case with every key set (OpenRouter charges the same and
 wins the tie; APIMart and Revana are cheaper), but it beats fal and kie.ai on Seedance 2.5 and 2.0. Its calls go
-through the app's server, the one provider that does (ModelArk refuses browser calls). No image model is routed: the
+through the app's server, as Replicate's do (ModelArk refuses browser calls). No image model is routed: the
 Seedream models ModelArk has (5.0 Pro, Flash and Lite, 4.5, 4.0) are not in the curated catalog, and the catalog's
 Seedream 5.5 is not on ModelArk. Not verified with a real key.
 
@@ -712,7 +721,8 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `apimart` | How APIMart serves the model (`ApimartVideoRoute`): its `family`, APIMart's `model` id and a `tier` (Kling's `mode`). See [APIMART.md](APIMART.md#video-fields-buildapimartvideopayload). |
 | `revana` | How Revana serves the model (`RevanaRoute`): Revana's `model` id. See [REVANA.md](REVANA.md). |
 | `bytedance` | How ByteDance serves the model on BytePlus ModelArk (`BytedanceRoute`): ModelArk's `model` id, whose options and token prices are in `BYTEDANCE_VIDEO_MODELS`. Videos only. See [BYTEDANCE.md](BYTEDANCE.md). |
-| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `bytedance`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with another provider's route that OpenRouter stopped listing. |
+| `replicate` | How Replicate serves the model (`ReplicateRoute`): the official model's `owner/name`, and a `variant` when two catalog models share one (Kling 3.0's `mode`). Its fields and prices are in `REPLICATE_MODELS`. See [REPLICATE.md](REPLICATE.md). |
+| `offOpenRouter` | Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `bytedance`, `replicate`), and is never looked up in OpenRouter's catalogs. The browser also sets it on a curated model with another provider's route that OpenRouter stopped listing. |
 
 ## Verification checklist
 

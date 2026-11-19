@@ -35,16 +35,16 @@ describe("routes", () => {
     expect(routed.map((m) => m.id)).toEqual(["bytedance/seedance-2.5", "bytedance/seedance-2.0", "bytedance/seedance-2.0-fast", "bytedance/seedance-2.0-mini"]);
     // No catalog image model is on ModelArk (its Seedream 5.0 and 4.x are not curated here), and Seedance 1.5 Pro retires on 11 Nov 2026.
     expect(IMAGE_MODELS.some((m) => "bytedance" in m)).toBe(false);
-    expect(modelProviders(video("bytedance/seedance-2.0"))).toEqual(["openrouter", "kie", "apimart", "revana", "bytedance"]);
+    expect(modelProviders(video("bytedance/seedance-2.0"))).toEqual(["openrouter", "kie", "apimart", "revana", "bytedance", "replicate"]);
     expect(providerNotice({ ...video("bytedance/seedance-2.5"), offOpenRouter: true }, {})).toBe(
-      "Seedance 2.5 needs a fal, kie.ai, APIMart, Revana or ByteDance key. Add one in Settings to use it.",
+      "Seedance 2.5 needs a fal, kie.ai, APIMart, Revana, ByteDance or Replicate key. Add one in Settings to use it.",
     );
   });
 });
 
 describe("key", () => {
-  it("next to the key field, Settings says the ByteDance key goes through the server and is never stored; no other key does", () => {
-    expect(Object.keys(KEY_VIA_SERVER)).toEqual(["bytedance"]);
+  it("next to the key field, Settings says the ByteDance key goes through the server and is never stored; only Replicate's does too", () => {
+    expect(Object.keys(KEY_VIA_SERVER)).toEqual(["bytedance", "replicate"]);
     expect(KEY_VIA_SERVER.bytedance).toBe(
       "Unlike the other providers, your ByteDance key is sent to the higgsfree server so it can call ByteDance's API (it blocks direct browser calls). It is only used to forward your request and is never stored or logged.",
     );

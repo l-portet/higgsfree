@@ -51,8 +51,8 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      # The built server: the pages answer, and the ByteDance pass-through refuses what it should (no key, a call the
-      # app does not make, a file off ModelArk's storage) without ever reaching ByteDance.
+      # The built server: the pages answer, and the ByteDance and Replicate pass-throughs refuse what they should (no
+      # key, a call the app does not make, a malformed id, a file off ModelArk's storage) without ever reaching either.
       - name: Server smoke test
         run: |
           pnpm start --port 3000 > next-start.log 2>&1 &
@@ -64,6 +64,9 @@ jobs:
           test "$(code -X POST -H 'Authorization: Bearer x' http://127.0.0.1:3000/api/bytedance/v3/chat/completions)" = 404
           test "$(code -H 'Authorization: Bearer x' http://127.0.0.1:3000/api/bytedance/v3/contents/generations/tasks/..%2Fx)" = 400
           test "$(code -X POST -H 'Content-Type: application/json' -d '{"url":"https://example.com/x.mp4"}' http://127.0.0.1:3000/api/bytedance/media)" = 403
+          test "$(code http://127.0.0.1:3000/api/replicate/v1/predictions/gm3qorzdhgbfurvjtvhg6dckhu)" = 401
+          test "$(code -X POST -H 'Authorization: Bearer x' http://127.0.0.1:3000/api/replicate/v1/files)" = 404
+          test "$(code -H 'Authorization: Bearer x' http://127.0.0.1:3000/api/replicate/v1/predictions/NOT_AN_ID)" = 400
 
   docker:
     name: Docker image (build only)

@@ -1,7 +1,8 @@
 /**
- * kie.ai, APIMart and Revana run every image and video as a task, ByteDance its videos: inputs uploaded first (they
- * take inputs by url; ByteDance takes images inline instead), a submit that returns a task id, a task url polled until
- * the result urls are there, a download without the key. This is the one shape the engine drives them through.
+ * kie.ai, APIMart, Revana and Replicate run every image and video as a task, ByteDance its videos: inputs uploaded
+ * first (they take inputs by url; ByteDance and Replicate take images inline instead), a submit that returns a task id,
+ * a task url polled until the result urls are there, a download without the key. This is the one shape the engine
+ * drives them through.
  */
 import type { ImageModel, VideoModel, VideoParams } from "@shared/types";
 import * as apimart from "./apimart";
@@ -10,11 +11,13 @@ import * as bytedance from "./bytedance";
 import { buildBytedanceVideoPayload } from "./bytedance-payloads";
 import { badRequest } from "./errors";
 import * as kie from "./kie";
+import * as replicate from "./replicate";
+import { buildReplicateImagePayload, buildReplicateVideoPayload } from "./replicate-payloads";
 import * as revana from "./revana";
 import { buildRevanaImagePayload, buildRevanaVideoPayload } from "./revana-payloads";
 import { buildKieImagePayload, buildKieVideoPayload, type KieImageParams, type KieVideoMedia, type KieVideoParams } from "./kie-payloads";
 
-export type TaskProviderId = "kie" | "apimart" | "revana" | "bytedance";
+export type TaskProviderId = "kie" | "apimart" | "revana" | "bytedance" | "replicate";
 
 /** A task's state, the same for both: `pending` keeps polling (`raw` is the provider's word for it). */
 export interface TaskStatus {
@@ -36,7 +39,7 @@ export interface TaskRequest {
 
 export interface TaskProvider {
   name: string;
-  /** An image input as the provider takes it: uploaded, then its url (ByteDance: the data URL itself). */
+  /** An image input as the provider takes it: uploaded, then its url (ByteDance and Replicate: the data URL itself). */
   uploadImage(key: string, dataUrl: string, signal?: AbortSignal): Promise<string>;
   /** Undefined when the provider has no upload for videos (APIMart). */
   uploadVideo?: (key: string, blob: Blob, fileName: string, signal?: AbortSignal) => Promise<string>;
@@ -47,8 +50,8 @@ export interface TaskProvider {
   /** `key`: for a provider whose result links need it (Revana's `/content`). */
   download(url: string, signal?: AbortSignal, key?: string): Promise<Blob>;
   /**
-   * An error that ends the job at once rather than being retried: a url off the provider's own hosts, or (ByteDance) a
-   * finished video on a host the server will not fetch from.
+   * An error that ends the job at once rather than being retried: a url off the provider's own hosts, or a finished
+   * file on a host it is not fetched from (ByteDance, Replicate).
    */
   endsJob(err: unknown): boolean;
 }
@@ -58,6 +61,8 @@ const APIMART_PENDING = new Set(["pending", "submitted", "processing", "in_progr
 const REVANA_PENDING = new Set(["queued", "running"]);
 const BYTEDANCE_PENDING = new Set(["queued", "running"]);
 const BYTEDANCE_FAILED = new Set(["failed", "expired", "cancelled"]);
+const REPLICATE_PENDING = new Set(["starting", "processing"]);
+const REPLICATE_FAILED = new Set(["failed", "canceled", "aborted"]);
 
 export const TASK_PROVIDERS: Record<TaskProviderId, TaskProvider> = {
   kie: {
@@ -174,8 +179,35 @@ export const TASK_PROVIDERS: Record<TaskProviderId, TaskProvider> = {
     download: (url, signal) => bytedance.download(url, signal),
     endsJob: (err) => err instanceof bytedance.BytedanceOriginError || err instanceof bytedance.BytedanceDownloadBlockedError,
   },
+  replicate: {
+    name: "Replicate",
+    uploadImage: async (_key, dataUrl) => replicate.inlineImage(dataUrl),
+    video(model, req, media) {
+      const p = buildReplicateVideoPayload(model, req, media);
+      return {
+        params: p.params,
+        summary: `model=${p.model} duration=${p.params.duration}s res=${p.params.resolution ?? "-"} ar=${p.params.aspectRatio ?? "-"} audio=${p.params.audio ?? "-"}`,
+        submit: (key, signal) => replicate.submit(key, p.model, p.input, signal),
+      };
+    },
+    image(model, req, refs) {
+      const p = buildReplicateImagePayload(model, req, refs);
+      return { summary: `model=${p.model}`, submit: (key, signal) => replicate.submit(key, p.model, p.input, signal) };
+    },
+    taskUrl: replicate.taskUrl,
+    async status(key, url, signal) {
+      const t = await replicate.prediction(key, url, signal);
+      const state = t.status === "succeeded" ? "done" : REPLICATE_FAILED.has(t.status) ? "failed" : "pending";
+      const out: TaskStatus = { state, raw: t.status, urls: t.urls };
+      if (t.error) out.error = t.error;
+      if (state === "pending" && !REPLICATE_PENDING.has(t.status)) out.raw = `unknown:${t.status}`;
+      return out;
+    },
+    download: (url, signal) => replicate.download(url, signal),
+    endsJob: (err) => err instanceof replicate.ReplicateOriginError || err instanceof replicate.ReplicateDownloadBlockedError,
+  },
 };
 
 export function isTaskProvider(provider: string): provider is TaskProviderId {
-  return provider === "kie" || provider === "apimart" || provider === "revana" || provider === "bytedance";
+  return provider === "kie" || provider === "apimart" || provider === "revana" || provider === "bytedance" || provider === "replicate";
 }

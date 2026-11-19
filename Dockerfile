@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # ---------------------------------------------------------------------------
-# higgsfree: self-hosted image. Next's standalone Node server serves the prerendered pages and the one server
-# route, the ByteDance pass-through (src/app/api/bytedance), which forwards ByteDance calls with the key they carry
-# and stores nothing. Nothing is stored in the container: your keys and your library live in your browser.
+# higgsfree: self-hosted image. Next's standalone Node server serves the prerendered pages and the two server
+# routes, the ByteDance and Replicate pass-throughs (src/app/api/bytedance, src/app/api/replicate), which forward
+# those providers' calls with the key they carry and store nothing. Nothing is stored in the container: your keys and your library live in your browser.
 #
 #   docker build -t higgsfree .
 #   docker run -d -p 127.0.0.1:3000:80 higgsfree

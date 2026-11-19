@@ -3,9 +3,11 @@
  * (a 2×2 PNG, a tiny MP4 with a moov box) the engine tests assert on. Mirrors the mock
  * server the old integration test ran.
  */
+import { REPLICATE_MODELS } from "@shared/replicate-models";
 import { vi } from "vitest";
 import { bytesToBase64 } from "@/lib/data-url";
 import { handleBytedanceProxy } from "../../server/bytedance-proxy";
+import { handleReplicateProxy } from "../../server/replicate-proxy";
 // OpenRouter's public catalogs as they were on 14 Oct 2026 (descriptions trimmed).
 import IMAGES_MODELS from "./fixtures/images-models.json";
 import VIDEOS_MODELS from "./fixtures/videos-models.json";
@@ -74,6 +76,7 @@ export interface MockOpenRouter {
     revanaGenerations: Record<string, { polls: number; image: boolean }>;
     revanaUploads: number;
     bytedanceTasks: Record<string, { polls: number; model: string; resolution: string }>;
+    replicatePredictions: Record<string, { polls: number; model: string; input: unknown }>;
     falBillingForbidden?: boolean;
   };
   /** Calls to fal hosts (API, uploads, CDN), by path. */
@@ -86,7 +89,9 @@ export interface MockOpenRouter {
   revana(path: string): Seen[];
   /** Calls to ByteDance hosts (ModelArk's API, its file storage), by path: what the pass-through sent on. */
   bytedance(path: string): Seen[];
-  /** Calls the browser made to the app's own origin (the ByteDance pass-through), by path. */
+  /** Calls to Replicate hosts (its API, its file CDN), by path: what the pass-through sent on, and the file downloads. */
+  replicate(path: string): Seen[];
+  /** Calls the browser made to the app's own origin (the ByteDance and Replicate pass-throughs), by path. */
   app(path: string): Seen[];
   calls(url: string): Seen[];
   last(url: string): Seen | undefined;
@@ -97,7 +102,7 @@ const json = (status: number, payload: unknown): Response => new Response(JSON.s
 /** Replace `fetch` for the current test (undone by `vi.unstubAllGlobals()` in the setup's afterEach). */
 export function installMockOpenRouter(): MockOpenRouter {
   const seen: Seen[] = [];
-  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0, revanaGenerations: {}, revanaUploads: 0, bytedanceTasks: {} };
+  const state: MockOpenRouter["state"] = { pollCount: 0, unknownPolls: 0, catalogDown: false, falPolls: 0, uploads: 0, kieTasks: {}, kieUploads: 0, apimartTasks: {}, apimartUploads: 0, revanaGenerations: {}, revanaUploads: 0, bytedanceTasks: {}, replicatePredictions: {} };
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.signal?.aborted) throw init.signal.reason;
     // A path alone is a call to the app's own origin, as in a browser.
@@ -116,12 +121,13 @@ export function installMockOpenRouter(): MockOpenRouter {
       for (const [k, v] of init.body.entries()) entry.form[k] = typeof v === "string" ? v : `${v.name} (${v.size} bytes)`;
     }
     seen.push(entry);
-    // The app's own server: the real ByteDance pass-through, whose calls to ModelArk come back through this mock.
-    if (u.origin === APP_ORIGIN) return handleBytedanceProxy(new Request(u, init));
+    // The app's own server: the real pass-throughs, whose calls to ModelArk and Replicate come back through this mock.
+    if (u.origin === APP_ORIGIN) return u.pathname.startsWith("/api/replicate/") ? handleReplicateProxy(new Request(u, init)) : handleBytedanceProxy(new Request(u, init));
     if (KIE_HOSTS.includes(u.hostname)) return kieRoute(u, entry, state);
     if (APIMART_HOSTS.includes(u.hostname)) return apimartRoute(u, entry, state);
     if (REVANA_HOSTS.includes(u.hostname)) return revanaRoute(u, entry, state);
     if (BYTEDANCE_HOSTS.includes(u.hostname)) return bytedanceRoute(u, entry, state);
+    if (REPLICATE_HOSTS.includes(u.hostname)) return replicateRoute(u, entry, state);
     if (u.hostname !== "openrouter.ai") return falRoute(u, entry, state);
     // The two catalogs are public: no key needed.
     if (url === "/api/v1/videos/models" || url === "/api/v1/images/models") {
@@ -165,9 +171,10 @@ export function installMockOpenRouter(): MockOpenRouter {
     seen,
     state,
     fal: (path) =>
-      seen.filter((s) => s.host !== "openrouter.ai" && ![...KIE_HOSTS, ...APIMART_HOSTS, ...REVANA_HOSTS, ...BYTEDANCE_HOSTS, APP_HOST].includes(s.host) && s.url === path),
+      seen.filter((s) => s.host !== "openrouter.ai" && ![...KIE_HOSTS, ...APIMART_HOSTS, ...REVANA_HOSTS, ...BYTEDANCE_HOSTS, ...REPLICATE_HOSTS, APP_HOST].includes(s.host) && s.url === path),
     revana: (path) => seen.filter((s) => REVANA_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     bytedance: (path) => seen.filter((s) => BYTEDANCE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
+    replicate: (path) => seen.filter((s) => REPLICATE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     app: (path) => seen.filter((s) => s.host === APP_HOST && s.url.split("?")[0] === path),
     apimart: (path) => seen.filter((s) => APIMART_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
     kie: (path) => seen.filter((s) => KIE_HOSTS.includes(s.host) && s.url.split("?")[0] === path),
@@ -434,4 +441,54 @@ function bytedanceRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Re
     return json(200, { ...base, status: "succeeded", content: { video_url: `${file}?X-Tos-Signature=x` }, usage: { completion_tokens: 108900, total_tokens: 108900 }, error: null });
   }
   return json(404, { error: { code: "NotFound", message: `no ByteDance route ${path}`, type: "NotFound" } });
+}
+
+export const REPLICATE_KEY = "r8_test_key";
+export const REPLICATE_FILES = "https://replicate.delivery";
+/** A file host that is not Replicate's CDN: the browser never downloads from it. */
+export const REPLICATE_OTHER_FILES = "https://files.not-replicate.example";
+const REPLICATE_HOSTS = ["api.replicate.com", new URL(REPLICATE_FILES).hostname, new URL(REPLICATE_OTHER_FILES).hostname];
+
+/**
+ * Replicate, as the pass-through reaches it (`api.replicate.com`: official-model predictions, and the account as the
+ * key test) and as the browser reaches its file CDN (`replicate.delivery`, no key). Errors are HTTP statuses with
+ * `{ title, detail, status }`. A prediction echoes its `input` and carries `logs`, is `processing` on its first poll
+ * and `succeeded` after: an image model answers with a list of files, a video model with one. Prompts containing
+ * REPLICATE_FAIL make it fail, REPLICATE_INVALID makes the submit a 422, and REPLICATE_BLOCKED puts the result on a
+ * host that is not Replicate's CDN.
+ */
+function replicateRoute(u: URL, entry: Seen, state: MockOpenRouter["state"]): Response {
+  const path = u.pathname;
+  if (u.hostname !== "api.replicate.com") {
+    if (entry.auth) return json(403, { detail: "the key never goes here" });
+    return path.endsWith(".mp4")
+      ? new Response(new Blob([MP4]), { status: 200, headers: { "content-type": "video/mp4" } })
+      : new Response(new Blob([Uint8Array.from(PNG_2X2)]), { status: 200, headers: { "content-type": "application/octet-stream" } });
+  }
+  if (entry.auth !== `Bearer ${REPLICATE_KEY}`) return json(401, { title: "Unauthenticated", detail: "You did not pass a valid authentication token", status: 401 });
+  if (path === "/v1/account" && entry.method === "GET") return json(200, { type: "user", username: "tester", name: "Tester" });
+  const create = path.match(/^\/v1\/models\/([^/]+\/[^/]+)\/predictions$/);
+  if (create && entry.method === "POST") {
+    const model = create[1] ?? "";
+    const input = (entry.body?.input ?? {}) as Record<string, unknown>;
+    const prompt = String(input.prompt ?? "");
+    if (prompt.includes("REPLICATE_INVALID")) return json(422, { title: "Input validation failed", detail: "- input.aspect_ratio: aspect_ratio must be one of the listed values", status: 422 });
+    const id = prompt.includes("REPLICATE_FAIL") ? "failedprediction0001" : prompt.includes("REPLICATE_BLOCKED") ? "blockedprediction001" : `prediction${String(Object.keys(state.replicatePredictions).length + 1).padStart(4, "0")}`;
+    state.replicatePredictions[id] = { polls: 0, model, input };
+    return json(201, { id, model, version: "hidden", input, logs: "", output: null, error: null, status: "starting", urls: { get: `https://api.replicate.com/v1/predictions/${id}` } });
+  }
+  const get = path.match(/^\/v1\/predictions\/([^/]+)$/);
+  if (get && entry.method === "GET") {
+    const id = get[1] ?? "";
+    const p = state.replicatePredictions[id];
+    if (!p) return json(404, { title: "Not found", detail: "The requested resource could not be found.", status: 404 });
+    p.polls++;
+    const base = { id, model: p.model, version: "hidden", input: p.input, logs: "Using seed 1\n" };
+    if (id === "failedprediction0001") return json(200, { ...base, status: "failed", output: null, error: "The input was flagged as sensitive (E005)" });
+    if (p.polls === 1) return json(200, { ...base, status: "processing", output: null, error: null });
+    const image = Object.entries(REPLICATE_MODELS).some(([key, info]) => (key === p.model || key.startsWith(`${p.model}:`)) && info.kind === "image");
+    const output = id === "blockedprediction001" ? `${REPLICATE_OTHER_FILES}/out/blocked.mp4` : image ? [`${REPLICATE_FILES}/xezq/${id}/out-0.png`] : `${REPLICATE_FILES}/xezq/${id}/out.mp4`;
+    return json(200, { ...base, status: "succeeded", output, error: null, metrics: { predict_time: 12.5 } });
+  }
+  return json(404, { title: "Not found", detail: `no Replicate route ${path}`, status: 404 });
 }

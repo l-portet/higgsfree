@@ -2,7 +2,8 @@
  * What is left on each provider's key, in USD: OpenRouter's credits, fal's account balance, kie.ai's credits
  * ($0.005 each), APIMart's and Revana's balances. Each lookup is cached 30 s per key, so hovering the key button again
  * does not refetch. A provider whose balance cannot be read reports why instead; ByteDance's never can (an API key
- * has no balance to read on ModelArk, only the BytePlus console shows it).
+ * has no balance to read on ModelArk, only the BytePlus console shows it), nor can Replicate's (its API has no
+ * balance call; replicate.com/account/billing shows it).
  */
 import type { ProviderId } from "@shared/types";
 import * as apimart from "./apimart";
@@ -24,6 +25,8 @@ export type BalanceEntry = { ok: true; balance: ProviderBalance } | { ok: false;
 
 /** Why ByteDance's balance is never shown. */
 export const NO_BALANCE_API = "ByteDance shows the balance in the BytePlus console only";
+/** Why Replicate's balance is never shown. */
+export const REPLICATE_NO_BALANCE_API = "Replicate shows the balance on replicate.com only";
 
 const TTL_MS = 30_000;
 const cache = new Map<string, { at: number; value: ProviderBalance }>();
@@ -46,6 +49,8 @@ async function lookup(provider: ProviderId, key: string): Promise<ProviderBalanc
       return { usd: (await revana.testKey(key)).balanceUsd };
     case "bytedance":
       throw new ApiClientError(501, NO_BALANCE_API);
+    case "replicate":
+      throw new ApiClientError(501, REPLICATE_NO_BALANCE_API);
   }
 }
 

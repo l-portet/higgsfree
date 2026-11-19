@@ -16,6 +16,7 @@
  * shows its real errors (a bad key, a model not activated, a refused face).
  */
 import { BYTEDANCE_PROXY_API, BYTEDANCE_PROXY_MAX_BODY_BYTES, BYTEDANCE_PROXY_MEDIA, BYTEDANCE_TASK_ID, isBytedanceFileUrl, MODELARK_API } from "@shared/bytedance-proxy";
+import { BEARER, isJson, isTimeout, NO_STORE, readBody } from "./pass-through";
 
 const TASKS = `${BYTEDANCE_PROXY_API}/contents/generations/tasks`;
 /** ModelArk answers a submit in seconds; the browser gives up on it after 90. */
@@ -25,10 +26,7 @@ const MEDIA_HEADERS_TIMEOUT_MS = 60_000;
 const MAX_REDIRECTS = 3;
 /** `{ "url": "…" }`: a presigned link is well under this. */
 const MAX_MEDIA_REQUEST_BYTES = 16 * 1024;
-const BEARER = /^Bearer [\x21-\x7e]{1,1024}$/;
 const PAGE_SIZE = /^(?:[1-9]|[1-9][0-9]|100)$/;
-
-const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 /** An error in ModelArk's own shape (`{ error: { code, message } }`), so the browser reads it the same way. */
 function fail(status: number, code: string, message: string, headers: Record<string, string> = {}): Response {
@@ -57,36 +55,6 @@ export function modelArkTarget(method: string, url: URL): { target: string; body
   }
   return fail(404, "NotFound", "Not a ByteDance call this server passes on");
 }
-
-const isJson = (type: string | null): boolean => /^application\/json\s*(?:;|$)/i.test(type ?? "");
-
-/** The request body, or null past `max` bytes (by its Content-Length, or as it streams in). */
-async function readBody(req: Request, max: number): Promise<Uint8Array<ArrayBuffer> | null> {
-  if (Number(req.headers.get("content-length")) > max) return null;
-  if (!req.body) return new Uint8Array(0);
-  const reader = req.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > max) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  const out = new Uint8Array(size);
-  let at = 0;
-  for (const c of chunks) {
-    out.set(c, at);
-    at += c.byteLength;
-  }
-  return out;
-}
-
-const isTimeout = (err: unknown): boolean => err instanceof DOMException && err.name === "TimeoutError";
 
 /** A redirect's `Location`, resolved against the url that sent it. */
 function resolveRedirect(location: string | null, base: string): string | undefined {

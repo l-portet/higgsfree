@@ -38,6 +38,7 @@ one weight at 14–20 px. Colors, gradients and wordmarks were dropped.
 | `topaz` | Topaz Labs steps | [LobeHub Icons](https://github.com/lobehub/lobe-icons) `@lobehub/icons-static-svg` (v1.102.0) `topazlabs` | MIT |
 | `kie` | kie.ai circuit "A" | Traced (potrace 1.16) from the official logo <https://kie.ai/logo-icon.webp> (300×300), rendered even-odd | Nominative use of kie.ai's trademark |
 | `apimart` | APIMart "M" | Official inline SVG on <https://apimart.ai/> (`aria-label="APIMart"`), three paths merged | Nominative use of APIMart's trademark |
+| `replicate` | Replicate nested corners | [Simple Icons](https://simpleicons.org) `replicate` (v16.29.0) | CC0 1.0 |
 | `revana` | Revana "R" with its square | Official SVG favicon <https://revana.si/favicon.svg>, strokes outlined, background dropped | Nominative use of Revana's trademark |
 
 LobeHub Icons is released under the [MIT license](https://github.com/lobehub/lobe-icons/blob/master/LICENSE).

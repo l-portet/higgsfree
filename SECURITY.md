@@ -1,15 +1,16 @@
 # Security
 
 higgsfree runs in the browser. It has no database and no accounts: the browser holds your keys and your library,
-and talks to OpenRouter, fal, kie.ai, APIMart and Revana directly. Its only server code is a stateless pass-through
-for ByteDance (`src/server/bytedance-proxy.ts`), whose API refuses browser calls: a ByteDance key and its requests go
-through the app's own server on their way to ByteDance, and nothing of them is kept. Every other security question
+and talks to OpenRouter, fal, kie.ai, APIMart and Revana directly. Its only server code is two stateless pass-throughs,
+for ByteDance (`src/server/bytedance-proxy.ts`) and Replicate (`src/server/replicate-proxy.ts`), whose APIs refuse
+browser calls: a ByteDance or Replicate key and its requests go through the app's own server on their way to the
+provider, and nothing of them is kept. Every other security question
 comes down to the browser and the origin the app is served from.
 
 ## Where your keys live
 
 Each key is stored in this browser's localStorage and nowhere else, and each is sent only to its own provider. The
-ByteDance key is the one that travels through the app's server on the way (below).
+ByteDance and Replicate keys are the two that travel through the app's server on the way (below).
 
 - **OpenRouter** (`higgsfree.apiKey`) is sent with exactly one kind of request: calls to
   `https://openrouter.ai` (or the `NEXT_PUBLIC_OPENROUTER_BASE_URL` the site was built with). A url
@@ -30,6 +31,15 @@ ByteDance key is the one that travels through the app's server on the way (below
   makes (submit a video task, read one by its `cgt-…` id, list one task as the key test), refusing anything else
   before it leaves the server. Finished videos are fetched by the server from ModelArk's own storage bucket only,
   without the key. Settings › Keys and the key dialog say this next to the ByteDance key field.
+- **Replicate** (`higgsfree.replicateKey`, optional) travels the same way. Replicate's API answers browsers from
+  replicate.com only (from any other site its preflights carry no `Access-Control-Allow-Origin`), so the browser
+  sends the key, in the `Authorization` header, only to the pass-through on its own origin (`/api/replicate/v1/…`,
+  `assertReplicateOrigin` in `src/client/lib/replicate.ts`). The server uses it once to call
+  `https://api.replicate.com/v1` and drops it, under the same rules (no state, no console output, `no-store`, fixed
+  error messages, redirects not followed), and forwards only the three calls the app makes (run an official model,
+  read a prediction by its id, read the account as the key test), with no header of the browser's but the key.
+  Finished files never pass through it: the browser reads them from Replicate's CDN without the key. Settings › Keys
+  and the key dialog say this next to the Replicate key field.
 - The app never logs a key and never puts one in a url; the UI shows them masked (`sk-or-v1-…a1b2`).
 - Use a **dedicated OpenRouter key with a spend limit** for this app, and rotate it any time at
   <https://openrouter.ai/keys>. Test connection in Settings › Keys shows the key's label, spend limit and
@@ -89,10 +99,12 @@ What the app does about it:
   `storage.googleapis.com` serves every Google Cloud Storage bucket, Google's analytics endpoints take hits
   for any property, and Clarity's take uploads for any project. The list narrows where an injected script
   can send the keys; it does not close it.
-  ByteDance needs no entry: the browser only reaches it through the app's own origin (`'self'`).
+  ByteDance needs no entry: the browser only reaches it through the app's own origin (`'self'`). Replicate's API
+  needs none either; only its file CDN is listed (`replicate.delivery`, `*.replicate.delivery`), where results are
+  read from.
 - **`X-Content-Type-Options: nosniff`** and **`frame-ancestors 'none'`** on every response (`vercel.json`; the
-  Docker image's standalone server sends the same headers, from `next.config.ts`). The ByteDance pass-through's
-  answers also carry `Cache-Control: no-store`, and the videos it streams are typed as videos (anything else as
+  Docker image's standalone server sends the same headers, from `next.config.ts`). The pass-throughs'
+  answers also carry `Cache-Control: no-store`, and the videos ByteDance's streams are typed as videos (anything else as
   `application/octet-stream`) under `Content-Security-Policy: default-src 'none'; sandbox`.
 - Media are shown through `blob:` object urls, never by url from anywhere else.
 
@@ -129,18 +141,25 @@ On ByteDance (BytePlus ModelArk), frames and reference images travel inline in t
 server; nothing is uploaded. Its videos are presigned urls on its TOS storage for 24 hours, read through the app's
 server without the key; a url on any other host is never fetched, and the run's error shows it instead.
 
+On Replicate, frames and reference images travel inline in the request (data URIs), through the app's server;
+nothing is uploaded, and no video or audio is ever sent there. Replicate deletes a prediction's inputs and outputs
+after an hour. Its results are urls on its CDN (`replicate.delivery`), read by the browser without the key; a url on
+any other host is never fetched, and the run's error shows it instead.
+
 The app does not keep these urls, but the providers have them. Treat anything you send to fal, kie.ai,
-APIMart, Revana or ByteDance, and anything they make, as reachable by url.
+APIMart, Revana, ByteDance or Replicate, and anything they make, as reachable by url.
 
 ## What a hosted copy can see
 
-The host serves the pages and runs the ByteDance pass-through. It never receives your OpenRouter, fal, kie.ai,
+The host serves the pages and runs the ByteDance and Replicate pass-throughs. It never receives your OpenRouter, fal, kie.ai,
 APIMart or Revana keys, your library, or what you send those providers: that goes from the browser to them and
 into IndexedDB. A host sees ordinary web-server traffic (your IP address, which pages you load) and, if you use
 ByteDance, your ByteDance calls as they pass through: the key, the prompt and options, the frames and references,
-and the finished video's link and bytes. The code it runs keeps none of that (no storage, no logs, nothing cached),
+and the finished video's link and bytes; if you use Replicate, your Replicate calls likewise (the key, the prompt and
+options, the images, and the result's link, but not its bytes, which the browser fetches itself). The code it runs keeps none of that (no storage, no logs, nothing cached),
 but whoever controls the server controls that code, which is one more reason to use a copy you deploy yourself.
-The url of each call (`/api/bytedance/v3/contents/generations/tasks/cgt-…`) is in the host's ordinary request logs,
+The url of each call (`/api/bytedance/v3/contents/generations/tasks/cgt-…`, `/api/replicate/v1/models/<owner>/<name>/predictions`,
+`/api/replicate/v1/predictions/<id>`) is in the host's ordinary request logs,
 like any page load; the key and the video's presigned link are not (they travel in a header and in a request body).
 Vercel adds nothing on top (the only configuration there is the headers above), but production builds load Google
 Analytics and Microsoft Clarity (see above), so Google sees page views and Microsoft sees session recordings.
@@ -158,7 +177,7 @@ Analytics and Microsoft Clarity (see above), so Google sees page views and Micro
 
 Please open a GitHub issue for anything that is not sensitive. If the report could put users at risk (e.g.
 a way to read a stored key from another origin, to make a key go anywhere other than its provider, or to make the
-ByteDance pass-through call or fetch anything off its allowlist),
+ByteDance or Replicate pass-through call or fetch anything off its allowlist),
 open a
 [private security advisory](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
 on the repository instead so it can be fixed before it's public.

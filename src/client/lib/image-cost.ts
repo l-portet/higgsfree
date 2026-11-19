@@ -12,6 +12,8 @@ import { estimateFalImageCost } from "./fal-pricing";
 import { buildKieImagePayload } from "./kie-payloads";
 import { estimateKieImageCost } from "./kie-pricing";
 import { modelProviders, type ProviderKeys } from "./providers";
+import { buildReplicateImagePayload } from "./replicate-payloads";
+import { estimateReplicateImageCost } from "./replicate-pricing";
 import { buildRevanaImagePayload } from "./revana-payloads";
 import { estimateRevanaImageCost } from "./revana-pricing";
 import { routeQuotes, type ProviderQuote, type QuoteReason } from "./video-cost";
@@ -75,6 +77,10 @@ function priceOn(provider: ProviderId, model: ImageModel, req: ImageQuoteRequest
     case "bytedance":
       // No image model has a ByteDance route: ModelArk's image API does not take a key from a browser (docs/BYTEDANCE.md).
       return { refusal: "Runs videos only" };
+    case "replicate": {
+      const why = refusal(() => buildReplicateImagePayload(model, { prompt: "", aspectRatio: req.aspectRatio, size: req.size, upscale: req.upscale }, refs));
+      return why ? { refusal: why } : usd(estimateReplicateImageCost(model, req, req.count, withRefs));
+    }
   }
 }
 

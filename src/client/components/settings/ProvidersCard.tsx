@@ -206,7 +206,7 @@ function KeysLink({ provider, href, children }: { provider: KeyedProvider; href?
   );
 }
 
-/** The fal, kie.ai, APIMart, Revana and ByteDance keys. */
+/** The fal, kie.ai, APIMart, Revana, ByteDance and Replicate keys. */
 export function ProvidersCard({ settings }: { settings: SettingsResponse | null }) {
   return (
     <>
@@ -264,6 +264,18 @@ export function ProvidersCard({ settings }: { settings: SettingsResponse | null 
               activation page
             </KeysLink>
             . Not tried with a real key yet.
+          </>
+        }
+        offHint="No key yet. Runs go to the other providers until one is saved here."
+      />
+      <ProviderKeyCard
+        provider="replicate"
+        settings={settings}
+        description={
+          <>
+            Replicate runs many of these models as official models at list prices (Seedance, Veo 3.1, Kling 3.0 and 4.0, Wan 3.0, Nano Banana Pro, GPT
+            Image 2, FLUX…): with a key, a run goes there whenever it is the cheapest. Create an API token at <KeysLink provider="replicate" />. Images only
+            as inputs, 4 MB a run; no video to edit or upscale. Not tried with a real key yet.
           </>
         }
         offHint="No key yet. Runs go to the other providers until one is saved here."

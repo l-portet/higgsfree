@@ -5,7 +5,7 @@
 
 export type GenerationType = "image" | "video";
 /** Who runs a generation. A model can be offered by several. */
-export type ProviderId = "openrouter" | "fal" | "kie" | "apimart" | "revana" | "bytedance";
+export type ProviderId = "openrouter" | "fal" | "kie" | "apimart" | "revana" | "bytedance" | "replicate";
 /** Motion control: whose orientation the character keeps (fal caps the reference video at 30 s for `video`, 10 s for `image`). */
 export type MotionOrientation = "video" | "image";
 export type GenerationStatus = "pending" | "running" | "completed" | "failed";
@@ -138,7 +138,7 @@ export interface FolderRequest {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "fal" | "openrouter" | "kie" | "apimart" | "revana";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "fal" | "openrouter" | "kie" | "apimart" | "revana" | "replicate";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -189,7 +189,9 @@ export interface ImageModel {
   apimart?: ApimartImageRoute;
   /** Revana serves it too. */
   revana?: RevanaRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`). */
+  /** Replicate serves it too, through this site's server. */
+  replicate?: ReplicateRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `replicate`). */
   offOpenRouter?: boolean;
 }
 
@@ -267,7 +269,9 @@ export interface VideoModel {
   revana?: RevanaRoute;
   /** ByteDance serves it too, on its own platform (BytePlus ModelArk). */
   bytedance?: BytedanceRoute;
-  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `bytedance`). */
+  /** Replicate serves it too, through this site's server. */
+  replicate?: ReplicateRoute;
+  /** Not on OpenRouter: runs only on the providers its routes name (`fal`, `kie`, `apimart`, `revana`, `bytedance`, `replicate`). */
   offOpenRouter?: boolean;
 }
 
@@ -384,6 +388,16 @@ export interface RevanaRoute {
  */
 export interface BytedanceRoute {
   model: string;
+}
+
+/**
+ * How Replicate serves a model: `POST /v1/models/<model>/predictions` `{ input }`, one of its official models. `model`
+ * is Replicate's `owner/name`; `variant` tells apart two catalog models on one Replicate model (Kling 3.0's `mode`).
+ * Which fields the input takes, and what a run costs, is in `REPLICATE_MODELS`.
+ */
+export interface ReplicateRoute {
+  model: string;
+  variant?: string;
 }
 
 /**

@@ -48,6 +48,7 @@ import { buildPreviewBody, buildRecreateBody, buildRewriteBody, cleanRewrite, DE
 import * as apimart from "./apimart";
 import { allBalances, invalidateBalances, type BalanceEntry } from "./balances";
 import * as bytedance from "./bytedance";
+import * as replicate from "./replicate";
 import * as revana from "./revana";
 import * as kie from "./kie";
 import { isProviderId, PROVIDER_IDS, PROVIDER_NAME } from "./providers";
@@ -90,9 +91,9 @@ export async function testSettings(apiKey?: string): Promise<CreditsResponse> {
 }
 
 /**
- * Check a fal, kie.ai, APIMart, Revana or ByteDance key (the stored one when none is passed). Resolves when the provider
- * accepts it, with the balance where the provider gives one: kie's in credits, APIMart's and Revana's in USD
- * (−1: unlimited); ByteDance has none to give.
+ * Check a fal, kie.ai, APIMart, Revana, ByteDance or Replicate key (the stored one when none is passed). Resolves when
+ * the provider accepts it, with the balance where the provider gives one: kie's in credits, APIMart's and Revana's in
+ * USD (−1: unlimited); ByteDance and Replicate have none to give.
  */
 export async function testProviderKey(provider: Exclude<ProviderId, "openrouter">, apiKey?: string): Promise<{ ok: true; credits?: number; balanceUsd?: number }> {
   const name = PROVIDER_NAME[provider];
@@ -104,6 +105,10 @@ export async function testProviderKey(provider: Exclude<ProviderId, "openrouter"
     if (provider === "revana") return { ok: true, balanceUsd: (await revana.testKey(key)).balanceUsd };
     if (provider === "bytedance") {
       await bytedance.testKey(key);
+      return { ok: true };
+    }
+    if (provider === "replicate") {
+      await replicate.testKey(key);
       return { ok: true };
     }
     // The balance when the key may read it; a key made for running models only is still a working key.
