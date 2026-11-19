@@ -25,6 +25,8 @@ export type FalPrice =
       usd: number | Partial<Record<ImageSize, number>>;
       /** When the price depends on the output size: by the aspect ratio the app asks for (`auto`: fal's default size). */
       byAspect?: Partial<Record<ImageAspectRatio, number>>;
+      /** Each reference image sent is billed on top, for every image made (Seedream 5.5's edits). */
+      inputImageUsd?: number;
     }
   | {
       /** Per megapixel of output (1024 x 1024 pixels), rounded up, at least one. */
@@ -42,6 +44,12 @@ const GPT_IMAGE_2: FalPrice = {
 };
 // High quality (fal's default): 1024 x 1024 (also the default size) or any other size.
 const GPT_IMAGE_1_5: FalPrice = { unit: "image", usd: 0.2, byAspect: { auto: 0.133, "1:1": 0.133 } };
+// Read 13 Nov 2026: up to 2.61 MP (1K, and fal's 1.5K) or above it (2K). Edits add $0.012 for each reference image.
+const SEEDREAM_5_5: FalPrice = { unit: "image", usd: { "1K": 0.03, "2K": 0.0405 } };
+// Read 18 Nov 2026: $0.063 per "unit" on both endpoints, which is Kling's own price for one image at 2K (fal's default).
+// Kling's own list also charges $0.094 at 4K, $0.157 at 8K and $0.003 for each reference image; fal says neither how many
+// units a 4K image takes nor whether it bills references, so 4K has no estimate and references add nothing.
+const KLING_IMAGE_V4: FalPrice = { unit: "image", usd: { "2K": 0.063 } };
 const KLING_V3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.168 };
 const KLING_V3_STANDARD: FalPrice = { unit: "second", usd: 0.084, audioUsd: 0.126 };
 // The US-hosted endpoints (read 22 Oct 2026), 20% above the ones fal stopped listing.
@@ -66,6 +74,8 @@ const KLING_O3_PRO: FalPrice = { unit: "second", usd: 0.112, audioUsd: 0.14 };
 // Read 22 Oct 2026, while fal still says API access is "coming soon".
 const KLING_V4: FalPrice = { unit: "second", usd: { "720p": 0.157, "1080p": 0.235 } };
 const PIXVERSE_6: FalPrice = { unit: "second", usd: { "720p": 0.045, "1080p": 0.09 }, audioUsd: { "720p": 0.06, "1080p": 0.115 } };
+// Read 12 Nov 2026. fal's 360p and 540p are not listed, the app has neither.
+const PIXVERSE_6_MAX: FalPrice = { unit: "second", usd: { "720p": 0.099, "1080p": 0.198 }, audioUsd: { "720p": 0.135, "1080p": 0.252 } };
 // 2K and 4K are fal's 1440p and 2160p.
 const LTX_2_3: FalPrice = { unit: "second", usd: { "1080p": 0.08, "2K": 0.16, "4K": 0.32 } };
 
@@ -85,6 +95,10 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "ideogram/v4.5/edit": { unit: "image", usd: 0.06 },
   "fal-ai/gpt-image-1.5": GPT_IMAGE_1_5,
   "fal-ai/gpt-image-1.5/edit": GPT_IMAGE_1_5,
+  "bytedance/seedream/v5.5/text-to-image": SEEDREAM_5_5,
+  "bytedance/seedream/v5.5/edit": { ...SEEDREAM_5_5, inputImageUsd: 0.012 },
+  "kling/v4/text-to-image": KLING_IMAGE_V4,
+  "kling/v4/image-to-image": KLING_IMAGE_V4,
   "fal-ai/qwen-image-edit-2511": { unit: "megapixel", usd: 0.03 },
   "fal-ai/z-image/turbo": { unit: "megapixel", usd: 0.005 },
   "fal-ai/flux/dev": { unit: "megapixel", usd: 0.025 },
@@ -121,6 +135,8 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/kling-video/v3/turbo/pro/image-to-video": { unit: "second", usd: 0.14 },
   "fal-ai/pixverse/v6/text-to-video": PIXVERSE_6,
   "fal-ai/pixverse/v6/image-to-video": PIXVERSE_6,
+  "pixverse/v6/max/text-to-video": PIXVERSE_6_MAX,
+  "pixverse/v6/max/image-to-video": PIXVERSE_6_MAX,
   "fal-ai/vidu/q4/image-to-video": {
     unit: "second",
     usd: { "720p": 0.095, "1080p": 0.12, "2K": 0.19, "4K": 0.39 },

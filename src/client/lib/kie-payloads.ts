@@ -306,6 +306,8 @@ const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[
   "gpt-image-economy": { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "16:9", "9:16", "21:9"], maxRefs: 16 },
   // Seedream 5.5: `auto` on edits only (text to image sends 1:1 for it), and 10 references (the app sends 8 at most).
   seedream: { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], maxRefs: 10, sizes: true },
+  // MiniMax H3 Image: every ratio the app has, and 16 references (the app sends 8 at most).
+  "minimax-h3-image": { aspects: ["auto", "1:1", "5:4", "4:3", "3:2", "16:9", "21:9", "4:5", "3:4", "2:3", "9:16"], maxRefs: 16, sizes: true },
   "flux-kontext": { aspects: ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], maxRefs: 1 },
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16"], maxRefs: 0 },
   "topaz-upscale": { aspects: ["auto"], maxRefs: 1 },
@@ -357,6 +359,14 @@ export function buildKieImagePayload(model: ImageModel, req: KieImageParams, ref
     case "seedream":
       // Text to image requires a ratio and has no `auto`; edits default to `auto`.
       Object.assign(input, { aspect_ratio: req.aspectRatio === "auto" && !edit ? "1:1" : req.aspectRatio, size: req.size });
+      if (edit) {
+        id = route.editModel ?? route.model;
+        input.image_urls = referenceUrls;
+      }
+      break;
+    case "minimax-h3-image":
+      // `auto` is kie's default: the prompt rewriter's pick on text to image, the first reference's ratio on an edit.
+      Object.assign(input, { aspect_ratio: req.aspectRatio, resolution: req.size });
       if (edit) {
         id = route.editModel ?? route.model;
         input.image_urls = referenceUrls;

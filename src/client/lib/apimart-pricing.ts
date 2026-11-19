@@ -43,13 +43,13 @@ export function estimateApimartVideoCost(model: VideoModel, req: ApimartVideoEst
   return videoListUsd(APIMART_PRICES[payload.priceKey], model, payload.params, req.resolution, payload.params.duration, 1);
 }
 
-/** Estimated USD for `count` images of `req` on APIMart, with or without reference images. */
-export function estimateApimartImageCost(model: ImageModel, req: Omit<ApimartImageParams, "prompt">, count: number, withRefs: boolean): number | undefined {
+/** Estimated USD for `count` images of `req` on APIMart, with `references` reference images (Seedream 5.5 bills each one). */
+export function estimateApimartImageCost(model: ImageModel, req: Omit<ApimartImageParams, "prompt">, count: number, references: number): number | undefined {
   let payload;
   try {
-    payload = buildApimartImagePayload(model, { ...req, prompt: "" }, withRefs ? ["https://ref"] : []);
+    payload = buildApimartImagePayload(model, { ...req, prompt: "" }, Array.from({ length: references }, () => "https://ref"));
   } catch {
     return undefined;
   }
-  return imageListUsd(APIMART_PRICES[payload.priceKey], req.size, count, 1);
+  return imageListUsd(APIMART_PRICES[payload.priceKey], req.size, count, 1, references);
 }

@@ -13,8 +13,8 @@ import { IMAGES_SIZE_BY_ASPECT } from "../payloads";
 
 const VISIBLE_VIDEO = VIDEO_MODELS.filter((m) => !m.hidden);
 const HIDDEN_VIDEO = VIDEO_MODELS.filter((m) => m.hidden);
-// On OpenRouter but billed in tokens there, with no per-image price (read 5 Nov 2026): no estimate rather than a guessed one.
-const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare", "openai/gpt-image-2.6-sunburst", "minimax/minimax-h3-image"]);
+// On OpenRouter but billed in tokens there, with no per-image price (read 5 Nov 2026; MAI-Image-2.7, 18 Nov 2026): no estimate rather than a guessed one.
+const UNPRICED_IMAGE = new Set(["openai/gpt-image-2.6-flare", "openai/gpt-image-2.6-sunburst", "minimax/minimax-h3-image", "microsoft/mai-image-2.7"]);
 
 describe("catalog shape", () => {
   it("has unique slugs and unique display names across image + video", () => {
@@ -204,7 +204,7 @@ describe("video models (hidden)", () => {
 describe("fal routes", () => {
   it("every fal-only model has a route, and every route covers what the model offers", () => {
     for (const m of IMAGE_MODELS) {
-      // GPT Image 2.6 is only on APIMart, GPT Image 2.6 Economy only on kie.ai, Seedream 5.5 on both.
+      // GPT Image 2.6 is only on APIMart, GPT Image 2.6 Economy only on kie.ai.
       if (m.offOpenRouter) {
         expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
         expect(m.endpoint).toBe("fal");
@@ -214,7 +214,6 @@ describe("fal routes", () => {
       if (m.caps.imageToImage) expect(m.fal.edit, `${m.id} edit endpoint`).toBeTruthy();
     }
     for (const m of VIDEO_MODELS.filter((v) => !v.hidden)) {
-      // PixVerse 6 Max is only on kie.ai and APIMart.
       if (m.offOpenRouter) expect(m.fal ?? m.kie ?? m.apimart, `${m.id} is off OpenRouter without a route`).toBeDefined();
       if (!m.fal) continue;
       if (m.caps.motionControl) {
@@ -235,13 +234,42 @@ describe("fal routes", () => {
     }
   });
 
-  it("Seedream 5.5 has kie.ai and APIMart routes and no other, and is not verified", () => {
-    const m = findImageModel("bytedance/seedream-5.5");
-    expect(m?.kie).toEqual({ family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" });
-    expect(m?.apimart).toEqual({ family: "seedream", model: "seedream-5.5" });
-    expect(m?.offOpenRouter).toBe(true);
-    expect(m?.verified).toBe(false);
-    expect(m?.fal ?? m?.revana).toBeUndefined();
+  it("Seedream 5.5 is on OpenRouter under its own slug, and on fal, kie.ai and APIMart, and is not verified", () => {
+    const m = findImageModel("bytedance-seed/seedream-5-5");
+    if (!m) throw new Error("catalog changed");
+    expect(m.endpoint).toBe("native");
+    expect(m.offOpenRouter).toBeUndefined();
+    expect(m.fal).toEqual({
+      textToImage: "bytedance/seedream/v5.5/text-to-image",
+      edit: "bytedance/seedream/v5.5/edit",
+      refs: "image_urls",
+      aspect: "image_size",
+      scaledSize: true,
+      autoSizes: { "1K": "auto_1K", "2K": "auto_2K" },
+    });
+    expect(m.kie).toEqual({ family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" });
+    expect(m.apimart).toEqual({ family: "seedream", model: "seedream-5-5" });
+    expect(m.revana).toBeUndefined();
+    expect(m.verified).toBe(false);
+    // OpenRouter bills each reference image on top: two images at 2K from three references.
+    expect(estimateImageCost(m, "2K", 2, 3)).toBeCloseTo((0.035 + 3 * 0.008) * 2);
+    expect(estimateImageCost(m, "1K", 1)).toBeCloseTo(0.02);
+  });
+
+  it("Kling Image 4.0 is fal-only, at 2K or 4K, and is not verified", () => {
+    const m = findImageModel("fal/kling-image-v4");
+    if (!m) throw new Error("catalog changed");
+    expect(m.endpoint).toBe("fal");
+    expect(m.offOpenRouter).toBe(true);
+    expect(m.fal).toEqual({ textToImage: "kling/v4/text-to-image", edit: "kling/v4/image-to-image", refs: "image_urls", aspect: "aspect_ratio", resolution: true });
+    expect(m.kie ?? m.apimart ?? m.revana).toBeUndefined();
+    expect(m.sizes).toEqual(["2K", "4K"]);
+    expect(m.supportsImageSize).toBe(true);
+    expect(m.caps).toEqual({ textToImage: true, imageToImage: true, maxReferenceImages: 8 });
+    expect(m.aspectRatios).not.toContain("4:5");
+    expect(m.estCostUsd).toEqual({});
+    expect(m.badges).toEqual(["new"]);
+    expect(m.verified).toBe(false);
   });
 
   it("GPT Image 2.6 Economy has a kie.ai route and no other, and is not verified", () => {
@@ -250,5 +278,59 @@ describe("fal routes", () => {
     expect(m?.offOpenRouter).toBe(true);
     expect(m?.verified).toBe(false);
     expect(m?.fal ?? m?.apimart ?? m?.revana).toBeUndefined();
+  });
+
+  it("Seedance 1.5 Pro, retired by OpenRouter and fal, has an APIMart route and no other, no OpenRouter price, and is not verified", () => {
+    const m = findVideoModel("bytedance/seedance-1-5-pro");
+    expect(m?.apimart).toEqual({ family: "seedance15", model: "seedance-1-5-pro" });
+    expect(m?.offOpenRouter).toBe(true);
+    expect(m?.estCostPerSecUsd).toEqual({});
+    expect(m?.estCostPerSecNoAudioUsd).toBeUndefined();
+    expect(m?.verified).toBe(false);
+    expect(m?.fal ?? m?.kie ?? m?.revana).toBeUndefined();
+  });
+
+  it("MiniMax H3 Image has OpenRouter, fal, kie.ai and APIMart routes, and is not verified", () => {
+    const m = findImageModel("minimax/minimax-h3-image");
+    expect(m?.endpoint).toBe("native");
+    expect(m?.offOpenRouter).toBeUndefined();
+    expect(m?.fal?.textToImage).toBe("minimax/h3-image/text-to-image");
+    expect(m?.kie).toEqual({ family: "minimax-h3-image", model: "minimax-h3/text-to-image", editModel: "minimax-h3/image-edit" });
+    expect(m?.apimart).toEqual({ family: "minimax-h3-image", model: "minimax-h3-image" });
+    expect(m?.verified).toBe(false);
+    expect(m?.revana).toBeUndefined();
+  });
+
+  it("MAI-Image-2.7 is on OpenRouter and fal (not kie.ai nor APIMart), at 1K with 5 references, unpriced, and is not verified", () => {
+    const m = findImageModel("microsoft/mai-image-2.7");
+    if (!m) throw new Error("catalog changed");
+    expect(m.endpoint).toBe("native");
+    expect(m.offOpenRouter).toBeUndefined();
+    expect(m.provider).toBe("microsoft");
+    expect(m.fal).toEqual({
+      textToImage: "microsoft/mai-image-2.7/text-to-image",
+      edit: "microsoft/mai-image-2.7/edit",
+      refs: "image_urls",
+      aspect: "image_size",
+      imageSizes: { "3:2": "landscape_3_2", "2:3": "portrait_3_2" },
+    });
+    expect(m.kie ?? m.apimart ?? m.revana).toBeUndefined();
+    expect(m.sizes).toEqual(["1K"]);
+    expect(m.supportsImageSize).toBe(false);
+    expect(m.caps).toEqual({ textToImage: true, imageToImage: true, maxReferenceImages: 5 });
+    expect(m.aspectRatios).toEqual(["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"]);
+    expect(m.estCostUsd).toEqual({});
+    expect(estimateImageCost(m, "1K", 1)).toBeUndefined();
+    expect(m.badges).toEqual(["new"]);
+    expect(m.verified).toBe(false);
+  });
+
+  it("PixVerse 6 Max has PixVerse 6's fal route on its own endpoints, next to kie.ai, APIMart and Revana, and is not verified", () => {
+    const m = findVideoModel("pixverse/pixverse-v6-max");
+    const v6 = findVideoModel("fal/pixverse-v6");
+    expect(m?.fal).toEqual({ ...v6?.fal, textToVideo: "pixverse/v6/max/text-to-video", imageToVideo: "pixverse/v6/max/image-to-video" });
+    expect(m?.kie && m.apimart && m.revana).toBeTruthy();
+    expect(m?.offOpenRouter).toBe(true);
+    expect(m?.verified).toBe(false);
   });
 });

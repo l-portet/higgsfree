@@ -17,6 +17,7 @@ export const APIMART_PRICES: Record<string, ListPrice> = {
   "seedance-2.0": { unit: "second", amount: { "480p": 0.066, "720p": 0.142, "1080p": 0.3544, "4K": 0.722 } },
   "seedance-2.0-fast": { unit: "second", amount: { "480p": 0.03984, "720p": 0.0856 } },
   "seedance-2.0-mini": { unit: "second", amount: { "480p": 0.01815, "720p": 0.03903 } },
+  // Read 20 Oct 2026. The catalog no longer lists it (12 Nov 2026), though its doc page does: the last price it gave.
   "seedance-1-5-pro": { unit: "second", amount: { "480p": 0.0204, "720p": 0.044, "1080p": 0.108 } },
   "MiniMax-H3": { unit: "second", amount: { "768p": 0.05712, "2K": 0.09144 } },
   "MiniMax-H3-Max": { unit: "second", amount: { "480p": 0.03768, "768p": 0.05712, "1080p": 0.128 } },
@@ -56,4 +57,8 @@ export const APIMART_PRICES: Record<string, ListPrice> = {
   "flux-kontext-pro": { unit: "image", amount: 0.032 },
   // Without prompt_extend, which doubles it.
   "z-image-turbo": { unit: "image", amount: 0.01 },
+  // Seedream 5.5 (read 13 Nov 2026 from `api.apimart.ai/api/pricing/model?model=seedream-5-5`; the catalog has no
+  // reference fee): Gold is 65% of the list price here. 1.5K, which the app has no size for, is 0.013 too. Every
+  // reference image is billed on top, the first included.
+  "seedream-5-5": { unit: "image", amount: { "1K": 0.013, "2K": 0.02275 }, inputImageAmount: 0.0052 },
 };

@@ -77,17 +77,28 @@ describe("quoteVideo", () => {
     expect(refs.quotes[0]).toMatchObject({ provider: "fal", refusal: "Takes no style references" });
   });
 
-  it("PixVerse 6 Max, on kie.ai and APIMart only: APIMart is cheaper, and takes a frame without a prompt", () => {
+  it("PixVerse 6 Max, on fal, kie.ai and APIMart: APIMart is the cheapest and takes a frame without a prompt, fal the dearest", () => {
     const max = video("pixverse/pixverse-v6-max");
-    // 10 s at 1080p with sound: $1.12 on kie, $0.996 on APIMart.
-    const q = quoteVideo(max, { prompt: "a fox", duration: 10, resolution: "1080p", audio: true }, { kie: true, apimart: true }, NOW);
+    const all = { fal: true, kie: true, apimart: true };
+    // 10 s at 1080p with sound: $2.52 on fal, $1.12 on kie, $0.996 on APIMart.
+    const q = quoteVideo(max, { prompt: "a fox", duration: 10, resolution: "1080p", audio: true }, all, NOW);
     expect(q).toMatchObject({ provider: "apimart", reason: "cheaper" });
-    expect(usd(q)).toEqual({ kie: expect.closeTo(1.12), apimart: expect.closeTo(0.9956), revana: expect.closeTo(1.3) });
+    expect(usd(q)).toEqual({ fal: expect.closeTo(2.52), kie: expect.closeTo(1.12), apimart: expect.closeTo(0.9956), revana: expect.closeTo(1.3) });
     const noPrompt = quoteVideo(max, { prompt: "", duration: 5, firstFrame: true }, { kie: true, apimart: true }, NOW);
     expect(noPrompt).toMatchObject({ provider: "apimart", reason: "one-ready" });
-    expect(noPrompt.quotes[0]).toMatchObject({ provider: "kie", refusal: "Needs a prompt" });
-    // OpenRouter and fal keys do not help.
-    expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, NOW)).toMatchObject({ reason: "none" });
+    expect(noPrompt.quotes[1]).toMatchObject({ provider: "kie", refusal: "Needs a prompt" });
+    // With fal and kie.ai keys, kie; with fal's alone, fal.
+    expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, { fal: true, kie: true }, NOW)).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(quoteVideo(max, { prompt: "a fox", duration: 5 }, BOTH, NOW)).toMatchObject({ provider: "fal" });
+  });
+
+  it("Seedance 1.5 Pro, on APIMart only since OpenRouter retired it: APIMart runs it at its price, and no other key helps", () => {
+    const s15 = video("bytedance/seedance-1-5-pro");
+    // 5 s at 720p: $0.22 on APIMart.
+    const q = quoteVideo(s15, { prompt: "a fox", duration: 5, resolution: "720p", aspectRatio: "16:9" }, { openrouter: true, fal: true, kie: true, apimart: true }, NOW);
+    expect(q).toMatchObject({ provider: "apimart", reason: "only" });
+    expect(q.quotes).toEqual([{ provider: "apimart", noKey: false, usd: expect.closeTo(0.22) }]);
+    expect(quoteVideo(s15, { prompt: "a fox", duration: 5 }, { openrouter: true, fal: true, kie: true }, NOW)).toMatchObject({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 
   it("Gemini Omni Flash 1.2, on fal, kie.ai and APIMart: kie is the cheapest, fal takes no style references, APIMart no length and no price yet", () => {

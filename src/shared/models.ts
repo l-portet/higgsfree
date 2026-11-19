@@ -257,27 +257,31 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
-    id: "bytedance/seedream-5.5",
+    id: "bytedance-seed/seedream-5-5",
     name: "Seedream 5.5",
     provider: "bytedance",
     description: "ByteDance's flagship image model, strong on precise edits and transparency",
-    endpoint: "fal",
+    // OpenRouter's native images API: the live catalog replaces the ratios, sizes and reference count below.
+    endpoint: "native",
     featured: false,
     badges: ["new"],
-    // APIMart and kie.ai take 10 references; the app sends 8 at most.
+    // Every provider takes 10 references; the app sends 8 at most.
     caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
-    // APIMart's ratios but 2:1 and 1:2, which the app has no option for. kie.ai has the rest, `auto` on edits only.
-    aspectRatios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"],
-    // Both also take 1.5K, which `ImageSize` cannot say, and no 4K.
+    // Every ratio the app has, on OpenRouter and fal; kie.ai and APIMart have no 4:5 nor 5:4 (and kie.ai `auto` on edits only).
+    // OpenRouter also lists 1:2, 2:1, 9:19.5, 19.5:9, 9:20, 20:9 and 9:21, which the app has no option for.
+    aspectRatios: ALL_IMAGE_AR,
+    // Every provider also takes 1.5K, which `ImageSize` cannot say, and none 4K.
     sizes: ["1K", "2K"],
-    // Priced from `KIE_PRICES` on kie.ai (read 11 Nov 2026); APIMart has no price in the app, so no estimate there.
-    estCostUsd: {},
+    // OpenRouter (13 Nov 2026): $0.02 an image at 1K, $0.035 at 2K (its `high_resolution` rate), plus $0.008 for each reference. fal,
+    // kie.ai and APIMart are priced from `FAL_PRICES`, `KIE_PRICES` and `APIMART_PRICES`.
+    estCostUsd: { "1K": 0.02, "2K": 0.035 },
+    estCostPerReferenceUsd: 0.008,
     supportsImageSize: true,
     verified: false,
-    // Not on OpenRouter nor fal yet.
-    offOpenRouter: true,
+    // fal takes an exact size (0.92 to 4.6 MP) rather than a ratio and a resolution, and its own `auto_1K` / `auto_2K` for `auto`.
+    fal: { textToImage: "bytedance/seedream/v5.5/text-to-image", edit: "bytedance/seedream/v5.5/edit", refs: "image_urls", aspect: "image_size", scaledSize: true, autoSizes: { "1K": "auto_1K", "2K": "auto_2K" } },
     kie: { family: "seedream", model: "seedream/5-5-text-to-image", editModel: "seedream/5-5-image-to-image" },
-    apimart: { family: "seedream", model: "seedream-5.5" },
+    apimart: { family: "seedream", model: "seedream-5-5" },
   },
   {
     kind: "image",
@@ -289,18 +293,52 @@ export const IMAGE_MODELS: ImageModel[] = [
     endpoint: "native",
     featured: false,
     badges: ["new"],
-    // OpenRouter and fal take 16 references; the app sends 8 at most.
+    // OpenRouter, fal, kie.ai and APIMart take 16 references; the app sends 8 at most.
     caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
     // OpenRouter also lists ratios the app has no option for (1:2, 2:1, 1:3, 3:1, 2.35:1, 5:2, 5:7, 7:5, 9:19.5 and more).
     aspectRatios: ALL_IMAGE_AR,
     sizes: ["1K", "2K", "4K"],
     // Billed in tokens on OpenRouter and fal ($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens,
-    // 11 Nov 2026), neither with a per-image price: no estimate rather than a guessed one.
+    // 11 Nov 2026) and APIMart ($2.14 / $1.43 / $3.57 at Gold, 13 Nov 2026), none with a per-image price: no estimate
+    // rather than a guessed one. kie.ai's is in `KIE_PRICES`.
     estCostUsd: {},
     supportsImageSize: true,
     verified: false,
     // fal takes an exact size (up to 20 MP, 1:3 to 3:1) rather than a ratio and a resolution, so both go in one `image_size`.
     fal: { textToImage: "minimax/h3-image/text-to-image", edit: "minimax/h3-image/edit", refs: "image_urls", aspect: "image_size", scaledSize: true },
+    kie: { family: "minimax-h3-image", model: "minimax-h3/text-to-image", editModel: "minimax-h3/image-edit" },
+    apimart: { family: "minimax-h3-image", model: "minimax-h3-image" },
+  },
+  {
+    kind: "image",
+    id: "microsoft/mai-image-2.7",
+    name: "MAI-Image-2.7",
+    provider: "microsoft",
+    description: "Microsoft AI's image model, for design-ready visuals and edits from up to 5 images",
+    // OpenRouter's native images API: the live catalog replaces the ratios, sizes and reference count below.
+    endpoint: "native",
+    featured: false,
+    badges: ["new"],
+    // OpenRouter and fal's edit schema (`maxItems: 5`) take 5 references; fal's catalog blurb says "up to two input images".
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 5 },
+    // OpenRouter's and fal's ratios (read 18 Nov 2026): no 21:9, 4:5 nor 5:4.
+    aspectRatios: ["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"],
+    // OpenRouter lists no `resolution` for it. fal also takes 2K (its `resolution` on a preset size), not offered here.
+    sizes: ["1K"],
+    // Billed in tokens on OpenRouter and fal ($5 / $8 / $34 per 1M input text / input image / output image tokens,
+    // 18 Nov 2026), neither with a per-image price: no estimate rather than a guessed one.
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    // fal takes one of its seven presets (3:2 and 2:3 are its own) or a custom size of at least 768 px a side; `auto`
+    // sends none (square on text to image, close to the first reference on an edit). `background` is left opaque.
+    fal: {
+      textToImage: "microsoft/mai-image-2.7/text-to-image",
+      edit: "microsoft/mai-image-2.7/edit",
+      refs: "image_urls",
+      aspect: "image_size",
+      imageSizes: { "3:2": "landscape_3_2", "2:3": "portrait_3_2" },
+    },
   },
   {
     kind: "image",
@@ -351,6 +389,31 @@ export const IMAGE_MODELS: ImageModel[] = [
     verified: false,
   },
   // ---------- fal only (need a fal key) ----------
+  {
+    kind: "image",
+    id: "fal/kling-image-v4",
+    name: "Kling Image 4.0",
+    provider: "kwaivgi",
+    description: "Kling's newest image model: 2K or 4K, edits from up to 8 images",
+    endpoint: "fal",
+    featured: false,
+    badges: ["new"],
+    // fal takes 10 references (images and elements together); the app sends 8 at most. Each must be at least 300 px a
+    // side and between 2:5 and 5:2; fal refuses the rest with its own message.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+    // fal's ratios (read 18 Nov 2026): no 4:5 nor 5:4. `auto` sends none, and fal picks one from the prompt or the references.
+    aspectRatios: ["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9", "21:9"],
+    // fal's `resolution` is 2K (its default), 4K or 8K: no 1K, and `ImageSize` cannot say 8K.
+    sizes: ["2K", "4K"],
+    // Priced from `FAL_PRICES` (2K only; fal does not say what 4K costs), like the other fal-only models.
+    estCostUsd: {},
+    supportsImageSize: true,
+    verified: false,
+    // Not on OpenRouter, kie.ai nor APIMart yet. `result_type: "series"` / `series_amount`, `num_images`, `elements` and the
+    // `kling/v4/long-image` endpoint are not wired: every image is one `single` request.
+    fal: { textToImage: "kling/v4/text-to-image", edit: "kling/v4/image-to-image", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
+    offOpenRouter: true,
+  },
   {
     kind: "image",
     id: "fal/flux-kontext-pro",
@@ -1064,7 +1127,7 @@ export const VIDEO_MODELS: VideoModel[] = [
     id: "bytedance/seedance-1-5-pro",
     name: "Seedance 1.5 Pro",
     provider: "bytedance",
-    description: "Previous-gen Seedance. OpenRouter retires it on 11 Nov 2026",
+    description: "Previous-gen Seedance, with sound; on APIMart only",
     featured: false,
     badges: [],
     caps: { textToVideo: true, imageToVideo: true, lastFrame: true, audio: true, realFaces: false },
@@ -1072,11 +1135,14 @@ export const VIDEO_MODELS: VideoModel[] = [
     defaultDuration: 5,
     resolutions: ["480p", "720p", "1080p"],
     defaultResolution: "1080p",
-    aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"],
+    // APIMart's ratios: OpenRouter's 9:21 is gone with it.
+    aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
     omitAspectRatioOnI2v: true,
-    estCostPerSecUsd: { "480p": 0.0231, "720p": 0.0518, "1080p": 0.1166 },
-    estCostPerSecNoAudioUsd: { "480p": 0.0115, "720p": 0.0259, "1080p": 0.0583 },
+    // No OpenRouter price any more: APIMart's is in `APIMART_PRICES`.
+    estCostPerSecUsd: {},
     verified: false,
+    // OpenRouter retired it on 11 Nov 2026, and fal its v1.5 Pro endpoints the same day: it runs on APIMart only.
+    offOpenRouter: true,
     apimart: { family: "seedance15", model: "seedance-1-5-pro" },
   },
   // ---------- fal only (need a fal key) ----------
@@ -1319,7 +1385,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: {},
     verified: false,
-    // Not on fal (nor OpenRouter) yet.
+    // PixVerse 6's fields on fal, under `pixverse/` rather than `fal-ai/pixverse/`.
+    fal: { textToVideo: "pixverse/v6/max/text-to-video", imageToVideo: "pixverse/v6/max/image-to-video", duration: "number", aspect: "text", resolutions: { "720p": "720p", "1080p": "1080p" }, audio: "generate_audio_switch" },
     offOpenRouter: true,
     kie: { family: "pixverse", model: "pixverse-v6-max/text-to-video", imageModel: "pixverse-v6-max/image-to-video" },
     apimart: { family: "pixverse-max", model: "pixverse-v6-max" },
@@ -1690,9 +1757,10 @@ export function snapDuration(m: VideoModel, requested: number): number {
   return best;
 }
 
-export function estimateImageCost(m: ImageModel, size: ImageModel["sizes"][number], count: number): number | undefined {
+/** `references`: how many reference images each image is made from (a model with `estCostPerReferenceUsd` bills them). */
+export function estimateImageCost(m: ImageModel, size: ImageModel["sizes"][number], count: number, references = 0): number | undefined {
   const per = m.estCostUsd[size] ?? m.estCostUsd["1K"];
-  return per === undefined ? undefined : per * count;
+  return per === undefined ? undefined : (per + references * (m.estCostPerReferenceUsd ?? 0)) * count;
 }
 
 /** `audio: false` takes the no-audio price where the model has one. */

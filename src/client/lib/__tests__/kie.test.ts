@@ -229,7 +229,7 @@ describe("buildKieImagePayload", () => {
   });
 
   it("Seedream 5.5: `size` as the app's size, references as `image_urls` on the edit model, and `auto` on edits only", () => {
-    const m = image("bytedance/seedream-5.5");
+    const m = image("bytedance-seed/seedream-5-5");
     expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "21:9", size: "2K" }, [])).toEqual({
       model: "seedream/5-5-text-to-image",
       input: { prompt: "a red fox", aspect_ratio: "21:9", size: "2K" },
@@ -242,8 +242,26 @@ describe("buildKieImagePayload", () => {
     });
     // Text to image has no `auto`: 1:1 is sent for it.
     expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "auto", size: "1K" }, []).input).toMatchObject({ aspect_ratio: "1:1" });
-    for (const aspectRatio of m.aspectRatios) for (const size of m.sizes) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
+    // 4:5 and 5:4 are OpenRouter's and fal's only: kie.ai refuses them, so they run elsewhere.
+    for (const aspectRatio of m.aspectRatios.filter((a) => a !== "4:5" && a !== "5:4")) for (const size of m.sizes) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "1K" }, [])).toThrow("Takes no 4:5");
     expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array.from({ length: 11 }, () => "https://r"))).toThrow("Takes up to 10 reference images");
+  });
+
+  it("MiniMax H3 Image: `aspect_ratio` (`auto` kept) and `resolution`, references as `image_urls` on the edit model", () => {
+    const m = image("minimax/minimax-h3-image");
+    expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "21:9", size: "4K" }, [])).toEqual({
+      model: "minimax-h3/text-to-image",
+      input: { prompt: "a red fox", aspect_ratio: "21:9", resolution: "4K" },
+      priceKey: "minimax-h3/text-to-image",
+    });
+    expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "auto", size: "1K" }, ["https://r", "https://s"])).toEqual({
+      model: "minimax-h3/image-edit",
+      input: { prompt: "a red fox", aspect_ratio: "auto", resolution: "1K", image_urls: ["https://r", "https://s"] },
+      priceKey: "minimax-h3/text-to-image",
+    });
+    for (const aspectRatio of m.aspectRatios) for (const size of m.sizes) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array.from({ length: 17 }, () => "https://r"))).toThrow("Takes up to 16 reference images");
   });
 });
 
@@ -315,15 +333,40 @@ describe("kie prices", () => {
   });
 
   it("Seedream 5.5: 3.6 credits at 1K and 6.3 at 2K, plus 1.44 for each reference image", () => {
-    const m = image("bytedance/seedream-5.5");
+    const m = image("bytedance-seed/seedream-5-5");
     expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeCloseTo(0.018);
     expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.0315);
     // Two references, four images: (6.3 + 2 × 1.44) × 4 credits.
     expect(estimateKieImageCost(m, { aspectRatio: "auto", size: "2K" }, 4, 2)).toBeCloseTo(0.1836);
-    // With an APIMart key too, kie.ai runs it: APIMart has no price for it in the app.
+    // With an APIMart key too, APIMart runs it, being cheaper; against OpenRouter and fal, kie.ai is.
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 3 };
     const quote = quoteImage(m, req, { kie: true, apimart: true });
-    expect(quote).toMatchObject({ quotes: [{ provider: "kie", noKey: false }, { provider: "apimart", noKey: false }], provider: "kie", reason: "cheaper" });
-    expect(quote.quotes[0]?.usd).toBeCloseTo((6.3 + 3 * 1.44) * 0.005);
+    expect(quote).toMatchObject({
+      quotes: [{ provider: "openrouter", noKey: true }, { provider: "fal", noKey: true }, { provider: "kie", noKey: false }, { provider: "apimart", noKey: false }],
+      provider: "apimart",
+      reason: "cheaper",
+    });
+    expect(quote.quotes[2]?.usd).toBeCloseTo((6.3 + 3 * 1.44) * 0.005);
+    expect(quote.quotes[3]?.usd).toBeCloseTo(0.02275 + 3 * 0.0052);
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toMatchObject({ provider: "kie", reason: "cheaper" });
+  });
+
+  it("MiniMax H3 Image: 1.8 credits at 1K and 2K, 5.5 at 4K, plus 0.5 for each reference image", () => {
+    const m = image("minimax/minimax-h3-image");
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeCloseTo(0.009);
+    expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.009);
+    expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "4K" }, 1, 0)).toBeCloseTo(0.0275);
+    // Three references, two images: (5.5 + 3 × 0.5) × 2 credits.
+    expect(estimateKieImageCost(m, { aspectRatio: "auto", size: "4K" }, 2, 3)).toBeCloseTo(0.07);
+    // OpenRouter, fal and APIMart bill it in tokens with no per-image price: with a kie.ai key, kie runs it.
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 2 };
+    const quote = quoteImage(m, req, { openrouter: true, fal: true, kie: true });
+    expect(quote).toMatchObject({
+      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }, { provider: "kie", noKey: false }, { provider: "apimart", noKey: true }],
+      provider: "kie",
+      reason: "cheaper",
+    });
+    expect(quote.quotes[2]?.usd).toBeCloseTo((1.8 + 2 * 0.5) * 0.005);
+    expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ provider: "openrouter", reason: "unpriced" });
   });
 });

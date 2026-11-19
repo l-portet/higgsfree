@@ -33,15 +33,15 @@ function megapixels(size: unknown): number {
 const at = (usd: ByResolution | undefined, res: VideoResolution | undefined): number | undefined =>
   typeof usd === "number" ? usd : res && usd ? usd[res] : undefined;
 
-/** Estimated USD for `count` images of `req` on fal, with or without reference images. `input`: an upscaler's image size. */
-export function estimateFalImageCost(model: ImageModel, req: Omit<FalImageParams, "prompt">, count: number, withRefs: boolean, input: UpscaleInput = {}): number | undefined {
+/** Estimated USD for `count` images of `req` on fal, with `references` reference images (Seedream 5.5 bills each one). `input`: an upscaler's image size. */
+export function estimateFalImageCost(model: ImageModel, req: Omit<FalImageParams, "prompt">, count: number, references: number, input: UpscaleInput = {}): number | undefined {
   if (model.caps.upscale) {
     const usd = upscaleImageUsd("fal", model, req.upscale, input, req.creative);
     return usd === undefined ? undefined : usd * count;
   }
   let payload;
   try {
-    payload = buildFalImagePayload(model, { ...req, prompt: "" }, withRefs ? ["ref"] : []);
+    payload = buildFalImagePayload(model, { ...req, prompt: "" }, Array.from({ length: references }, () => "ref"));
   } catch {
     return undefined;
   }
@@ -52,7 +52,7 @@ export function estimateFalImageCost(model: ImageModel, req: Omit<FalImageParams
   // A ratio the payload does not carry leaves fal on its default size.
   const aspect = "image_size" in payload.input || "aspect_ratio" in payload.input ? req.aspectRatio : "auto";
   const per = price.byAspect?.[aspect] ?? (typeof price.usd === "number" ? price.usd : (price.usd[req.size] ?? price.usd["1K"]));
-  return per === undefined ? undefined : per * count;
+  return per === undefined ? undefined : (per + references * (price.inputImageUsd ?? 0)) * count;
 }
 
 export interface FalVideoEstimate extends Omit<FalVideoParams, "prompt"> {

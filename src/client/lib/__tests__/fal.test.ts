@@ -28,11 +28,15 @@ describe("provider choice", () => {
     expect(modelProviders(video("fal/vidu-q4"))).toEqual(["fal", "kie", "apimart", "revana"]);
     expect(modelProviders(video("kwaivgi/kling-video-o1"))).toEqual(["openrouter", "apimart", "revana"]);
     expect(modelProviders(video("google/gemini-omni-flash-1.2"))).toEqual(["fal", "kie", "apimart"]);
+    expect(modelProviders(video("pixverse/pixverse-v6-max"))).toEqual(["fal", "kie", "apimart", "revana"]);
+    expect(modelProviders(video("bytedance/seedance-1-5-pro"))).toEqual(["apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-flare"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-sunburst"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
-    expect(modelProviders(image("bytedance/seedream-5.5"))).toEqual(["kie", "apimart"]);
-    expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal"]);
+    expect(modelProviders(image("bytedance-seed/seedream-5-5"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(modelProviders(image("fal/kling-image-v4"))).toEqual(["fal"]);
+    expect(modelProviders(image("microsoft/mai-image-2.7"))).toEqual(["openrouter", "fal"]);
   });
 
   it("before prices: the first provider of the model with a key", () => {
@@ -48,6 +52,7 @@ describe("provider choice", () => {
     expect(providerNotice(image("krea/krea-2-large"), { openrouter: false, fal: true })).toBe("Krea 2 Large runs on OpenRouter. Add an OpenRouter key in Settings to use it.");
     expect(providerNotice(video("kwaivgi/kling-v3.0-pro"), { openrouter: false, fal: false })).toBe("Kling 3.0 Pro needs an OpenRouter, fal, kie.ai or APIMart key. Add one in Settings to use it.");
     expect(providerNotice(video("fal/vidu-q4"), { openrouter: true })).toBe("Vidu Q4 needs a fal, kie.ai, APIMart or Revana key. Add one in Settings to use it.");
+    expect(providerNotice(video("bytedance/seedance-1-5-pro"), { openrouter: true, fal: true })).toBe("Seedance 1.5 Pro runs on APIMart. Add an APIMart key in Settings to use it.");
     expect(chooseProvider(video("fal/vidu-q4"), { kie: true }).provider).toBe("kie");
     expect(providerNotice(motion, both)).toBeUndefined();
   });
@@ -107,11 +112,17 @@ describe("buildFalImagePayload", () => {
     expect(buildFalImagePayload(h3, { prompt: "p", aspectRatio: "auto", size: "4K" }, ["data:a", "data:b"]).input).toEqual({ prompt: "p", image_urls: ["data:a", "data:b"] });
   });
 
-  it("MiniMax H3 Image: priced on neither provider, so OpenRouter runs it when its key is there", () => {
+  it("MiniMax H3 Image: priced on neither OpenRouter nor fal, so OpenRouter runs it when its key is there (and no kie.ai key)", () => {
     const h3 = image("minimax/minimax-h3-image");
     const req = { aspectRatio: "16:9" as const, size: "4K" as const, count: 1, references: 2 };
+    // kie.ai prices it ((5.5 + 2 × 0.5) credits at 4K with two references), but has no key here; APIMart bills it in tokens.
     expect(quoteImage(h3, req, { openrouter: true, fal: true })).toEqual({
-      quotes: [{ provider: "openrouter", noKey: false }, { provider: "fal", noKey: false }],
+      quotes: [
+        { provider: "openrouter", noKey: false },
+        { provider: "fal", noKey: false },
+        { provider: "kie", noKey: true, usd: expect.closeTo(0.0325) },
+        { provider: "apimart", noKey: true },
+      ],
       provider: "openrouter",
       reason: "unpriced",
     });
@@ -131,9 +142,120 @@ describe("buildFalImagePayload", () => {
       }
     }
   });
+
+  it("MAI-Image-2.7: every ratio as one of fal's seven `image_size` presets, none for `auto`, no `resolution`", () => {
+    const m = image("microsoft/mai-image-2.7");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "1K" }, [])).toEqual({
+      endpoint: "microsoft/mai-image-2.7/text-to-image",
+      input: { prompt: "p", image_size: "landscape_16_9" },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "3:2", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: "landscape_3_2" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "2:3", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: "portrait_3_2" });
+    // `auto`: fal's default (square) without references, a size close to the first reference with them.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).input).toEqual({ prompt: "p" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "microsoft/mai-image-2.7/edit",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"] },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "9:16", size: "1K" }, ["data:a"]).input).toEqual({ prompt: "p", image_urls: ["data:a"], image_size: "portrait_16_9" });
+    // fal's presets (read 18 Nov 2026). A custom size must be at least 768 px a side, which the app's fallback for 21:9 (1536×640) is not.
+    const presets = ["square_hd", "portrait_4_3", "landscape_4_3", "portrait_3_2", "landscape_3_2", "portrait_16_9", "landscape_16_9"];
+    for (const ar of m.aspectRatios.filter((a) => a !== "auto")) {
+      expect(presets, ar).toContain(buildFalImagePayload(m, { prompt: "p", aspectRatio: ar, size: "1K" }, []).input.image_size);
+    }
+  });
+
+  it("MAI-Image-2.7: priced on neither OpenRouter nor fal, so OpenRouter runs it when its key is there", () => {
+    const m = image("microsoft/mai-image-2.7");
+    const req = { aspectRatio: "4:3" as const, size: "1K" as const, count: 1, references: 3 };
+    expect(quoteImage(m, req, { openrouter: true, fal: true })).toEqual({
+      quotes: [
+        { provider: "openrouter", noKey: false },
+        { provider: "fal", noKey: false },
+      ],
+      provider: "openrouter",
+      reason: "unpriced",
+    });
+    expect(quoteImage(m, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
+  });
+
+  it("Seedream 5.5: the ratio and the size in one explicit `image_size`, and fal's own `auto_1K` / `auto_2K` for `auto`", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "2K" }, [])).toEqual({
+      endpoint: "bytedance/seedream/v5.5/text-to-image",
+      input: { prompt: "p", image_size: { width: 2752, height: 1536 } },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: { width: 896, height: 1152 } });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: "auto_1K" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "2K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "bytedance/seedream/v5.5/edit",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"], image_size: "auto_2K" },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "1K" }, ["data:a"]).input).toEqual({ prompt: "p", image_urls: ["data:a"], image_size: { width: 1536, height: 640 } });
+  });
+
+  it("Seedream 5.5: every ratio and size it offers is within fal's limits (921,600 to 4,624,220 px), and 1K stays in fal's lower price tier", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    for (const ar of m.aspectRatios.filter((a) => a !== "auto")) {
+      for (const size of m.sizes) {
+        const { width, height } = falScaledSize(ar, size);
+        expect(width * height, `${ar} ${size}`).toBeGreaterThanOrEqual(921_600);
+        expect(width * height, `${ar} ${size}`).toBeLessThanOrEqual(4_624_220);
+        // fal bills up to 2.61 MP at its 1K rate, and above that at its 2K one.
+        expect(width * height > 2_610_000, `${ar} ${size}`).toBe(size === "2K");
+      }
+    }
+  });
+
+  it("Seedream 5.5: the cheapest provider with a key runs it, each reference image counted", () => {
+    const m = image("bytedance-seed/seedream-5-5");
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 1, references: 2 };
+    const all = quoteImage(m, req, { openrouter: true, fal: true, kie: true, apimart: true });
+    expect(all).toMatchObject({ provider: "apimart", reason: "cheaper" });
+    expect(all.quotes.map((q) => q.provider)).toEqual(["openrouter", "fal", "kie", "apimart"]);
+    expect(all.quotes[0]?.usd).toBeCloseTo(0.035 + 2 * 0.008);
+    expect(all.quotes[1]?.usd).toBeCloseTo(0.0405 + 2 * 0.012);
+    expect(all.quotes[2]?.usd).toBeCloseTo((6.3 + 2 * 1.44) * 0.005);
+    expect(all.quotes[3]?.usd).toBeCloseTo(0.02275 + 2 * 0.0052);
+    expect(quoteImage(m, req, { openrouter: true, fal: true, kie: true })).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ provider: "openrouter", reason: "cheaper" });
+    expect(quoteImage(m, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
+    // kie.ai and APIMart have no 4:5: OpenRouter runs it.
+    const portrait = quoteImage(m, { ...req, aspectRatio: "4:5" }, { openrouter: true, kie: true, apimart: true });
+    expect(portrait).toMatchObject({ provider: "openrouter", reason: "one-ready" });
+    expect(portrait.quotes[2]?.refusal).toBe("Takes no 4:5");
+  });
 });
 
 describe("buildFalVideoPayload", () => {
+  it("Kling Image 4.0: `aspect_ratio` and `resolution` (2K or 4K), references as `image_urls` on image-to-image", () => {
+    const m = image("fal/kling-image-v4");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "2K" }, [])).toEqual({
+      endpoint: "kling/v4/text-to-image",
+      input: { prompt: "p", aspect_ratio: "16:9", resolution: "2K" },
+    });
+    // `auto` is fal's default: no ratio goes out.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "4K" }, []).input).toEqual({ prompt: "p", resolution: "4K" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "4K" }, ["data:a", "data:b"])).toEqual({
+      endpoint: "kling/v4/image-to-image",
+      input: { prompt: "p", image_urls: ["data:a", "data:b"], aspect_ratio: "21:9", resolution: "4K" },
+    });
+    // A ratio or a size it does not offer is never sent: fal has no 4:5 and no 1K.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "1K" }, []).input).toEqual({ prompt: "p" });
+  });
+
+  it("Kling Image 4.0: runs on fal only, priced at 2K, not at 4K", () => {
+    const m = image("fal/kling-image-v4");
+    const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 2, references: 1 };
+    expect(quoteImage(m, req, { fal: true })).toEqual({
+      quotes: [{ provider: "fal", noKey: false, usd: expect.closeTo(0.126) }],
+      provider: "fal",
+      reason: "only",
+    });
+    expect(quoteImage(m, { ...req, size: "4K" }, { fal: true })).toEqual({ quotes: [{ provider: "fal", noKey: false }], provider: "fal", reason: "only" });
+    expect(quoteImage(m, req, { openrouter: true, kie: true, apimart: true, revana: true })).toMatchObject({ reason: "none" });
+  });
+
   it("Kling 3.0 on fal: start_image_url, string durations, aspect ratio only without a frame", () => {
     const kling = video("kwaivgi/kling-v3.0-pro");
     expect(buildFalVideoPayload(kling, { prompt: "p", duration: 7.4, aspectRatio: "9:16", audio: false }, {})).toEqual({
@@ -190,6 +312,21 @@ describe("buildFalVideoPayload", () => {
       prompt: "p", duration: 10, image_url: "data:f", end_image_url: "data:l", resolution: "720p",
     });
     expect(() => buildFalVideoPayload(m, { prompt: "p", duration: 11 }, { firstFrame: "data:f", lastFrame: "data:l" })).toThrow("Takes clips of up to 10 s between two frames");
+  });
+
+  it("PixVerse 6 Max: PixVerse 6's fields on its own `pixverse/v6/max` endpoints, a first frame only", () => {
+    const m = video("pixverse/pixverse-v6-max");
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 15, resolution: "1080p", aspectRatio: "2:3", audio: false }, {})).toEqual({
+      endpoint: "pixverse/v6/max/text-to-video",
+      input: { prompt: "p", duration: 15, aspect_ratio: "2:3", resolution: "1080p", generate_audio_switch: false },
+      params: { duration: 15, aspectRatio: "2:3", resolution: "1080p", audio: false },
+    });
+    expect(buildFalVideoPayload(m, { prompt: "p", duration: 5, aspectRatio: "16:9", audio: true }, { firstFrame: "data:f" })).toEqual({
+      endpoint: "pixverse/v6/max/image-to-video",
+      input: { prompt: "p", duration: 5, image_url: "data:f", resolution: "720p", generate_audio_switch: true },
+      params: { duration: 5, resolution: "720p", audio: true },
+    });
+    expect(() => buildFalVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "data:f", lastFrame: "data:l" })).toThrow("does not take a last frame");
   });
 
   it("FLUX.3 Max: resolution and audio; aspect ratio only without a frame; the last frame beside the first", () => {

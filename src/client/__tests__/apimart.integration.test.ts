@@ -86,10 +86,10 @@ describe("APIMart videos", () => {
     expect((await video({ model: "kwaivgi/kling-v3.0-pro", audio: false, provider: "apimart" })).provider).toBe("apimart");
   });
 
-  it("PixVerse 6 Max, on kie.ai and APIMart only: a frame without a prompt runs on APIMart, and other keys do not help", async () => {
+  it("PixVerse 6 Max, on fal, kie.ai and APIMart: a frame without a prompt runs on APIMart, the cheapest; an OpenRouter key does not help", async () => {
     setStoredKey("test-key");
-    setStoredFalKey(FAL_KEY);
     await expect(video({ model: "pixverse/pixverse-v6-max", prompt: "p" })).rejects.toMatchObject({ status: 401, error: expect.stringContaining("APIMart") });
+    setStoredFalKey(FAL_KEY);
     setProviderKey("kie", KIE_KEY);
     setProviderKey("apimart", APIMART_KEY);
     const frame = await uploadImage();
@@ -104,6 +104,25 @@ describe("APIMart videos", () => {
       image_urls: ["https://upload.apimart.ai/f/image/up-1.png"],
     });
     expect(mock.kie("/api/v1/jobs/createTask")).toHaveLength(0);
+    expect(mock.fal("/pixverse/v6/max/image-to-video")).toHaveLength(0);
+    await waitFor(completed(g.id));
+  });
+
+  it("Seedance 1.5 Pro, on APIMart only since OpenRouter retired it: an OpenRouter key does not run it, an APIMart key does", async () => {
+    setStoredKey("test-key");
+    await expect(video({ model: "bytedance/seedance-1-5-pro" })).rejects.toMatchObject({ status: 401, error: expect.stringContaining("APIMart") });
+    setProviderKey("apimart", APIMART_KEY);
+    const g = await video({ model: "bytedance/seedance-1-5-pro", resolution: "720p", aspectRatio: "9:16", audio: false });
+    expect(g).toMatchObject({ provider: "apimart", params: { duration: 5, resolution: "720p", aspectRatio: "9:16", audio: false } });
+    expect(mock.apimart("/v1/videos/generations")[0]?.body).toEqual({
+      model: "seedance-1-5-pro",
+      prompt: "a fox in the snow",
+      aspect_ratio: "9:16",
+      resolution: "720p",
+      duration: 5,
+      audio: false,
+    });
+    expect(mock.calls("/api/v1/videos")).toHaveLength(0);
     await waitFor(completed(g.id));
   });
 
@@ -178,6 +197,47 @@ describe("APIMart images", () => {
       resolution: "4k",
     });
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
+  });
+
+  it("MiniMax H3 Image, on OpenRouter, fal, kie.ai and APIMart: an APIMart key alone runs it, `auto` and the resolution sent, the references uploaded", async () => {
+    setProviderKey("apimart", APIMART_KEY);
+    const req = { prompt: "a red fox", model: "minimax/minimax-h3-image", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("apimart");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, aspectRatio: "9:16", size: "4K", referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    expect(edit.provider).toBe("apimart");
+    await waitFor(completed(edit.id));
+    expect(mock.apimart("/v1/images/generations").map((c) => c.body)).toEqual([
+      { model: "minimax-h3-image", prompt: "a red fox", n: 1, size: "auto", resolution: "2K" },
+      { model: "minimax-h3-image", prompt: "a red fox", n: 1, image_urls: ["https://upload.apimart.ai/f/image/up-1.png"], size: "9:16", resolution: "4K" },
+    ]);
+    expect(mock.calls("/api/v1/images")).toHaveLength(0);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
+  });
+
+  it("Seedream 5.5, with kie.ai and APIMart keys: APIMart runs it, being the cheaper, as `seedream-5-5`, the tier alone for `auto`, the reference uploaded", async () => {
+    setProviderKey("kie", KIE_KEY);
+    setProviderKey("apimart", APIMART_KEY);
+    const req = { prompt: "a red fox", model: "bytedance-seed/seedream-5-5", aspectRatio: "auto" as const, size: "1K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("apimart");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, aspectRatio: "16:9", size: "2K", referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    expect(edit.provider).toBe("apimart");
+    await waitFor(completed(edit.id));
+    expect(mock.apimart("/v1/images/generations").map((c) => c.body)).toEqual([
+      { model: "seedream-5-5", prompt: "a red fox", n: 1, size: "1K" },
+      { model: "seedream-5-5", prompt: "a red fox", n: 1, image_urls: ["https://upload.apimart.ai/f/image/up-1.png"], size: "16:9", resolution: "2K" },
+    ]);
+    expect(mock.kie("/api/v1/jobs/createTask")).toHaveLength(0);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
   });
 });
 

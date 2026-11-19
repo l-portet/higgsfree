@@ -107,17 +107,21 @@ The model's `fal` route (`FalImageRoute`) says how each option is spelled.
 - Aspect ratio, only when it is not `auto` and the model lists it:
   - `aspect: "aspect_ratio"` → `aspect_ratio: "16:9"`.
   - `aspect: "image_size"` → `image_size`: the model's own `imageSizes` value if it has one (GPT Image
-    1.5: `"1536x1024"`), else fal's preset (`1:1` `square_hd`, `4:3` `landscape_4_3`, `3:4`
+    1.5: `"1536x1024"`; MAI-Image-2.7: fal's `landscape_3_2` / `portrait_3_2` presets, since its custom sizes
+    must be at least 768 px a side), else fal's preset (`1:1` `square_hd`, `4:3` `landscape_4_3`, `3:4`
     `portrait_4_3`, `16:9` `landscape_16_9`, `9:16` `portrait_16_9`), else an explicit
     `{ width, height }` of about one megapixel in multiples of 64 (`2:3` 832×1216, `3:2` 1216×832, `4:5`
     896×1152, `5:4` 1152×896, `21:9` 1536×640).
   - `scaledSize: true` (MiniMax H3 Image) → `image_size` is an explicit `{ width, height }` for the ratio
     at the requested size instead: about 1, 4 or 16 MP at 1K / 2K / 4K, sides in multiples of 64
     (`falScaledSize`). `auto` is 1:1 at that size without references; with references nothing is sent,
-    so fal's `auto` keeps the first image's ratio (about 2K).
+    so fal's `auto` keeps the first image's ratio (about 2K). Seedream 5.5 takes the same explicit sizes, and
+    `autoSizes` gives its own value for `auto` at each size instead (`auto_1K` / `auto_2K`), with or without
+    references.
   - No `aspect`: never sent.
 - `resolution: "1K" | "2K" | "4K"` only when the route has `resolution: true`, the model has
-  `supportsImageSize` and lists the size (Nano Banana Pro, Nano Banana 2).
+  `supportsImageSize` and lists the size (Nano Banana Pro, Nano Banana 2; Kling Image 4.0 at 2K / 4K, with
+  fal's default 2K for a size it does not list).
 
 ## Videos
 
@@ -253,8 +257,8 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 
 - fal-only models are curated in `src/shared/models.ts` (`offOpenRouter: true`, ids `fal/<name>`) and never
   looked up in OpenRouter's catalogs: `src/client/lib/catalog.ts` keeps them whatever OpenRouter lists.
-- A curated video model with a `fal` route that OpenRouter stops listing stays, marked `offOpenRouter`. One
-  without a fal route leaves the picker, as before.
+- A curated video model with a `fal` route (or a kie.ai, APIMart or Revana one) that OpenRouter stops listing
+  stays, marked `offOpenRouter`. One with no other route leaves the picker, as before.
 - Image models are not re-marked: a curated image model OpenRouter stops listing stays as it is.
 - The app reads no catalog from fal. fal-only models use their curated options; a model both offer takes
   OpenRouter's live options, mapped through its fal route.
@@ -264,15 +268,21 @@ cheapest authenticated call. A 2xx means fal accepted the key; 401 / 403 is "Inv
 The composer estimates a run on fal from fal's list prices, not the catalog's (those are OpenRouter's).
 
 - `FAL_PRICES` (`src/shared/fal-prices.ts`) has a price for every endpoint a route names, read from the
-  endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026; a test checks it covers every
+  endpoint's page (`fal.ai/models/<endpoint>/llms.txt`) on 15 Oct 2026 (PixVerse 6 Max's on 12 Nov); a test checks it covers every
   endpoint, size and resolution the catalog offers. The exceptions are GPT Image 2.6 Flare and Sunburst: their
   pages (5 Nov 2026) give token rates only, with no per-size figure, so they have no estimate on fal and the
   test lists their four endpoints as unpriced. MiniMax H3 Image's two endpoints are the same (11 Nov 2026: $2.30 /
-  $1.50 / $3.80 per 1M input text / input image / output image tokens). fal's pricing API needs a key and gives one unit
-  price per endpoint, without the tiers below, so the app does not read it.
+  $1.50 / $3.80 per 1M input text / input image / output image tokens), and so are MAI-Image-2.7's (18 Nov 2026: $5 /
+  $8 / $34; the page's one figure, $0.034816 for a 1024 × 1024 output before input tokens, is not a per-size price).
+  Seedream 5.5's were read on 13 Nov 2026.
+  Kling Image 4.0's (18 Nov 2026) say "$0.063 per units", Kling's own price for one image at 2K (fal's default),
+  and nothing about 4K: the test lists its 4K as unpriced, so a 4K run has no estimate (Kling's own list charges
+  $0.094 at 4K and $0.003 for each reference image; fal does not say whether it passes either on). fal's
+  pricing API needs a key and gives one unit price per endpoint, without the tiers below, so the app does not read it.
 - A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on
   Kling and PixVerse; a promotional rate up to a date, as on Vidu Q4 and FLUX.3 Max), per image (by size, or by the
-  output size the ratio asks for, as on GPT Image), or per started megapixel of 1024 x 1024 (FLUX.1
+  output size the ratio asks for, as on GPT Image; plus each reference image, as on Seedream 5.5's edits:
+  `inputImageUsd`), or per started megapixel of 1024 x 1024 (FLUX.1
   [dev] and [schnell], Z-Image, Qwen).
 - `estimateFalImageCost` / `estimateFalVideoCost` (`src/client/lib/fal-pricing.ts`) build the payload
   the run would send and price it: the endpoint the frames pick (Luma and FLUX.3 Video Draft differ by
@@ -284,7 +294,7 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   at the resolution sent. A video handed over with **Edit video** brings its length from its record.
   Grok Imagine's price counts the input second as well ($0.05 / $0.07 per output second plus $0.01).
 - Quality and size defaults are fal's (GPT Image at high, Ideogram at medium); GPT Image edits also pay
-  for their input images, which the estimate leaves out.
+  for their input images, which the estimate leaves out (as Kling Image 4.0's may).
 
 ## Known gaps
 

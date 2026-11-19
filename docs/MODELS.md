@@ -16,9 +16,9 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 25 image models (8 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models), 1 [on kie.ai and APIMart only](#kieai-and-apimart-only)) and 50 video models, of which 48 are offered
-(19 fal-only, 1 [on kie.ai or APIMart only](#kieai-and-apimart-only), 8 of the 48 are
-[video editors](#video-editing)) and 2 are hidden.
+Curated today: 27 image models (9 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
+(20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 8 of the 48 are [video editors](#video-editing)) and 2
+are hidden.
 
 **Legend**
 
@@ -53,6 +53,8 @@ OpenRouter's image catalog lists. "all 11" aspect ratios = `auto`, 1:1, 3:4, 4:3
 | **GPT Image 2.6 Flare** <sub>NEW</sub> <sub>FAST</sub> | `openai/gpt-image-2.6-flare` | `native` | ✓ | ✓ (8) | 1K * | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | none ¹ | – |
 | **GPT Image 2.6 Sunburst** <sub>NEW</sub> <sub>PRO</sub> | `openai/gpt-image-2.6-sunburst` | `native` | ✓ | ✓ (8) | 1K * | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | none ¹ | – |
 | **MiniMax H3 Image** <sub>NEW</sub> | `minimax/minimax-h3-image` | `native` | ✓ | ✓ (8) | 1K / 2K / 4K | all 11 | none ² | – |
+| **Seedream 5.5** <sub>NEW</sub> | `bytedance-seed/seedream-5-5` | `native` | ✓ | ✓ (8) | 1K / 2K | all 11 | 1K $0.02 · 2K $0.035, + $0.008 a reference ³ | – |
+| **MAI-Image-2.7** <sub>NEW</sub> | `microsoft/mai-image-2.7` | `native` | ✓ | ✓ (5) | 1K * | auto, 1:1, 3:4, 4:3, 2:3, 3:2, 9:16, 16:9 | none ⁴ | – |
 | **Krea 2 Large** | `krea/krea-2-large` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.06 | ✓ |
 | **Krea 2 Medium** | `krea/krea-2-medium` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.04 | – |
 | **Krea 2 Turbo** <sub>FAST</sub> | `krea/krea-2-medium-turbo` | `images` | ✓ | – | 1K * | 1:1 | 1K $0.02 | – |
@@ -64,14 +66,52 @@ reference count come from OpenRouter's image catalog once it arrives (the values
 are left at OpenRouter's defaults. Every provider bills them in tokens and gives no per-image price, so
 there is no estimate; the cost of each run is recorded.
 
-² MiniMax's image model (10 Nov 2026), text to image and edits from up to 16 references, on OpenRouter and fal
-([models on both](#models-on-both)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
+² MiniMax's image model (10 Nov 2026), text to image and edits from up to 16 references, on OpenRouter, fal
+([models on both](#models-on-both)), kie.ai ([kie.ai](#kieai)) and APIMart ([APIMart](#apimart)); the Highspeed variant (`minimax/minimax-h3-image-highspeed`) is not curated.
 Also a curated `native` model: the values here are OpenRouter's catalog on 11 Nov 2026 (`resolution` 1K / 2K / 4K,
 16 references, which the app caps at 8). OpenRouter also lists ratios the app has no option for (1:2, 2:1, 1:3, 3:1,
 2.35:1, 5:2, 5:7, 7:5, 9:19.5, 19.5:9, 9:20, 20:9, 9:21). `n` and `output_format` are left at their defaults, and so
-is prompt enhancement (on; OpenRouter passes `disable_prompt_enhanced` through). Both providers bill it in tokens
-($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens) with no per-image price, so there is
-no estimate; the cost of each run is recorded.
+is prompt enhancement (on; OpenRouter passes `disable_prompt_enhanced` through). OpenRouter and fal bill it in tokens
+($2.30 / $1.50 / $3.80 per 1M input text / input image / output image tokens) with no per-image price, so neither has
+an estimate. kie.ai (docs and pricing API read 12 Nov 2026) takes `aspect_ratio` (`auto` by default: the prompt
+rewriter's pick on text to image, the first reference's ratio on an edit), `resolution` 1K / 2K / 4K and 1 to 16
+`image_urls` on `minimax-h3/image-edit`, and charges 1.8 credits ($0.009) an image at 1K or 2K, 5.5 ($0.0275) at 4K,
+plus 0.5 ($0.0025) for each reference image on an edit (`KIE_PRICES`); being the one priced, it runs the model whenever
+a kie.ai key is set. APIMart (docs and price catalog read 13 Nov 2026) takes `size` (the ratio, `auto` allowed),
+`resolution` 1K / 2K / 4K (always sent: its default is 4K) and up to 16 `image_urls` on its one `minimax-h3-image`
+model, and bills it in tokens too ($2.14 / $1.43 / $3.57 at Gold), so it has no estimate either. The cost of each run
+is recorded on OpenRouter, kie.ai and APIMart.
+
+³ ByteDance's Seedream 5.5, on OpenRouter (listed 12 Nov 2026), fal ([models on both](#models-on-both)), [kie.ai](#kieai)
+and [APIMart](#apimart). The id is OpenRouter's slug, as for every model OpenRouter serves; it was the app's own
+`bytedance/seedream-5.5` while only kie.ai and APIMart had it, so a composer left on that id falls back to the default
+model, and older runs keep it. Also a curated `native` model: the values here are OpenRouter's catalog on 13 Nov 2026
+(`resolution` 1K / 1.5K / 2K, of which the app lists 1K and 2K; 10 references, which the app caps at 8; `n` 1).
+OpenRouter also lists ratios the app has no option for (1:2, 2:1, 9:19.5, 19.5:9, 9:20, 20:9, 9:21). `background`
+(`transparent` too), `output_format` and `seed` are left at their defaults. OpenRouter's price (its `/endpoints`, 13 Nov
+2026) is $0.02 an image, $0.035 at its `high_resolution` rate (2K), plus $0.008 for each reference image
+(`estCostPerReferenceUsd`). kie.ai and APIMart (APIMart's docs and pricing API read 13 Nov 2026, as `seedream-5-5`;
+kie's docs and pricing API 11 Nov 2026) take the ratio (APIMart as `size` with `resolution`, and for `auto` the size
+alone as `size`, since APIMart reads `size: "auto"` as 2K; kie as `aspect_ratio`, `auto` on edits only, so a
+text-to-image run at `auto` sends 1:1 there), but neither 4:5 nor 5:4, so those run on OpenRouter or fal; 1K or 2K (as
+`resolution` on APIMart, `size` on kie); and up to 10 references as `image_urls` (kie: 10 MB each). APIMart makes text
+to image and edits with one model, kie with two. Not sent there: `output_format`, `background`, APIMart's
+`layer_decomposition`, `optimize_prompt_options`, `watermark` and `nsfw_check`, and kie's `nsfw_checker`; kie's layer
+decomposition model is not wired. kie charges 3.6 credits ($0.018) an image at 1K (and 1.5K), 6.3 ($0.0315) at 2K,
+plus 1.44 ($0.0072) for each reference image on an edit (`KIE_PRICES`). APIMart charges $0.013 at 1K (and 1.5K),
+$0.02275 at 2K, plus $0.0052 for each reference image, the first included (`APIMART_PRICES`), the cheapest of the four:
+with an APIMart key it runs there, and otherwise with a kie.ai key on kie. kie also wants a prompt of 5 characters or more.
+
+⁴ Microsoft AI's MAI-Image-2.7 (14 Nov 2026), text to image and edits, on OpenRouter and fal
+([models on both](#models-on-both)). The Flash variant (`microsoft/mai-image-2.7-flash`) is not curated and stays a
+discovered model, as do MAI-Image 2.5 and 2.6. Also a curated `native` model: the values here are OpenRouter's catalog
+on 18 Nov 2026 (no `resolution`, so the output is the provider's default and listed as 1K; 5 references; `n` 1; no
+21:9, 4:5 nor 5:4). `background` (`transparent` too) and the `web_grounding` passthrough are left at their defaults.
+OpenRouter (its `/endpoints`, Azure) and fal both bill it in tokens ($5 / $8 / $34 per 1M input text / input image /
+output image tokens) with no per-image price, so neither has an estimate; the cost of each run on OpenRouter is
+recorded. Not on kie.ai, and not on APIMart yet: its model page (`apimart.ai/model/mai-image-2-7`) is up, but its
+pricing API answers `model_not_found` for `mai-image-2.7` and `mai-image-2-7`, its catalog and docs list MAI-Image-2.6
+only, and the app has no APIMart builder for MAI (18 Nov 2026).
 
 Every other image model OpenRouter lists (Nano Banana 2.1, Seedream 5, FLUX.3, Qwen Image 3,
 GPT Image 2.5, Recraft, MAI Image and more; about 45 on 14 Oct 2026) is offered as a discovered
@@ -79,9 +119,8 @@ model through the native `POST /api/v1/images` (`endpoint: "native"`). See
 [Live catalog and discovered models](#live-catalog-and-discovered-models).
 
 Not on OpenRouter: the [fal-only image models](#fal-only-image-models), GPT Image 2.6, which runs on APIMart only
-(see [APIMart-only image models](#apimart-only-image-models)), GPT Image 2.6 Economy, which runs on kie.ai only (see
-[kie.ai-only image models](#kieai-only-image-models)), and Seedream 5.5, which runs on kie.ai and APIMart (see
-[kie.ai and APIMart only](#kieai-and-apimart-only)); GPT Image 2.6 Flare and Sunburst, above, are separate models.
+(see [APIMart-only image models](#apimart-only-image-models)), and GPT Image 2.6 Economy, which runs on kie.ai only (see
+[kie.ai-only image models](#kieai-only-image-models)); GPT Image 2.6 Flare and Sunburst, above, are separate models.
 
 Default image model: **Nano Banana Pro** (`google/gemini-3-pro-image`). Each composer starts there, then remembers the last model picked.
 
@@ -125,7 +164,6 @@ picker's: featured first, following Higgsfield's lineup where OpenRouter has the
 | **HappyHorse 1.0** | `alibaba/happyhorse-1.0` | ✓ | ✓ | – | – | ? | 720p / 1080p (default 1080p) | 3–15 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16, 9:21 | 720p $0.0988 · 1080p $0.169 | – |
 | **Grok Imagine Video** <sub>FAST</sub> | `x-ai/grok-imagine-video` | ✓ | ✓ | – | – | ? | 480p / 720p (default 480p) | 1–15 (default 5) | 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 | 480p $0.05 · 720p $0.07 | ✓ |
 | **Runway Gen-4.5** | `runway/gen-4.5` | ✓ | ✓ | – | – | ? | 720p (default 720p) | 2–10 (default 5) | 16:9, 9:16 | 720p $0.12 | – |
-| **Seedance 1.5 Pro** | `bytedance/seedance-1-5-pro` | ✓ | ✓ | ✓ | ✓ | ✗ | 480p / 720p / 1080p (default 1080p) | 4–12 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16, 9:21 † | 480p $0.0231 · 720p $0.0518 · 1080p $0.117 | – |
 
 ¹ The provider answers "does not support image input references" (Sep 2026): `caps.references: false`,
 so the app hides the style-reference strip and rejects `references` with a 400.
@@ -141,9 +179,9 @@ Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced abov
 frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` lists `video_url` and `audio_url`
 parts but documents no inline data, and APIMart uploads images only.
 
-Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 on fal, kie.ai and APIMart (see
-[fal models](#fal-models)); PixVerse 6 Max runs on kie.ai and APIMart only (see
-[kie.ai and APIMart only](#kieai-and-apimart-only)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
+Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 and PixVerse 6 Max on fal, kie.ai and APIMart (see
+[fal models](#fal-models)); Seedance 1.5 Pro, which OpenRouter retired on 11 Nov 2026, runs on APIMart only (see
+[APIMart-only video models](#apimart-only-video-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
 Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
@@ -169,8 +207,9 @@ verified yet.
 Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint (`FAL_PRICES` in
 `src/shared/fal-prices.ts`, read from each endpoint's page on 15 Oct 2026), not the catalog's
 OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
-times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst, and MiniMax H3 Image, have no fal price: fal
-bills them in tokens and gives no per-size figure for them. fal reports no cost with a result, so runs on fal record none.
+times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst, MiniMax H3 Image and MAI-Image-2.7 have no fal
+price: fal bills them in tokens and gives no per-size figure for them. Seedream 5.5's edits also bill each reference image. Kling
+Image 4.0 has a fal price at 2K only, so a 4K run has no estimate. fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -188,6 +227,7 @@ brackets are the values fal receives when they differ from the app's.
 | **Kling O3 Pro** <sub>NEW</sub> | `fal/kling-o3-pro` | `fal-ai/kling-video/o3/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **Kling 3.0 Turbo** <sub>FAST</sub> | `fal/kling-v3-turbo-pro` | `fal-ai/kling-video/v3/turbo/pro/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | – | not sent | 3–15 (default 5) | 16:9, 1:1, 9:16 † |
 | **PixVerse 6** <sub>NEW</sub> | `fal/pixverse-v6` | `fal-ai/pixverse/v6/text-to-video` · `…/image-to-video` | ✓ | ✓ | – | ✓ ¹ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
+| **PixVerse 6 Max** <sub>NEW</sub> | `pixverse/pixverse-v6-max` | `pixverse/v6/max/text-to-video` · `…/image-to-video` ⁶ | ✓ | ✓ | – | ✓ ¹ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
 | **Vidu Q4** <sub>NEW</sub> | `fal/vidu-q4` | `fal-ai/vidu/q4/image-to-video` | – | ✓ | – | – | 720p / 1080p / 2K / 4K (default 720p) | 3–16 (default 5) | not sent (follows the frame) |
 | **LTX 2.3** | `fal/ltx-2.3` | `fal-ai/ltx-2.3/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | ✓ | 1080p / 2K [`1440p`] / 4K [`2160p`] (default 1080p) | 6, 8, 10 (default 6) | 16:9, 9:16 |
 | **Luma Ray 3.2** | `fal/luma-ray-3.2` | `luma/agent/ray/v3.2/text-to-video` · `…/image-to-video` | ✓ | ✓ | ✓ | – | 720p / 1080p (default 720p) | 5, 10 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 |
@@ -227,6 +267,15 @@ second), `aspect_ratio: "auto"`, `seeds` and its video-edit mode (`video_list`).
 goes to fal, unless it has style references, which fal does not take.
 OpenRouter's `google/gemini-omni-1.2-flash` (5 Nov 2026) is another slug: like `google/gemini-omni-1.1-flash`, it is
 [discovered](#live-catalog-and-discovered-models) as a model of its own, with OpenRouter's options and prices.
+⁶ The top quality tier of PixVerse 6 (24 Oct 2026), also on kie.ai and APIMart: text-to-video and a first frame only (no
+last frame, references, extension or multi-shot); with a frame the clip follows the image's ratio. fal's endpoints sit
+under `pixverse/`, not `fal-ai/pixverse/`, and take PixVerse 6's fields (schemas read 12 Nov 2026); `style`,
+`thinking_type`, `negative_prompt`, `seed` and `generate_multi_clip_switch` are not sent. Every provider also offers
+360p and 540p, which the app does not list (nor for PixVerse 6). Per second without / with sound, at 720p then 1080p:
+fal $0.099 / $0.135 and $0.198 / $0.252 (read 12 Nov 2026); kie 8.8 / 12 and 17.6 / 22.4 credits ($0.044 / $0.06,
+$0.088 / $0.112); APIMart $0.0391 / $0.0533 and $0.0782 / $0.0996 (Gold tier; kie and APIMart read 26 Oct 2026).
+APIMart is the cheapest and fal the dearest of its four providers (Revana included), so a run goes to fal only when
+none of the others has a key. APIMart takes a frame without a prompt, kie does not.
 
 Durations go out as numbers (Gemini Omni Flash, Kling 4.0, FLUX.3 Max, FLUX.3 Video Draft, PixVerse, Vidu, LTX), strings (`"5"`, Kling) or
 seconds (`"5s"`, Luma). None of these takes style references (`caps.references: false`), except Kling 4.0,
@@ -247,12 +296,13 @@ Video editors that run only on fal are listed under [Video editing](#video-editi
 
 ### fal-only image models
 
-All are 1K only (no size choice). References are sent as a list (`image_urls`) or a single
-`image_url`. "preset" = the aspect ratio goes out as one of fal's `image_size` presets
+All are 1K only (no size choice), except Kling Image 4.0 (2K / 4K, sent as `resolution`). References are sent as a
+list (`image_urls`) or a single `image_url`. "preset" = the aspect ratio goes out as one of fal's `image_size` presets
 (`square_hd`, `landscape_4_3`, `portrait_4_3`, `landscape_16_9`, `portrait_16_9`).
 
 | Model | Id | fal endpoints (text-to-image · edit) | t2i | i2i (max refs) | Aspect ratios | Aspect sent as |
 |---|---|---|:-:|:-:|---|---|
+| **Kling Image 4.0** <sub>NEW</sub> ¹ | `fal/kling-image-v4` | `kling/v4/text-to-image` · `kling/v4/image-to-image` | ✓ | ✓ (8, `image_urls`) | auto, 1:1, 3:4, 4:3, 2:3, 3:2, 9:16, 16:9, 21:9 | `aspect_ratio` |
 | **FLUX.1 Kontext Pro** | `fal/flux-kontext-pro` | `fal-ai/flux-pro/kontext/text-to-image` · `fal-ai/flux-pro/kontext` | ✓ | ✓ (1, `image_url`) | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
 | **FLUX 1.1 Pro Ultra** | `fal/flux-1.1-pro-ultra` | `fal-ai/flux-pro/v1.1-ultra` | ✓ | – | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
 | **Ideogram 4.5** <sub>NEW</sub> | `fal/ideogram-4.5` | `ideogram/v4.5` · `ideogram/v4.5/edit` | ✓ | ✓ (1, `image_url`) | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
@@ -261,6 +311,14 @@ All are 1K only (no size choice). References are sent as a list (`image_urls`) o
 | **Z-Image Turbo** <sub>FAST</sub> | `fal/z-image-turbo` | `fal-ai/z-image/turbo` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [dev]** | `fal/flux-dev` | `fal-ai/flux/dev` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [schnell]** <sub>FAST</sub> | `fal/flux-schnell` | `fal-ai/flux/schnell` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
+
+¹ Kuaishou's Kling Image 4.0 (17 Nov 2026), read from fal's schemas on 18 Nov 2026; not on OpenRouter, kie.ai or APIMart
+yet. 2K (fal's default) or 4K as `resolution`; fal's 8K is not offered (`ImageSize` has no 8K). fal takes 10 references
+(each at least 300 px a side, 2:5 to 5:2), which the app caps at 8; the prompt can name them `@Image1`, `@Image2`, ….
+`result_type: "series"` / `series_amount` (a coherent set of 2 to 10), `num_images`, `elements` and the
+`kling/v4/long-image` endpoint are not wired. fal lists $0.063 an image, Kling's own 2K price, and no 4K figure, so a
+4K run has no estimate; Kling's own list also charges $0.094 at 4K and $0.003 for each reference image, which fal may
+pass on.
 
 ### APIMart-only image models
 
@@ -279,6 +337,25 @@ picks), `n` (up to 4; the app makes one call per image), `output_format` and `ba
 (transparent). APIMart lists no price for it yet, so there is no estimate; the cost of each run is
 recorded. GPT Image 2.6 Flare and Sunburst, separate models, are on OpenRouter too (see [Image models](#image-models)).
 
+### APIMart-only video models
+
+Not on OpenRouter, fal nor kie.ai: this runs only with an APIMart key (fields and rules in [APIMART.md](APIMART.md)).
+The id is OpenRouter's old slug, kept so that earlier runs still find their model. It is not verified yet. `†` = the
+aspect ratio is sent for text-to-video only.
+
+| Model | Id | APIMart model | t2v | i2v | Last frame | Audio | Real faces | Resolutions | Durations (s) | Aspect ratios | Est. cost / second |
+|---|---|---|:-:|:-:|:-:|:-:|:-:|---|---|---|---|
+| **Seedance 1.5 Pro** | `bytedance/seedance-1-5-pro` | `seedance-1-5-pro` ¹ | ✓ | ✓ | ✓ | ✓ | ✗ | 480p / 720p / 1080p (default 1080p) | 4–12 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † | 480p $0.0204 · 720p $0.044 · 1080p $0.108 |
+
+¹ ByteDance's previous Seedance. OpenRouter retired it on 11 Nov 2026 (`/api/v1/videos/models` no longer lists it,
+read 12 Nov 2026), and fal retired its `fal-ai/bytedance/seedance/v1.5/pro/…` endpoints the same day, so the app no
+longer sends it to OpenRouter, even before the live catalog arrives. On APIMart: `aspect_ratio` (16:9 is sent with a
+frame, APIMart's default), `resolution`, `duration` 4–12, `audio` (on by default), and a first frame, or a first and a
+last, as `image_urls`; no style references. OpenRouter's 9:21 is not listed, APIMart has none. Not sent: `seed`,
+`camerafixed` and `nsfw_check`. The estimate is APIMart's Gold-tier price read on 20 Oct 2026, the same with or
+without sound; APIMart's price catalog no longer lists the model (12 Nov 2026), though its doc page still does. The
+cost of each run is recorded.
+
 ### kie.ai-only image models
 
 Not on OpenRouter, fal nor APIMart: this runs only with a kie.ai key (fields and rules in [KIE.md](KIE.md)). The id is
@@ -292,38 +369,6 @@ the app's own (`<maker>/<name>`). It is not verified yet.
 APIMart or Revana. It generates at 1K only, with no `resolution` field, and has no 3:4. kie takes 16 references, the app
 sends 8 at most. Not sent: `background`, `output_format` (`png` by default), `frame_count` and `frame_duration_ms`. 5
 credits ($0.025) an image, with or without references (`KIE_PRICES`).
-
-### kie.ai and APIMart only
-
-Not on OpenRouter nor fal: these run only with a kie.ai or APIMart key (fields and rules in
-[KIE.md](KIE.md) and [APIMART.md](APIMART.md)), on whichever is cheaper for the run. The ids are the app's own
-(`<maker>/<name>`). None is verified yet. `†` = the aspect ratio is sent for text-to-video only.
-
-| Model | Id | kie models · APIMart model | t2v | i2v | Last frame | Audio | Resolutions | Durations (s) | Aspect ratios |
-|---|---|---|:-:|:-:|:-:|:-:|---|---|---|
-| **PixVerse 6 Max** <sub>NEW</sub> | `pixverse/pixverse-v6-max` | `pixverse-v6-max/text-to-video` · `…/image-to-video` · `pixverse-v6-max` ¹ | ✓ | ✓ | – | ✓ | 720p / 1080p (default 720p) | 1–15 (default 5) | 21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16 † |
-
-¹ The top quality tier of PixVerse 6 (24 Oct 2026): text-to-video and a first frame only (no last
-frame, references, extension or multi-shot); with a frame the clip follows the image's ratio. Both
-providers also offer 360p and 540p, which the app does not list (nor for PixVerse 6). Read 26 Oct 2026,
-per second without / with sound: kie 8.8 / 12 credits at 720p, 17.6 / 22.4 at 1080p ($0.044 / $0.06,
-$0.088 / $0.112); APIMart $0.0391 / $0.0533 at 720p, $0.0782 / $0.0996 at 1080p (Gold tier), so
-APIMart is the cheaper. APIMart takes a frame without a prompt, kie does not.
-
-| Model | Id | kie models · APIMart model | t2i | i2i (max refs) | Sizes | Aspect ratios | Est. cost / image |
-|---|---|---|:-:|:-:|---|---|---|
-| **Seedream 5.5** <sub>NEW</sub> | `bytedance/seedream-5.5` | `seedream/5-5-text-to-image` · `5-5-image-to-image` · `seedream-5.5` ² | ✓ | ✓ (8, `image_urls`) | 1K / 2K | auto, 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9 | kie: 1K $0.018, 2K $0.0315, + $0.0072 a reference |
-
-² ByteDance's Seedream 5.5, read from APIMart's model page on 5 Nov 2026 and kie's docs and pricing API on
-11 Nov 2026; not on fal or OpenRouter yet (they stop at Seedream 5.0). Both take the ratio (APIMart as `size`, `auto`
-allowed; kie as `aspect_ratio`, `auto` on edits only, so a text-to-image run at `auto` sends 1:1 there), 1K or 2K (as
-`resolution` on APIMart, `size` on kie; their 1.5K and their 2:1 and 1:2 are not listed, the app has no such options)
-and up to 10 references as `image_urls` (kie: 10 MB each), of which the app sends 8 at most. APIMart makes text to image
-and edits with one model, kie with two. Not sent: `output_format`, `background` (transparent), APIMart's
-`layer_decomposition`, `optimize_prompt_options`, `watermark` and `nsfw_check`, and kie's `nsfw_checker`; kie's layer
-decomposition model is not wired. kie charges 3.6 credits ($0.018) an image at 1K (and 1.5K), 6.3 ($0.0315) at 2K,
-plus 1.44 ($0.0072) for each reference image on an edit (`KIE_PRICES`). APIMart has no price for it in the app, so with
-both keys kie runs it; the cost of each run is recorded either way. kie also wants a prompt of 5 characters or more.
 
 ### kie.ai
 
@@ -343,7 +388,8 @@ what each run cost.
 | Gemini Omni Flash 1.1, 1.2 | `google/gemini-omni-flash-1-1`, `google/gemini-omni-flash-1-2` | GPT Image 2.6 Flare ¹ | `gpt-image-2-6/flare-text-to-image` / `flare-image-to-image` |
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | GPT Image 2.6 Sunburst ¹ | `gpt-image-2-6/sunburst-text-to-image` / `sunburst-image-to-image` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
-| Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 (here and on APIMart) | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
+| Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
+| | | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
 per-image price, so they have no `KIE_PRICES` entry and no estimate: in credits, 900 text input, 225 cached text input,
@@ -381,13 +427,14 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Video | APIMart model | Image | APIMart model |
 |---|---|---|---|
 | Veo 3.1 / Fast / Lite (8 s) | `veo3.1-quality`, `veo3.1-fast`, `veo3.1-lite` | Nano Banana Pro | `gemini-3-pro-image-preview` |
-| Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
+| Seedance 2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.5 Pro (only here) | `seedance-2.5`, `seedance-2.0`, `-fast`, `-mini`, `seedance-1-5-pro` | Nano Banana 2 | `gemini-3.1-flash-image-preview` |
 | MiniMax H3, H3 Max, Hailuo 2.3 | `MiniMax-H3`, `MiniMax-H3-Max`, `MiniMax-Hailuo-2.3` | Nano Banana 2 Lite | `gemini-3.1-flash-lite-image-ext` |
 | Wan 3.0, Prime, 2.7, 2.6 | `wan3.0-video`, `wan3.0-video-prime`, `wan2.7`, `wan2.6` | Nano Banana | `gemini-2.5-flash-image-preview` |
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare, 2.6 Sunburst | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
-| | | Seedream 5.5 (here and on kie.ai) | `seedream-5.5` |
+| | | Seedream 5.5 | `seedream-5-5` |
+| | | MiniMax H3 Image | `minimax-h3-image` |
 
 ### Models on both
 
@@ -417,6 +464,21 @@ fal's fields. Style references are never sent to fal.
   `auto` is square at the size without references; with references it is fal's own `auto` (the first image's
   ratio, about 2K), so the size is not sent. `enable_prompt_expansion` (text to image only) is left at fal's
   default (on). No price (see above).
+- **Seedream 5.5**: `bytedance/seedream/v5.5/text-to-image` · `bytedance/seedream/v5.5/edit`; `image_urls` (fal takes
+  10), and the ratio and size together as an explicit `image_size` (`scaledSize`, as MiniMax H3 Image: e.g. 16:9
+  1344×768 at 1K, 2752×1536 at 2K; fal takes 921,600 to 4,624,220 pixels). `auto` is fal's own `auto_1K` / `auto_2K`
+  (`autoSizes`), with or without references. `background` (`transparent` with PNG), `output_format` (`png`),
+  `num_images`, `watermark` and `enable_safety_checker` are left at fal's defaults; the `/layerize` endpoint is not
+  wired. $0.03 an image at 1K and $0.0405 at 2K (fal bills by area: up to 2.61 MP, or above), plus $0.012 for each
+  reference image on an edit (read 13 Nov 2026).
+- **MAI-Image-2.7**: `microsoft/mai-image-2.7/text-to-image` · `microsoft/mai-image-2.7/edit` (both `active`, read
+  18 Nov 2026); `image_urls` (the edit schema takes 5, `maxItems: 5`, though fal's catalog blurb says "up to two input
+  images"), and the ratio as one of fal's seven `image_size` presets (`square_hd`, `landscape_4_3`, `portrait_4_3`,
+  `landscape_3_2`, `portrait_3_2` from `imageSizes`, `landscape_16_9`, `portrait_16_9`; a custom size must be at least
+  768 px a side and 4.19 MP at most). `auto` sends none: fal's `square_hd` without references, a size close to the input
+  on an edit. fal's `resolution` 2K is not offered (OpenRouter has no size choice for it), so fal's default 1K applies;
+  `background` and `output_format` (`png`) are left at fal's defaults. No price (see above): fal's page gives
+  $0.034816 for one 1024 × 1024 output (1,024 image tokens) before input tokens, and no per-size table.
 - **Seedance 2.5**: `bytedance/seedance-2.5/us/text-to-video` · `…/image-to-video`; `duration` as a
   string, `aspect_ratio` (not with a frame), `resolution` 480p / 720p, `end_image_url`,
   `generate_audio`. These are fal's US-hosted endpoints, the only ones it lists since Oct 2026
@@ -512,7 +574,9 @@ localStorage, so a model OpenRouter adds shows up within 10 minutes.
 image-to-video and last-frame support, audio and the price. The curated entry keeps the name,
 featured flag, badges, description, `realFaces`, `references`, `omitAspectRatioOnI2v`, `verified`
 and a text-to-video quirk. A curated model OpenRouter no longer lists disappears from the picker,
-unless it has a fal route: it then stays, as a fal-only model. fal-only models are never looked up
+unless it has a fal, kie.ai, APIMart or Revana route: it then stays, off OpenRouter. A model known to be gone
+(Seedance 1.5 Pro) is marked `offOpenRouter` in the catalog itself, so it never goes to OpenRouter, even before
+the live catalog arrives. fal-only models are never looked up
 in OpenRouter's catalogs. A curated editor (`caps.videoEdit`) is the exception to the first rule:
 OpenRouter lists no options for it, so it keeps its own and takes only the price (`cents_per_second_output`,
 and `minimum_cents_per_generation` as `minCostUsd`). Every other listed model is **discovered**:
@@ -529,7 +593,7 @@ and `minimum_cents_per_generation` as `minCostUsd`). Every other listed model is
 
 **Image.** Curated models keep their verified routes and options (`chat` and `images` do not take
 the catalog's fields one to one), and stay listed as they are when OpenRouter stops listing them. A
-curated `native` model (GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image) is the exception: it takes the catalog's options as a
+curated `native` model (GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image, Seedream 5.5, MAI-Image-2.7) is the exception: it takes the catalog's options as a
 discovered model does, keeps its name, badges, description and its other providers' routes, and leaves the
 picker if OpenRouter stops listing it. Every other model in `/api/v1/images/models` is discovered and
 served through the native `POST /api/v1/images` with `aspect_ratio`, `resolution` and
@@ -602,7 +666,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
 | `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
-| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 on APIMart only, GPT Image 2.6 Economy on kie.ai only, or Seedream 5.5 on kie.ai and APIMart). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image and everything discovered are `native`. |
+| `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 on APIMart only, or GPT Image 2.6 Economy on kie.ai only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image, Seedream 5.5, MAI-Image-2.7 and everything discovered are `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
 | `caps.textToImage` / `caps.imageToImage` | Whether the model accepts a prompt only / reference images. Rows that can't do the current mode are dimmed in the picker. |
@@ -611,8 +675,9 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `sizes` | Subset of `"1K" \| "2K" \| "4K"`. Only meaningful when `supportsImageSize` is true; otherwise list `["1K"]`. |
 | `supportsImageSize` | Whether `image_config.image_size` is honoured. If false the app never sends it. |
 | `estCostUsd` | USD per image keyed by size. Missing sizes fall back to `"1K"`. Shown as `~$0.13` in the Generate button. Empty for fal-only models (no estimate shown). |
+| `estCostPerReferenceUsd` | USD added for each reference image, when OpenRouter bills them on top (Seedream 5.5). |
 | `verified` | `true` only after the checklist below. For a model on both, it is about the OpenRouter route. |
-| `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets); `scaledSize` (`true` = an explicit `image_size` for the ratio at the requested 1K / 2K / 4K, as MiniMax H3 Image takes); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
+| `fal` | How fal serves the model (`FalImageRoute`): `textToImage` and `edit` endpoint ids (the edit one is used when references are attached); `refs` (`"image_urls"` list or a single `"image_url"`); `aspect` (`"aspect_ratio"`, `"image_size"`, absent = never sent); `imageSizes` (the model's own `image_size` per ratio, instead of fal's presets, e.g. MAI-Image-2.7's `landscape_3_2` / `portrait_3_2`); `scaledSize` (`true` = an explicit `image_size` for the ratio at the requested 1K / 2K / 4K, as MiniMax H3 Image and Seedream 5.5 take); `autoSizes` (with `scaledSize`, fal's own `image_size` for `auto` at each size, as Seedream 5.5's `auto_1K` / `auto_2K`); `resolution` (`true` = send `resolution: "1K" \| "2K" \| "4K"`); `extra` (fixed fields sent with every request). See [FAL.md](FAL.md#image-fields-buildfalimagepayload). |
 | `kie` | How kie.ai serves the model (`KieImageRoute`): its `family` (which builder maps the fields), the createTask `model`, an `editModel` used with references, a `tier`. See [KIE.md](KIE.md#image-fields-buildkieimagepayload). |
 | `apimart` | How APIMart serves the model (`ApimartImageRoute`): its `family` and APIMart's `model` id. See [APIMART.md](APIMART.md#image-fields-buildapimartimagepayload). |
 | `revana` | How Revana serves the model (`RevanaRoute`): Revana's `model` id. See [REVANA.md](REVANA.md). |
@@ -637,7 +702,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `aspectRatios` | Subset of `VideoAspectRatio`. |
 | `omitAspectRatioOnI2v` | Set when the provider returns 400 if `aspect_ratio` is sent together with `frame_images` (all Seedance models). The output then follows the input image. |
 | `estCostPerSecUsd` | USD per second keyed by resolution (with audio, for a model that has it). Multiplied by the duration for the estimate. |
-| `estCostPerSecNoAudioUsd` | USD per second with Sound off, where OpenRouter charges less for that (Kling 3.0, Veo 3.1, Seedance 1.5 Pro). Read from the live catalog's without-audio SKUs. |
+| `estCostPerSecNoAudioUsd` | USD per second with Sound off, where OpenRouter charges less for that (Kling 3.0, Veo 3.1). Read from the live catalog's without-audio SKUs. |
 | `minCostUsd` | The provider's minimum charge per run (Runway Aleph 2: $0.56); the estimate never goes below it. |
 | `verified` | `true` only after the checklist below. |
 | `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |

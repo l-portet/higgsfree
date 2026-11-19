@@ -166,7 +166,7 @@ failed refresh must never break the picker: the curated catalog always renders.
 
 ## Native images API
 Discovered image models (anything in `/api/v1/images/models` without a curated entry) and curated
-`endpoint: "native"` ones (GPT Image 2.6 Flare and Sunburst, MiniMax H3 Image) use `POST /api/v1/images` with
+`endpoint: "native"` ones (GPT Image 2.6 Flare and Sunburst, MiniMax H3 Image, Seedream 5.5, MAI-Image-2.7) use `POST /api/v1/images` with
 `{ model, prompt, aspect_ratio?, resolution?, input_references? }`:
 - `aspect_ratio` only when the user did not pick `auto` and the model lists it.
 - `resolution` (1K / 2K / 4K) only when the catalog lists `resolution` for the model.

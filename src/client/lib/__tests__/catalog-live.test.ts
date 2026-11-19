@@ -40,7 +40,8 @@ describe("perSecondUsd", () => {
     expect(perSecondUsd(videoSpec("google/veo-3.1").pricing, "1080p", false)).toBe(0.2);
     expect(perSecondUsd(videoSpec("google/veo-3.1").pricing, "4K", false)).toBe(0.4);
     expect(perSecondUsd(videoSpec("google/veo-3.1-fast").pricing, "720p", false)).toBe(0.08);
-    expect(perSecondUsd(videoSpec("bytedance/seedance-1-5-pro").pricing, "720p", false)).toBeCloseTo(0.0259, 4);
+    // Seedance 1.5 Pro's video tokens, from before OpenRouter retired it (11 Nov 2026): half the price without audio.
+    expect(perSecondUsd({ video_tokens: "0.0000024", video_tokens_without_audio: "0.0000012" }, "720p", false)).toBeCloseTo(0.0259, 4);
     expect(perSecondUsd(videoSpec("minimax/hailuo-3").pricing, "2K", false)).toBe(0.13); // one price either way
   });
 });
@@ -133,7 +134,7 @@ describe("buildImageModel", () => {
     expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
   });
 
-  it("MiniMax H3 Image: a curated native model with the catalog's 1K / 2K / 4K, every ratio the app has, and its fal route", () => {
+  it("MiniMax H3 Image: a curated native model with the catalog's 1K / 2K / 4K, every ratio the app has, and its fal, kie.ai and APIMart routes", () => {
     const curated = findImageModel("minimax/minimax-h3-image");
     if (!curated) throw new Error("catalog changed");
     const m = buildImageModel(imageSpec("minimax/minimax-h3-image"), curated);
@@ -148,10 +149,60 @@ describe("buildImageModel", () => {
       caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
       estCostUsd: {},
       fal: curated.fal,
+      kie: curated.kie,
+      apimart: curated.apimart,
     });
     expect(m?.discovered).toBeUndefined();
     // The catalog's extra ratios (1:2, 2.35:1, 9:19.5 and more) are dropped; the ones the app has match the curated list.
     expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
+  });
+
+  it("Seedream 5.5: a curated native model under OpenRouter's slug, with the catalog's 1K / 2K, its price and its fal, kie.ai and APIMart routes", () => {
+    const curated = findImageModel("bytedance-seed/seedream-5-5");
+    if (!curated) throw new Error("catalog changed");
+    const m = buildImageModel(imageSpec("bytedance-seed/seedream-5-5"), curated);
+    expect(m).toMatchObject({
+      endpoint: "native",
+      name: "Seedream 5.5",
+      provider: "bytedance",
+      badges: ["new"],
+      verified: false,
+      sizes: ["1K", "2K"],
+      supportsImageSize: true,
+      caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
+      estCostUsd: { "1K": 0.02, "2K": 0.035 },
+      estCostPerReferenceUsd: 0.008,
+      fal: curated.fal,
+      kie: curated.kie,
+      apimart: curated.apimart,
+    });
+    expect(m?.discovered).toBeUndefined();
+    // The catalog's 1.5K and extra ratios (1:2, 9:19.5 and more) are dropped; the ones the app has match the curated list.
+    expect(new Set(m?.aspectRatios)).toEqual(new Set(curated.aspectRatios));
+  });
+
+  it("MAI-Image-2.7: a curated native model at 1K (the catalog lists no resolution), 5 references, and its fal route", () => {
+    const curated = findImageModel("microsoft/mai-image-2.7");
+    if (!curated) throw new Error("catalog changed");
+    const m = buildImageModel(imageSpec("microsoft/mai-image-2.7"), curated);
+    expect(m).toMatchObject({
+      endpoint: "native",
+      name: "MAI-Image-2.7",
+      provider: "microsoft",
+      badges: ["new"],
+      verified: false,
+      sizes: ["1K"],
+      supportsImageSize: false,
+      caps: { textToImage: true, imageToImage: true, maxReferenceImages: 5 },
+      estCostUsd: {},
+      fal: curated.fal,
+    });
+    expect(m?.discovered).toBeUndefined();
+    expect(m?.kie).toBeUndefined();
+    expect(m?.apimart).toBeUndefined();
+    // The curated options are OpenRouter's, so the picker does not change when the catalog arrives.
+    expect(m?.aspectRatios).toEqual(curated.aspectRatios);
+    expect(m?.caps).toEqual(curated.caps);
   });
 
   it("builds a native model from the catalog: ratios, sizes, reference limits", () => {
