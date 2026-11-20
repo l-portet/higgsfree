@@ -173,6 +173,9 @@ Not routed, though Replicate has them:
   the catalog's model is not clear), **Luma Ray 3.2**, **LTX 2.3**, **Ideogram 4.5**, **Z-Image Turbo**, **Topaz**
   (billed per megapixel or with rules the table does not express yet), **Gemini Omni Flash 1.1** (Replicate's
   `google/gemini-omni-1.1` may not be the Flash).
+- **Ideogram 4.6** (`ideogram-ai/ideogram-4-6`, read 20 Nov 2026: $0.06 an image at medium up to 2K, as on fal): added on
+  fal only for now. Replicate takes up to 5 `images` and its own `size` (`auto`, `auto_2k`, `auto_4k`, `source` or an exact
+  1K / 2K / 4K size), which no route spells yet.
 - Anything that takes a video (see [Inputs](#inputs)), and MiniMax H3's reference images (public links only).
 
 ## Refreshing the list

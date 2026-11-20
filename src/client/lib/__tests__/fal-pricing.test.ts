@@ -157,6 +157,13 @@ describe("estimateFalImageCost", () => {
     expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "4K" }, 2, 2)).toBeUndefined();
   });
 
+  it("Ideogram 4.6: $0.06 an image at medium, on both endpoints, references not billed", () => {
+    const m = image("fal/ideogram-4.6");
+    expect(estimateFalImageCost(m, { aspectRatio: "16:9", size: "1K" }, 1, 0)).toBeCloseTo(0.06);
+    expect(estimateFalImageCost(m, { aspectRatio: "auto", size: "1K" }, 4, 0)).toBeCloseTo(0.24);
+    expect(estimateFalImageCost(m, { aspectRatio: "21:9", size: "1K" }, 2, 1)).toBeCloseTo(0.12);
+  });
+
   it("per started megapixel of 1024 x 1024", () => {
     const dev = image("fal/flux-dev");
     expect(estimateFalImageCost(dev, { aspectRatio: "1:1", size: "1K" }, 4, 0)).toBeCloseTo(0.1);

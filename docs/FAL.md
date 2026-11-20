@@ -276,6 +276,8 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   $1.50 / $3.80 per 1M input text / input image / output image tokens), and so are MAI-Image-2.7's (18 Nov 2026: $5 /
   $8 / $34; the page's one figure, $0.034816 for a 1024 × 1024 output before input tokens, is not a per-size price).
   Seedream 5.5's were read on 13 Nov 2026.
+  Ideogram 4.6's (20 Nov 2026) are per image by quality and by size: at medium (fal's default, the app sends no
+  `quality`) $0.06 up to 2K (4,194,304 px), $0.12 above it ($0.20 for an edit). Every size the app sends is under 2K.
   Kling Image 4.0's (18 Nov 2026) say "$0.063 per units", Kling's own price for one image at 2K (fal's default),
   and nothing about 4K: the test lists its 4K as unpriced, so a 4K run on fal has no estimate (kie.ai prices it; Kling's own list charges
   $0.094 at 4K and $0.003 for each reference image; fal does not say whether it passes either on). fal's
@@ -295,7 +297,9 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   at the resolution sent. A video handed over with **Edit video** brings its length from its record.
   Grok Imagine's price counts the input second as well ($0.05 / $0.07 per output second plus $0.01).
 - Quality and size defaults are fal's (GPT Image at high, Ideogram at medium); GPT Image edits also pay
-  for their input images, which the estimate leaves out (as Kling Image 4.0's may).
+  for their input images, which the estimate leaves out (as Kling Image 4.0's may). An Ideogram 4.6 edit with
+  `auto` keeps the source's size, and references are not downscaled: a source larger than 2048 × 2048 in area is
+  billed at fal's above-2K rate ($0.20 at medium), which the estimate ($0.06) does not see.
 
 ## Known gaps
 

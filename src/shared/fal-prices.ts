@@ -90,6 +90,12 @@ export const FAL_PRICES: Record<string, FalPrice> = {
   "fal-ai/flux-pro/kontext/text-to-image": { unit: "image", usd: 0.04 },
   "fal-ai/flux-pro/kontext": { unit: "image", usd: 0.04 },
   "fal-ai/flux-pro/v1.1-ultra": { unit: "image", usd: 0.06 },
+  // Read 20 Nov 2026, at medium quality (fal's default): $0.06 an image up to 2K (4,194,304 px), which every size the app
+  // sends stays under (fal's own `auto`, "about 2K", is taken to as well). Above it, $0.12 (text-to-image) and $0.20 (edit).
+  // An edit with `auto` keeps its source's size, so a source larger than 2048 × 2048 in area is billed at the higher rate,
+  // which the estimate does not see.
+  "ideogram/v4.6": { unit: "image", usd: 0.06 },
+  "ideogram/v4.6/edit": { unit: "image", usd: 0.06 },
   // Medium quality (fal's default); the size does not change the price.
   "ideogram/v4.5": { unit: "image", usd: 0.06 },
   "ideogram/v4.5/edit": { unit: "image", usd: 0.06 },
