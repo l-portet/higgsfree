@@ -329,7 +329,8 @@ its references bring kie's total within half a cent of fal's (a tie, which fal, 
 image with 5 references or more). `mode:
 "series"`, `count`, `elements` and `kling-4-0/long-image` are not wired on kie either. kie records the cost of each run.
 
-² Ideogram 4.6 (19 Nov 2026), read from fal's schemas on 20 Nov 2026; not on OpenRouter, kie.ai, APIMart or Replicate yet.
+² Ideogram 4.6 (19 Nov 2026), read from fal's schemas on 20 Nov 2026; not on OpenRouter, kie.ai or APIMart yet. Replicate
+has it (`ideogram-ai/ideogram-4-6`, also $0.06 at medium up to 2K) but is not routed (see [REPLICATE.md](REPLICATE.md)).
 Wired like Ideogram 4.5: 1K, the ratio as a preset or (2:3, 3:2, 4:5, 5:4, 21:9) an explicit size of about one megapixel,
 which 4.6 accepts (multiples of 32, 256 to 4096 px a side, 1:6 to 6:1); `auto` sends none, so fal picks about 2K, and an
 edit keeps its source's size. The edit takes the image to change as `image_url` and up to 4 more as

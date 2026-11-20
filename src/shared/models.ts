@@ -484,8 +484,9 @@ export const IMAGE_MODELS: ImageModel[] = [
     estCostUsd: {},
     supportsImageSize: false,
     verified: false,
-    // Not on OpenRouter, kie.ai, APIMart nor Replicate yet. 2K / 4K sizes, `quality` (fal's default is medium),
-    // `reference_image_urls`, `mask_url`, `edit_precision`, `background` and `num_images` are not wired.
+    // Not on OpenRouter, kie.ai nor APIMart yet; Replicate has it (`ideogram-ai/ideogram-4-6`), not routed. 2K / 4K sizes,
+    // `quality` (fal's default is medium), `reference_image_urls`, `mask_url`, `edit_precision`, `background` and
+    // `num_images` are not wired.
     fal: { textToImage: "ideogram/v4.6", edit: "ideogram/v4.6/edit", refs: "image_url", aspect: "image_size" },
     offOpenRouter: true,
   },

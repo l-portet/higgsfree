@@ -119,7 +119,7 @@ What follows from that:
 
 ## Models
 
-Curated: 27 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 11 of the image models and 21 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, GPT Image 2.6 and Seedance 1.5 Pro on APIMart only, and GPT Image 2.6 Economy on kie.ai only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
+Curated: 28 image models and 48 video models (8 of them video editors) with their real limits (sizes, durations, resolutions, audio); 12 of the image models and 21 of the video models are not on OpenRouter (they run on fal, some on kie.ai or APIMart too, GPT Image 2.6 and Seedance 1.5 Pro on APIMart only, and GPT Image 2.6 Economy on kie.ai only). Full list in [docs/MODELS.md](docs/MODELS.md). To change names, featured models or descriptions, edit `src/shared/models.ts`.
 
 The browser also reads OpenRouter's public model catalogs at startup, with or without a key (cached 10 minutes). Video options and prices follow what OpenRouter publishes, and any video or image model OpenRouter adds shows up on its own as an unverified entry; about 45 more image models are available that way today. Video models OpenRouter stops listing leave the picker, unless another provider (fal, kie.ai, APIMart, Revana) also has them. fal-only models do not depend on OpenRouter's catalogs.
 
