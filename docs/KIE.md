@@ -100,6 +100,7 @@ The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@V
 | `gpt-image-economy` | GPT Image 2.6 Economy → `gpt-image-2-6/economy-text-to-image`, `gpt-image-2-6/economy-image-to-image` | `aspect_ratio` (no 3:4), `input_urls` (≤ 16), no `resolution` |
 | `seedream` | Seedream 5.5 → `seedream/5-5-text-to-image`, `seedream/5-5-image-to-image` | `aspect_ratio` (`auto` on edits only: 1:1 is sent for it on text to image), `size` 1K / 2K, `image_urls` (≤ 10) |
 | `minimax-h3-image` | MiniMax H3 Image → `minimax-h3/text-to-image`, `minimax-h3/image-edit` | `aspect_ratio` (`auto` allowed), `resolution` 1K / 2K / 4K, `image_urls` (≤ 16) |
+| `kling-image` | Kling Image 4.0 → `kling-4-0/image` (text to image and edits) | `aspect_ratio` (`auto` allowed, no 4:5 / 5:4), `resolution` `2k` / `4k` (no 1K), `image_urls` (≤ 10) |
 | `flux-kontext` | FLUX.1 Kontext Pro → `flux1-kontext`, `model: "flux-kontext-pro"` | `aspect_ratio` (not `auto`, no 3:2 / 2:3), `input_image` (one reference) |
 | `z-image` | Z-Image Turbo → `z-image` | `aspect_ratio` (required: `auto` becomes 1:1) |
 
@@ -131,6 +132,16 @@ takes 1 to 16 `image_urls` (JPG, PNG, WebP, HEIC or BMP, 20 MB and 64 MP each), 
 prompt of 1 to 5,000 characters. `seed`, `expand_prompt` (on by default), `output_format` (`png` by default) and the
 custom `width` / `height` (which exclude `aspect_ratio` and `resolution`) are not sent.
 
+Kling Image 4.0 runs on kie and fal. Its doc page (`docs.kie.ai/market/kling-4-0/image.md`, read 20 Nov 2026) has one
+model, `kling-4-0/image`, for text to image and edits: without `image_urls` it is text to image. `aspect_ratio` is `auto`
+by default, or 9:16, 2:3, 3:4, 1:1, 4:3, 3:2, 16:9 or 21:9 (the same as fal's). `resolution` is `2k` (the default), `4k` or
+`8k`, in lower case; the app sends `2k` or `4k` (`ImageSize` has no 8K) and refuses 1K. `image_urls` takes up to 10
+public JPG or PNG urls (20 MB each), of which the app sends at most 8, and the prompt names them `@image_1`, `@image_2`,
+… in order (fal's endpoints say `@Image1`). kie refuses a mention of an image or element that was not sent, and the
+prompt goes out as typed. The schema allows no other field. `mode` (`series`, a coherent set of 2 to 10), `count` (the
+app makes one task per image), `elements` and the `kling-4-0/long-image` model are not wired. At 8K kie returns a JPEG,
+at 2K and 4K usually a PNG.
+
 An image goes to the cheapest provider with a key that can take the request (`quoteImage`), or to the one
 picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes to fal.
 
@@ -138,10 +149,10 @@ picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes 
 
 `KIE_PRICES` (`src/shared/kie-prices.ts`) has kie's list price in credits ($0.005 each) for every model a
 route sends to, read from kie's pricing page (`kie.ai/pricing`, backed by the public
-`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov, MiniMax H3 Image on 12 Nov); a test checks every route is priced and
+`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov, MiniMax H3 Image on 12 Nov, Kling Image 4.0 on 20 Nov); a test checks every route is priced and
 every price is used. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0
 and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash 1.1, by length),
-or per image (by size; Seedream 5.5's and MiniMax H3 Image's edits also bill each reference image). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
+or per image (by size; Seedream 5.5's, MiniMax H3 Image's and Kling Image 4.0's edits also bill each reference image). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
 and price it, so the estimate follows the model id, tier, resolution, duration and sound sent.
 
 The exceptions are GPT Image 2.6 Flare and Sunburst (6 Nov 2026), which kie bills per million tokens at the same rates,
@@ -152,7 +163,10 @@ Economy is not one of them: 5 credits ($0.025) an image, with or without referen
 reference image on an edit (`inputImageAmount`), under OpenRouter's ($0.02 / $0.035, + $0.008 a reference) and fal's, so
 with a kie.ai key it runs on kie, unless an APIMart key is set too: APIMart's price is lower still ([APIMART.md](APIMART.md)). MiniMax H3 Image costs 1.8 credits ($0.009) at 1K or 2K and 5.5
 ($0.0275) at 4K, the same on both models, plus 0.5 ($0.0025) for each reference image on an edit. OpenRouter, fal
-and APIMart bill it in tokens with no per-image price, so with a kie.ai key it runs on kie.
+and APIMart bill it in tokens with no per-image price, so with a kie.ai key it runs on kie. Kling Image 4.0 costs 11.3
+credits ($0.0565) an image at 2K and 17 ($0.085) at 4K (28.3 at 8K, which the app does not offer), plus 0.5 ($0.0025) for
+each reference image or element. fal lists $0.063 at 2K and no 4K price, so with both keys kie runs every 4K image, and a
+2K one unless its references bring kie's total within half a cent of fal's (a tie, which fal runs) or above it.
 
 ## Known gaps
 

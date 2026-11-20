@@ -405,21 +405,24 @@ export const IMAGE_MODELS: ImageModel[] = [
     endpoint: "fal",
     featured: false,
     badges: ["new"],
-    // fal takes 10 references (images and elements together); the app sends 8 at most. Each must be at least 300 px a
-    // side and between 2:5 and 5:2; fal refuses the rest with its own message.
+    // fal and kie.ai take 10 references (images and elements together); the app sends 8 at most. On fal each must be at
+    // least 300 px a side and between 2:5 and 5:2; fal refuses the rest with its own message.
     caps: { textToImage: true, imageToImage: true, maxReferenceImages: 8 },
-    // fal's ratios (read 18 Nov 2026): no 4:5 nor 5:4. `auto` sends none, and fal picks one from the prompt or the references.
+    // fal's ratios (read 18 Nov 2026), the same on kie.ai (20 Nov 2026): no 4:5 nor 5:4. `auto` sends none on fal and is
+    // sent as is on kie; either picks one from the prompt or the references.
     aspectRatios: ["auto", "1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9", "21:9"],
-    // fal's `resolution` is 2K (its default), 4K or 8K: no 1K, and `ImageSize` cannot say 8K.
+    // fal's and kie.ai's `resolution` is 2K (their default), 4K or 8K: no 1K, and `ImageSize` cannot say 8K.
     sizes: ["2K", "4K"],
-    // Priced from `FAL_PRICES` (2K only; fal does not say what 4K costs), like the other fal-only models.
+    // Priced from `FAL_PRICES` (2K only; fal does not say what 4K costs) and `KIE_PRICES` (2K and 4K, plus each reference).
     estCostUsd: {},
     supportsImageSize: true,
     verified: false,
-    // Not on OpenRouter, kie.ai nor APIMart yet. `result_type: "series"` / `series_amount`, `num_images`, `elements` and the
-    // `kling/v4/long-image` endpoint are not wired: every image is one `single` request.
+    // Not on OpenRouter nor APIMart yet. `result_type: "series"` / `series_amount` (`mode: "series"` / `count` on kie),
+    // `num_images`, `elements` and the long-image endpoints are not wired: every image is one single-image request.
     fal: { textToImage: "kling/v4/text-to-image", edit: "kling/v4/image-to-image", refs: "image_urls", aspect: "aspect_ratio", resolution: true },
     offOpenRouter: true,
+    // One kie model for text to image and edits: references go as `image_urls`, and the prompt names them `@image_1`, ….
+    kie: { family: "kling-image", model: "kling-4-0/image" },
   },
   {
     kind: "image",

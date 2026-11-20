@@ -371,7 +371,7 @@ export interface KieImageRoute {
   tier?: string;
 }
 
-export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "gpt-image-economy" | "seedream" | "minimax-h3-image" | "flux-kontext" | "z-image" | "topaz-upscale" | "recraft-upscale";
+export type KieImageFamily = "nano-banana" | "nano-banana-2" | "nano-banana-lite" | "gpt-image-2" | "gpt-image-economy" | "seedream" | "minimax-h3-image" | "kling-image" | "flux-kontext" | "z-image" | "topaz-upscale" | "recraft-upscale";
 
 /**
  * How Revana serves a model: `POST /v1/generations` `{ model, input }`, one input shape for every model. `model` is

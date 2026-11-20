@@ -58,6 +58,9 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   "seedream/5-5-text-to-image": { unit: "image", amount: { "1K": 3.6, "2K": 6.3 }, inputImageAmount: 1.44 },
   // MiniMax H3 Image (read 12 Nov 2026): 1K and 2K are one tier. Edits cost the same, plus 0.5 for each reference image.
   "minimax-h3/text-to-image": { unit: "image", amount: { "1K": 1.8, "2K": 1.8, "4K": 5.5 }, inputImageAmount: 0.5 },
+  // Kling Image 4.0 (read 20 Nov 2026): one model for text to image and edits, plus 0.5 for each reference image (or
+  // element). 8K, which `ImageSize` cannot say, is 28.3.
+  "kling-4-0/image": { unit: "image", amount: { "2K": 11.3, "4K": 17 }, inputImageAmount: 0.5 },
   "flux1-kontext#flux-kontext-pro": { unit: "image", amount: 5 },
   "z-image": { unit: "image", amount: 0.8 },
 };

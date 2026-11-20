@@ -263,6 +263,26 @@ describe("buildKieImagePayload", () => {
     for (const aspectRatio of m.aspectRatios) for (const size of m.sizes) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
     expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, Array.from({ length: 17 }, () => "https://r"))).toThrow("Takes up to 16 reference images");
   });
+
+  it("Kling Image 4.0: one model, `aspect_ratio` (`auto` kept) and `resolution` in lower case, references as `image_urls`", () => {
+    const m = image("fal/kling-image-v4");
+    expect(buildKieImagePayload(m, { prompt: "a red fox", aspectRatio: "21:9", size: "2K" }, [])).toEqual({
+      model: "kling-4-0/image",
+      input: { prompt: "a red fox", aspect_ratio: "21:9", resolution: "2k" },
+      priceKey: "kling-4-0/image",
+    });
+    expect(buildKieImagePayload(m, { prompt: "@image_1 in the snow", aspectRatio: "auto", size: "4K" }, ["https://r", "https://s"])).toEqual({
+      model: "kling-4-0/image",
+      input: { prompt: "@image_1 in the snow", aspect_ratio: "auto", resolution: "4k", image_urls: ["https://r", "https://s"] },
+      priceKey: "kling-4-0/image",
+    });
+    for (const aspectRatio of m.aspectRatios) for (const size of m.sizes) expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio, size }, [])).not.toThrow();
+    // No 4:5 nor 5:4, no 1K, and 10 references at most.
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "2K" }, [])).toThrow("Takes no 4:5");
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, [])).toThrow("Takes no 1K");
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "2K" }, Array.from({ length: 10 }, () => "https://r"))).not.toThrow();
+    expect(() => buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "2K" }, Array.from({ length: 11 }, () => "https://r"))).toThrow("Takes up to 10 reference images");
+  });
 });
 
 describe("resultUrls", () => {
@@ -287,10 +307,12 @@ describe("kie prices", () => {
       expect(estimateKieVideoCost(m, defaults), `${m.id} on kie`).toBeGreaterThan(0);
     }
     for (const m of IMAGE_MODELS.filter((i) => i.kie && !i.caps.upscale)) {
-      const { priceKey } = buildKieImagePayload(m, { prompt: "p", aspectRatio: "1:1", size: "1K" }, []);
+      // At 1K, or the model's smallest size when it has no 1K (Kling Image 4.0 starts at 2K).
+      const req = { aspectRatio: "1:1" as const, size: m.sizes.includes("1K") ? ("1K" as const) : (m.sizes[0] ?? "1K") };
+      const { priceKey } = buildKieImagePayload(m, { prompt: "p", ...req }, []);
       used.add(priceKey);
-      if (unpriced.has(priceKey)) expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0), `${m.id} on kie`).toBeUndefined();
-      else expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0), `${m.id} on kie`).toBeGreaterThan(0);
+      if (unpriced.has(priceKey)) expect(estimateKieImageCost(m, req, 1, 0), `${m.id} on kie`).toBeUndefined();
+      else expect(estimateKieImageCost(m, req, 1, 0), `${m.id} on kie`).toBeGreaterThan(0);
     }
     expect(Object.keys(KIE_PRICES).filter((k) => !used.has(k))).toEqual([]);
   });
@@ -368,5 +390,27 @@ describe("kie prices", () => {
     });
     expect(quote.quotes[2]?.usd).toBeCloseTo((1.8 + 2 * 0.5) * 0.005);
     expect(quoteImage(m, req, { openrouter: true, fal: true })).toMatchObject({ provider: "openrouter", reason: "unpriced" });
+  });
+
+  it("Kling Image 4.0: 11.3 credits at 2K, 17 at 4K, plus 0.5 for each reference image; none at 1K", () => {
+    const m = image("fal/kling-image-v4");
+    expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "2K" }, 1, 0)).toBeCloseTo(0.0565);
+    expect(estimateKieImageCost(m, { aspectRatio: "16:9", size: "4K" }, 1, 0)).toBeCloseTo(0.085);
+    // Three references, two images: (17 + 3 × 0.5) × 2 credits.
+    expect(estimateKieImageCost(m, { aspectRatio: "auto", size: "4K" }, 2, 3)).toBeCloseTo(0.185);
+    expect(estimateKieImageCost(m, { aspectRatio: "1:1", size: "1K" }, 1, 0)).toBeUndefined();
+    // fal lists $0.063 at 2K and nothing at 4K, and bills no reference in the estimate.
+    const keys = { fal: true, kie: true };
+    const plain = quoteImage(m, { aspectRatio: "1:1", size: "2K", count: 1, references: 0 }, keys);
+    expect(plain).toMatchObject({ quotes: [{ provider: "fal", noKey: false }, { provider: "kie", noKey: false }], provider: "kie", reason: "cheaper" });
+    expect(plain.quotes[0]?.usd).toBeCloseTo(0.063);
+    expect(plain.quotes[1]?.usd).toBeCloseTo(0.0565);
+    // With a reference, kie's $0.059 is within half a cent of fal's $0.063: a tie, which fal, listed first, runs.
+    expect(quoteImage(m, { aspectRatio: "1:1", size: "2K", count: 1, references: 1 }, keys)).toMatchObject({ provider: "fal", reason: "tie" });
+    // At 4K only kie is priced, so kie runs it.
+    const big = quoteImage(m, { aspectRatio: "1:1", size: "4K", count: 1, references: 1 }, keys);
+    expect(big).toMatchObject({ provider: "kie", reason: "cheaper" });
+    expect(big.quotes[0]?.usd).toBeUndefined();
+    expect(big.quotes[1]?.usd).toBeCloseTo((17 + 0.5) * 0.005);
   });
 });

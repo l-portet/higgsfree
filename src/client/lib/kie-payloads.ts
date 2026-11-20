@@ -308,6 +308,8 @@ const IMAGE_LIMITS: Record<KieImageRoute["family"], { aspects: ImageAspectRatio[
   seedream: { aspects: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], maxRefs: 10, sizes: true },
   // MiniMax H3 Image: every ratio the app has, and 16 references (the app sends 8 at most).
   "minimax-h3-image": { aspects: ["auto", "1:1", "5:4", "4:3", "3:2", "16:9", "21:9", "4:5", "3:4", "2:3", "9:16"], maxRefs: 16, sizes: true },
+  // Kling Image 4.0: no 4:5 nor 5:4, and 10 references (the app sends 8 at most). 2K and 4K only (no 1K).
+  "kling-image": { aspects: ["auto", "9:16", "2:3", "3:4", "1:1", "4:3", "3:2", "16:9", "21:9"], maxRefs: 10, sizes: true },
   "flux-kontext": { aspects: ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], maxRefs: 1 },
   "z-image": { aspects: ["auto", "1:1", "4:3", "3:4", "16:9", "9:16"], maxRefs: 0 },
   "topaz-upscale": { aspects: ["auto"], maxRefs: 1 },
@@ -371,6 +373,12 @@ export function buildKieImagePayload(model: ImageModel, req: KieImageParams, ref
         id = route.editModel ?? route.model;
         input.image_urls = referenceUrls;
       }
+      break;
+    case "kling-image":
+      // One model for both: references make it an edit. kie spells the sizes in lower case (`2k`, `4k`; also `8k`).
+      if (req.size === "1K") throw badRequest("Takes no 1K");
+      Object.assign(input, { aspect_ratio: req.aspectRatio, resolution: req.size.toLowerCase() });
+      if (edit) input.image_urls = referenceUrls;
       break;
     case "flux-kontext":
       Object.assign(input, { model: route.tier, output_format: "png" });

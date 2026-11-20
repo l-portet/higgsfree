@@ -35,7 +35,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("openai/gpt-image-2.6-economy"))).toEqual(["kie"]);
     expect(modelProviders(image("bytedance-seed/seedream-5-5"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
-    expect(modelProviders(image("fal/kling-image-v4"))).toEqual(["fal"]);
+    expect(modelProviders(image("fal/kling-image-v4"))).toEqual(["fal", "kie"]);
     expect(modelProviders(image("microsoft/mai-image-2.7"))).toEqual(["openrouter", "fal"]);
   });
 
@@ -244,16 +244,21 @@ describe("buildFalVideoPayload", () => {
     expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "4:5", size: "1K" }, []).input).toEqual({ prompt: "p" });
   });
 
-  it("Kling Image 4.0: runs on fal only, priced at 2K, not at 4K", () => {
+  it("Kling Image 4.0: on fal (priced at 2K, not at 4K) and kie.ai; with a fal key only, fal runs it", () => {
     const m = image("fal/kling-image-v4");
     const req = { aspectRatio: "16:9" as const, size: "2K" as const, count: 2, references: 1 };
+    // kie.ai prices it ((11.3 + 0.5) credits at 2K, (17 + 0.5) at 4K, with one reference), but has no key here.
     expect(quoteImage(m, req, { fal: true })).toEqual({
-      quotes: [{ provider: "fal", noKey: false, usd: expect.closeTo(0.126) }],
+      quotes: [{ provider: "fal", noKey: false, usd: expect.closeTo(0.126) }, { provider: "kie", noKey: true, usd: expect.closeTo(0.118) }],
       provider: "fal",
-      reason: "only",
+      reason: "one-ready",
     });
-    expect(quoteImage(m, { ...req, size: "4K" }, { fal: true })).toEqual({ quotes: [{ provider: "fal", noKey: false }], provider: "fal", reason: "only" });
-    expect(quoteImage(m, req, { openrouter: true, kie: true, apimart: true, revana: true })).toMatchObject({ reason: "none" });
+    expect(quoteImage(m, { ...req, size: "4K" }, { fal: true })).toEqual({
+      quotes: [{ provider: "fal", noKey: false }, { provider: "kie", noKey: true, usd: expect.closeTo(0.175) }],
+      provider: "fal",
+      reason: "one-ready",
+    });
+    expect(quoteImage(m, req, { openrouter: true, apimart: true, revana: true, replicate: true })).toMatchObject({ reason: "none" });
   });
 
   it("Kling 3.0 on fal: start_image_url, string durations, aspect ratio only without a frame", () => {
