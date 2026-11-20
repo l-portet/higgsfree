@@ -277,7 +277,7 @@ The composer estimates a run on fal from fal's list prices, not the catalog's (t
   $8 / $34; the page's one figure, $0.034816 for a 1024 × 1024 output before input tokens, is not a per-size price).
   Seedream 5.5's were read on 13 Nov 2026.
   Kling Image 4.0's (18 Nov 2026) say "$0.063 per units", Kling's own price for one image at 2K (fal's default),
-  and nothing about 4K: the test lists its 4K as unpriced, so a 4K run has no estimate (Kling's own list charges
+  and nothing about 4K: the test lists its 4K as unpriced, so a 4K run on fal has no estimate (kie.ai prices it; Kling's own list charges
   $0.094 at 4K and $0.003 for each reference image; fal does not say whether it passes either on). fal's
   pricing API needs a key and gives one unit price per endpoint, without the tiers below, so the app does not read it.
 - A price is per second of video (one rate, or one per resolution; a higher one with audio on, as on

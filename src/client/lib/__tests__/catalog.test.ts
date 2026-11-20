@@ -256,13 +256,14 @@ describe("fal routes", () => {
     expect(estimateImageCost(m, "1K", 1)).toBeCloseTo(0.02);
   });
 
-  it("Kling Image 4.0 is fal-only, at 2K or 4K, and is not verified", () => {
+  it("Kling Image 4.0 is on fal and kie.ai, not OpenRouter, at 2K or 4K, and is not verified", () => {
     const m = findImageModel("fal/kling-image-v4");
     if (!m) throw new Error("catalog changed");
     expect(m.endpoint).toBe("fal");
     expect(m.offOpenRouter).toBe(true);
     expect(m.fal).toEqual({ textToImage: "kling/v4/text-to-image", edit: "kling/v4/image-to-image", refs: "image_urls", aspect: "aspect_ratio", resolution: true });
-    expect(m.kie ?? m.apimart ?? m.revana).toBeUndefined();
+    expect(m.kie).toEqual({ family: "kling-image", model: "kling-4-0/image" });
+    expect(m.apimart ?? m.revana ?? m.replicate).toBeUndefined();
     expect(m.sizes).toEqual(["2K", "4K"]);
     expect(m.supportsImageSize).toBe(true);
     expect(m.caps).toEqual({ textToImage: true, imageToImage: true, maxReferenceImages: 8 });

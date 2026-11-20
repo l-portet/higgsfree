@@ -51,7 +51,7 @@ The rules are in [docs/FAL.md](docs/FAL.md).
 
 ## kie.ai (optional)
 
-[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0 and 4.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash 1.1 and 1.2, PixVerse 6 and 6 Max, Vidu, Nano Banana Pro, GPT Image 2, 2.6 Flare and 2.6 Sunburst, Seedream 5.5, MiniMax H3 Image and more; GPT Image 2.6 Economy runs only there. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares every provider. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
+[kie.ai](https://kie.ai) runs many of the same models for less: Veo 3.1, Kling 3.0 and 4.0, Seedance, MiniMax H3, Wan, Grok Imagine, Gemini Omni Flash 1.1 and 1.2, PixVerse 6 and 6 Max, Vidu, Nano Banana Pro, GPT Image 2, 2.6 Flare and 2.6 Sunburst, Seedream 5.5, MiniMax H3 Image, Kling Image 4.0 and more; GPT Image 2.6 Economy runs only there. Add a key in Settings › Keys (get one at [kie.ai/api-key](https://kie.ai/api-key)) and a video goes to kie whenever it is the cheapest for that run; the tooltip on the price compares every provider. kie records what each run cost. Inputs sent to kie are uploaded to its file host first (public urls, kept 24 hours). The rules are in [docs/KIE.md](docs/KIE.md).
 
 ## APIMart (optional)
 

@@ -228,6 +228,28 @@ describe("kie.ai images", () => {
     expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
+  it("Kling Image 4.0, on fal and kie.ai: kie runs it, being the cheaper at 2K and the one priced at 4K, with the size in lower case", async () => {
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const req = { prompt: "a red fox", model: "fal/kling-image-v4", aspectRatio: "auto" as const, size: "2K" as const, count: 1 };
+    const plain = (await api.generateImage(req)).generations[0];
+    if (!plain) throw new Error("no generation");
+    expect(plain.provider).toBe("kie");
+    await waitFor(completed(plain.id));
+    const ref = await uploadImage();
+    const edit = (await api.generateImage({ ...req, prompt: "@image_1 in the snow", aspectRatio: "16:9", size: "4K", referenceImages: [ref] })).generations[0];
+    if (!edit) throw new Error("no generation");
+    expect(edit.provider).toBe("kie");
+    await waitFor(completed(edit.id));
+    expect(mock.kie("/api/v1/jobs/createTask").map((c) => c.body)).toEqual([
+      { model: "kling-4-0/image", input: { prompt: "a red fox", aspect_ratio: "auto", resolution: "2k" } },
+      { model: "kling-4-0/image", input: { prompt: "@image_1 in the snow", aspect_ratio: "16:9", resolution: "4k", image_urls: ["https://tempfile.redpandaai.co/higgsfree/up-1.png"] } },
+    ]);
+    expect(mock.fal("/kling/v4/text-to-image")).toHaveLength(0);
+    expect(mock.fal("/kling/v4/image-to-image")).toHaveLength(0);
+    expect(await api.getGeneration(edit.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
+  });
+
   it("goes to another provider when the one picked cannot take the request", async () => {
     setStoredFalKey(FAL_KEY);
     setProviderKey("kie", KIE_KEY);

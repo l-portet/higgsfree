@@ -209,7 +209,7 @@ Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint 
 OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
 times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst, MiniMax H3 Image and MAI-Image-2.7 have no fal
 price: fal bills them in tokens and gives no per-size figure for them. Seedream 5.5's edits also bill each reference image. Kling
-Image 4.0 has a fal price at 2K only, so a 4K run has no estimate. fal reports no cost with a result, so runs on fal record none.
+Image 4.0 has a fal price at 2K only, so a 4K run on fal has no estimate (kie.ai prices both sizes). fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -312,13 +312,19 @@ list (`image_urls`) or a single `image_url`. "preset" = the aspect ratio goes ou
 | **FLUX.1 [dev]** | `fal/flux-dev` | `fal-ai/flux/dev` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **FLUX.1 [schnell]** <sub>FAST</sub> | `fal/flux-schnell` | `fal-ai/flux/schnell` | ✓ | – | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 
-¹ Kuaishou's Kling Image 4.0 (17 Nov 2026), read from fal's schemas on 18 Nov 2026; not on OpenRouter, kie.ai or APIMart
-yet. 2K (fal's default) or 4K as `resolution`; fal's 8K is not offered (`ImageSize` has no 8K). fal takes 10 references
+¹ Kuaishou's Kling Image 4.0 (17 Nov 2026), read from fal's schemas on 18 Nov 2026; also on [kie.ai](#kieai), not on
+OpenRouter or APIMart yet. 2K (fal's default) or 4K as `resolution`; fal's 8K is not offered (`ImageSize` has no 8K). fal takes 10 references
 (each at least 300 px a side, 2:5 to 5:2), which the app caps at 8; the prompt can name them `@Image1`, `@Image2`, ….
 `result_type: "series"` / `series_amount` (a coherent set of 2 to 10), `num_images`, `elements` and the
 `kling/v4/long-image` endpoint are not wired. fal lists $0.063 an image, Kling's own 2K price, and no 4K figure, so a
 4K run has no estimate; Kling's own list also charges $0.094 at 4K and $0.003 for each reference image, which fal may
-pass on.
+pass on. kie.ai (docs and pricing API read 20 Nov 2026) runs text to image and edits with one model, `kling-4-0/image`:
+the same nine ratios as `aspect_ratio` (`auto` sent as is), `resolution` as `2k` / `4k` (its 8K is not offered either)
+and up to 10 `image_urls` (JPG or PNG, 20 MB each), which the prompt names `@image_1`, `@image_2`, … there, not
+`@Image1`. kie charges 11.3 credits ($0.0565) an image at 2K and 17 ($0.085) at 4K, plus 0.5 ($0.0025) for each
+reference image (`KIE_PRICES`). With both keys, kie runs every 4K image, which fal does not price, and a 2K one unless
+its references bring kie within half a cent of fal's price: that is a tie, which fal, listed first, runs. `mode:
+"series"`, `count`, `elements` and `kling-4-0/long-image` are not wired on kie either. kie records the cost of each run.
 
 ### APIMart-only image models
 
@@ -390,6 +396,7 @@ what each run cost.
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
 | | | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
+| | | Kling Image 4.0 | `kling-4-0/image` (text to image and edits) |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
 per-image price, so they have no `KIE_PRICES` entry and no estimate: in credits, 900 text input, 225 cached text input,

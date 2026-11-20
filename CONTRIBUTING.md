@@ -97,7 +97,7 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
   APIMart, though fal and kie.ai price the latter), and models billed in tokens only (GPT Image 2.6
   Flare and Sunburst, on every provider; MiniMax H3 Image, on OpenRouter, fal and APIMart, though kie.ai prices it;
   MAI-Image-2.7, on OpenRouter and fal), and sizes a
-  provider prices only in part (Kling Image 4.0 at 4K on fal, which lists its 2K price only) carry no estimate rather than a guessed one. If you change an
+  provider prices only in part (Kling Image 4.0 at 4K on fal, which lists its 2K price only, though kie.ai prices it) carry no estimate rather than a guessed one. If you change an
   estimate, say where the number came from.
 
 ## Adding or updating a model
