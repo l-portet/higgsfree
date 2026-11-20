@@ -323,7 +323,8 @@ the same nine ratios as `aspect_ratio` (`auto` sent as is), `resolution` as `2k`
 and up to 10 `image_urls` (JPG or PNG, 20 MB each), which the prompt names `@image_1`, `@image_2`, … there, not
 `@Image1`. kie charges 11.3 credits ($0.0565) an image at 2K and 17 ($0.085) at 4K, plus 0.5 ($0.0025) for each
 reference image (`KIE_PRICES`). With both keys, kie runs every 4K image, which fal does not price, and a 2K one unless
-its references bring kie within half a cent of fal's price: that is a tie, which fal, listed first, runs. `mode:
+its references bring kie's total within half a cent of fal's (a tie, which fal, listed first, runs) or above it (one
+image with 5 references or more). `mode:
 "series"`, `count`, `elements` and `kling-4-0/long-image` are not wired on kie either. kie records the cost of each run.
 
 ### APIMart-only image models

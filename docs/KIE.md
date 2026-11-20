@@ -166,7 +166,7 @@ with a kie.ai key it runs on kie, unless an APIMart key is set too: APIMart's pr
 and APIMart bill it in tokens with no per-image price, so with a kie.ai key it runs on kie. Kling Image 4.0 costs 11.3
 credits ($0.0565) an image at 2K and 17 ($0.085) at 4K (28.3 at 8K, which the app does not offer), plus 0.5 ($0.0025) for
 each reference image or element. fal lists $0.063 at 2K and no 4K price, so with both keys kie runs every 4K image, and a
-2K one unless its references bring kie within half a cent of fal (a tie, which fal runs).
+2K one unless its references bring kie's total within half a cent of fal's (a tie, which fal runs) or above it.
 
 ## Known gaps
 
