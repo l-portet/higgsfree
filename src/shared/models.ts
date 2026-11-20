@@ -467,6 +467,30 @@ export const IMAGE_MODELS: ImageModel[] = [
   },
   {
     kind: "image",
+    id: "fal/ideogram-4.6",
+    name: "Ideogram 4.6",
+    provider: "ideogram",
+    description: "Ideogram's newest, strong on typography and edits",
+    endpoint: "fal",
+    featured: false,
+    badges: ["new"],
+    // The edit takes the image to change as `image_url` plus 4 more as `reference_image_urls`; only `image_url` is wired.
+    caps: { textToImage: true, imageToImage: true, maxReferenceImages: 1 },
+    // fal's presets for 1:1, 4:3, 3:4, 16:9 and 9:16, an explicit ~1 MP size for the rest: 4.6 takes any size in multiples of
+    // 32, 256 to 4096 px a side, 1:6 to 6:1 (read 20 Nov 2026). `auto` sends none: fal picks about 2K, or keeps an edit's size.
+    aspectRatios: ALL_IMAGE_AR,
+    sizes: ["1K"],
+    // Priced from `FAL_PRICES`, like the other fal-only models.
+    estCostUsd: {},
+    supportsImageSize: false,
+    verified: false,
+    // Not on OpenRouter, kie.ai, APIMart nor Replicate yet. 2K / 4K sizes, `quality` (fal's default is medium),
+    // `reference_image_urls`, `mask_url`, `edit_precision`, `background` and `num_images` are not wired.
+    fal: { textToImage: "ideogram/v4.6", edit: "ideogram/v4.6/edit", refs: "image_url", aspect: "image_size" },
+    offOpenRouter: true,
+  },
+  {
+    kind: "image",
     id: "fal/ideogram-4.5",
     name: "Ideogram 4.5",
     provider: "ideogram",

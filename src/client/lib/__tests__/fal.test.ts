@@ -36,6 +36,7 @@ describe("provider choice", () => {
     expect(modelProviders(image("bytedance-seed/seedream-5-5"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("minimax/minimax-h3-image"))).toEqual(["openrouter", "fal", "kie", "apimart"]);
     expect(modelProviders(image("fal/kling-image-v4"))).toEqual(["fal", "kie"]);
+    expect(modelProviders(image("fal/ideogram-4.6"))).toEqual(["fal"]);
     expect(modelProviders(image("microsoft/mai-image-2.7"))).toEqual(["openrouter", "fal"]);
   });
 
@@ -177,6 +178,51 @@ describe("buildFalImagePayload", () => {
       reason: "unpriced",
     });
     expect(quoteImage(m, req, { fal: true })).toMatchObject({ provider: "fal", reason: "one-ready" });
+  });
+
+  it("Ideogram 4.6: a preset or an explicit ~1 MP `image_size`, none for `auto`, the image to edit as `image_url`", () => {
+    const m = image("fal/ideogram-4.6");
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "16:9", size: "1K" }, [])).toEqual({
+      endpoint: "ideogram/v4.6",
+      input: { prompt: "p", image_size: "landscape_16_9" },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "21:9", size: "1K" }, []).input).toEqual({ prompt: "p", image_size: { width: 1536, height: 640 } });
+    // `auto`: fal's own (about 2K) without a reference, the source's size with one.
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, []).input).toEqual({ prompt: "p" });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "auto", size: "1K" }, ["data:a"])).toEqual({
+      endpoint: "ideogram/v4.6/edit",
+      input: { prompt: "p", image_url: "data:a" },
+    });
+    expect(buildFalImagePayload(m, { prompt: "p", aspectRatio: "3:4", size: "1K" }, ["data:a"]).input).toEqual({ prompt: "p", image_url: "data:a", image_size: "portrait_4_3" });
+    // fal's rules for an explicit size (read 20 Nov 2026): multiples of 32, 256 to 4096 a side, 1:6 to 6:1, and every
+    // size at most 2048 × 2048 in area, where fal's higher price starts.
+    const presets = ["square_hd", "portrait_4_3", "landscape_4_3", "portrait_16_9", "landscape_16_9"];
+    for (const ar of m.aspectRatios.filter((a) => a !== "auto")) {
+      const size = buildFalImagePayload(m, { prompt: "p", aspectRatio: ar, size: "1K" }, []).input.image_size;
+      if (typeof size === "string") {
+        expect(presets, ar).toContain(size);
+        continue;
+      }
+      const { width, height } = size as { width: number; height: number };
+      for (const side of [width, height]) {
+        expect(side % 32, ar).toBe(0);
+        expect(side, ar).toBeGreaterThanOrEqual(256);
+        expect(side, ar).toBeLessThanOrEqual(4096);
+      }
+      expect(Math.max(width, height) / Math.min(width, height), ar).toBeLessThanOrEqual(6);
+      expect(width * height, ar).toBeLessThanOrEqual(2048 * 2048);
+    }
+  });
+
+  it("Ideogram 4.6: runs on fal only, at $0.06 an image (medium, up to 2K)", () => {
+    const m = image("fal/ideogram-4.6");
+    const req = { aspectRatio: "16:9" as const, size: "1K" as const, count: 2, references: 1 };
+    expect(quoteImage(m, req, { fal: true })).toEqual({
+      quotes: [{ provider: "fal", noKey: false, usd: expect.closeTo(0.12) }],
+      provider: "fal",
+      reason: "only",
+    });
+    expect(quoteImage(m, req, { openrouter: true, kie: true, apimart: true, revana: true, replicate: true })).toMatchObject({ reason: "none" });
   });
 
   it("Seedream 5.5: the ratio and the size in one explicit `image_size`, and fal's own `auto_1K` / `auto_2K` for `auto`", () => {

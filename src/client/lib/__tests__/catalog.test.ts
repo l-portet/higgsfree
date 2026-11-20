@@ -256,6 +256,24 @@ describe("fal routes", () => {
     expect(estimateImageCost(m, "1K", 1)).toBeCloseTo(0.02);
   });
 
+  it("Ideogram 4.6 is fal-only, next to Ideogram 4.5, at 1K with one image to edit, and is not verified", () => {
+    const m = findImageModel("fal/ideogram-4.6");
+    if (!m) throw new Error("catalog changed");
+    expect(findImageModel("fal/ideogram-4.5")?.fal?.textToImage).toBe("ideogram/v4.5");
+    expect(m.endpoint).toBe("fal");
+    expect(m.offOpenRouter).toBe(true);
+    expect(m.provider).toBe("ideogram");
+    expect(m.fal).toEqual({ textToImage: "ideogram/v4.6", edit: "ideogram/v4.6/edit", refs: "image_url", aspect: "image_size" });
+    expect(m.kie ?? m.apimart ?? m.revana ?? m.replicate).toBeUndefined();
+    expect(m.sizes).toEqual(["1K"]);
+    expect(m.supportsImageSize).toBe(false);
+    expect(m.caps).toEqual({ textToImage: true, imageToImage: true, maxReferenceImages: 1 });
+    expect(m.aspectRatios).toEqual(IMAGE_ASPECT_RATIOS);
+    expect(m.estCostUsd).toEqual({});
+    expect(m.badges).toEqual(["new"]);
+    expect(m.verified).toBe(false);
+  });
+
   it("Kling Image 4.0 is on fal and kie.ai, not OpenRouter, at 2K or 4K, and is not verified", () => {
     const m = findImageModel("fal/kling-image-v4");
     if (!m) throw new Error("catalog changed");

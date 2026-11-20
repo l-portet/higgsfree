@@ -16,7 +16,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 27 image models (9 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
+Curated today: 28 image models (10 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
 (20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 8 of the 48 are [video editors](#video-editing)) and 2
 are hidden.
 
@@ -209,7 +209,8 @@ Runs on fal, fal-only or not, are estimated from fal's list prices per endpoint 
 OpenRouter prices: a model both offer can cost quite differently (Seedance 2.5 is about two and a half
 times OpenRouter's rate on fal). GPT Image 2.6 Flare and Sunburst, MiniMax H3 Image and MAI-Image-2.7 have no fal
 price: fal bills them in tokens and gives no per-size figure for them. Seedream 5.5's edits also bill each reference image. Kling
-Image 4.0 has a fal price at 2K only, so a 4K run on fal has no estimate (kie.ai prices both sizes). fal reports no cost with a result, so runs on fal record none.
+Image 4.0 has a fal price at 2K only, so a 4K run on fal has no estimate (kie.ai prices both sizes). Ideogram 4.6 is priced at fal's default medium quality, up
+to 2K; an `auto` edit of a larger source costs more than its estimate. fal reports no cost with a result, so runs on fal record none.
 
 ### fal-only video models
 
@@ -305,6 +306,7 @@ list (`image_urls`) or a single `image_url`. "preset" = the aspect ratio goes ou
 | **Kling Image 4.0** <sub>NEW</sub> ¹ | `fal/kling-image-v4` | `kling/v4/text-to-image` · `kling/v4/image-to-image` | ✓ | ✓ (8, `image_urls`) | auto, 1:1, 3:4, 4:3, 2:3, 3:2, 9:16, 16:9, 21:9 | `aspect_ratio` |
 | **FLUX.1 Kontext Pro** | `fal/flux-kontext-pro` | `fal-ai/flux-pro/kontext/text-to-image` · `fal-ai/flux-pro/kontext` | ✓ | ✓ (1, `image_url`) | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
 | **FLUX 1.1 Pro Ultra** | `fal/flux-1.1-pro-ultra` | `fal-ai/flux-pro/v1.1-ultra` | ✓ | – | auto, 21:9, 16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16 | `aspect_ratio` |
+| **Ideogram 4.6** <sub>NEW</sub> ² | `fal/ideogram-4.6` | `ideogram/v4.6` · `ideogram/v4.6/edit` | ✓ | ✓ (1, `image_url`) | auto, 1:1, 3:4, 4:3, 2:3, 3:2, 9:16, 16:9, 5:4, 4:5, 21:9 | preset, else explicit `image_size` |
 | **Ideogram 4.5** <sub>NEW</sub> | `fal/ideogram-4.5` | `ideogram/v4.5` · `ideogram/v4.5/edit` | ✓ | ✓ (1, `image_url`) | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
 | **GPT Image 1.5** | `fal/gpt-image-1.5` | `fal-ai/gpt-image-1.5` · `fal-ai/gpt-image-1.5/edit` | ✓ | ✓ (4, `image_urls`) | auto, 1:1, 3:2, 2:3 | `image_size` `1024x1024` / `1536x1024` / `1024x1536` |
 | **Qwen Image Edit 2511** | `fal/qwen-image-edit-2511` | edit only: `fal-ai/qwen-image-edit-2511` | – | ✓ (3, `image_urls`) | auto, 1:1, 4:3, 3:4, 16:9, 9:16 | preset |
@@ -326,6 +328,15 @@ reference image (`KIE_PRICES`). With both keys, kie runs every 4K image, which f
 its references bring kie's total within half a cent of fal's (a tie, which fal, listed first, runs) or above it (one
 image with 5 references or more). `mode:
 "series"`, `count`, `elements` and `kling-4-0/long-image` are not wired on kie either. kie records the cost of each run.
+
+² Ideogram 4.6 (19 Nov 2026), read from fal's schemas on 20 Nov 2026; not on OpenRouter, kie.ai, APIMart or Replicate yet.
+Wired like Ideogram 4.5: 1K, the ratio as a preset or (2:3, 3:2, 4:5, 5:4, 21:9) an explicit size of about one megapixel,
+which 4.6 accepts (multiples of 32, 256 to 4096 px a side, 1:6 to 6:1); `auto` sends none, so fal picks about 2K, and an
+edit keeps its source's size. The edit takes the image to change as `image_url` and up to 4 more as
+`reference_image_urls`; only `image_url` is sent. Not wired: sizes up to 4K, `quality` (very low, low, medium, high;
+fal's default medium is used), `reference_image_urls`, `mask_url`, `edit_precision` (`high`: Precise Edit),
+`context_window`, `background` (transparent) and `num_images`. $0.06 an image at medium up to 2K (4,194,304 px) on both
+endpoints; above it $0.12, or $0.20 for an edit, which an `auto` edit of a source larger than 2048 × 2048 pays.
 
 ### APIMart-only image models
 

@@ -16,7 +16,7 @@
 
 ## What it does
 
-- **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more, plus Kling Image 4.0, FLUX.1 Kontext, Ideogram 4.5 and other fal models with a fal key, GPT Image 2.6 with an APIMart key, and GPT Image 2.6 Economy with a kie.ai key. Reference images, batches of four, 1K to 4K.
+- **Image**: text to image and image to image with Nano Banana Pro, GPT-5.4 Image 2, Krea 2 and more, plus Kling Image 4.0, FLUX.1 Kontext, Ideogram 4.6 and 4.5 and other fal models with a fal key, GPT Image 2.6 with an APIMart key, and GPT Image 2.6 Economy with a kie.ai key. Reference images, batches of four, 1K to 4K.
 - **Video**: text to video and image to video with Seedance 2.5, Kling 3.0, Veo 3.1, MiniMax H3, Wan 3.0 and more. First and last frame, style references, native audio. With a fal key: Kling 3.0 Motion Control (your character, moving like a reference video), Gemini Omni Flash, Vidu Q4, PixVerse 6 and more; with a fal, kie.ai or APIMart key, PixVerse 6 Max and Gemini Omni Flash 1.2.
 - **Video editing**: change a clip in plain words ("make it snow", "swap the jacket for a red one", "remove the car"), keeping its motion and framing. FLUX Video Edit and Runway Aleph 2 on OpenRouter; with a fal key, Kling O3 Edit, Gemini Omni Flash Edit, Grok Imagine Edit and Wan 2.7 Edit too. Upload a video, or press **Edit video** on any clip you made.
 - **Favorites**: press the heart on any run to keep it in one place, with folders you create: drag runs onto a folder, or pick one from the heart's menu.
@@ -39,7 +39,7 @@ Open http://localhost:3000 and paste your key behind **Add key** (top right). Th
 
 ## fal (optional)
 
-[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 and 1.2 Edit, Grok Imagine Edit, Wan 2.7 Edit), Kling 4.0, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Max, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6 and 6 Max, LTX 2.3, Luma Ray 3.2, Kling Image 4.0, FLUX.1 Kontext, Ideogram 4.5 and more.
+[fal](https://fal.ai) is a second provider, for models OpenRouter does not have: Kling 3.0 Motion Control (a character image plus a reference video, optional prompt; the character moves like the video, for as long as the video), video editors (Kling O3 Edit, Gemini Omni Flash 1.1 and 1.2 Edit, Grok Imagine Edit, Wan 2.7 Edit), Kling 4.0, Gemini Omni Flash 1.1 and 1.2, FLUX.3 Max, FLUX.3 Video Draft, Kling O3 Pro, Vidu Q4, PixVerse 6 and 6 Max, LTX 2.3, Luma Ray 3.2, Kling Image 4.0, FLUX.1 Kontext, Ideogram 4.6 and 4.5 and more.
 
 - **Add a key** when you need it: pick a fal model and press Generate, and a small dialog asks for the fal key ("Save and generate" finishes the job). It is also in Settings › Keys, next to **Test connection** and **Remove key**. Get one at [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys).
 - **Every model is listed, whatever keys you have.** Pick one whose provider has no key and a small notice above the prompt says which provider it runs on; Generate opens the key dialog for that provider. That goes both ways: a fal-only model with only an OpenRouter key, an OpenRouter-only model with only a fal key.
