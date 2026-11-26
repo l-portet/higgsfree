@@ -103,6 +103,44 @@ describe("buildKieVideoPayload", () => {
     expect(() => buildKieVideoPayload(m, { prompt: " ", duration: 8 }, {})).toThrow("Needs a prompt");
   });
 
+  it("MAGI-2: text-, image- and reference-to-video on three models, 4–30 s at 1080p, the ratio without frames, sound on by default", () => {
+    const m = video("sand-ai/magi-2");
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 30, aspectRatio: "21:9" }, {})).toEqual({
+      model: "magi-2/text-to-video",
+      input: { prompt: "p", duration: 30, resolution: "1080p", generate_audio: true, aspect_ratio: "21:9" },
+      priceKey: "magi-2",
+      params: { duration: 30, resolution: "1080p", aspectRatio: "21:9", audio: true },
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 5, audio: false }, {}).input).toEqual({
+      prompt: "p", duration: 5, resolution: "1080p", generate_audio: false, aspect_ratio: "16:9",
+    });
+    // A first frame, and a last one: the clip follows the image (no ratio), and the prompt is optional.
+    expect(buildKieVideoPayload(m, { prompt: "", duration: 8, aspectRatio: "9:16" }, { firstFrame: "https://a", lastFrame: "https://b" })).toEqual({
+      model: "magi-2/image-to-video",
+      input: { duration: 8, resolution: "1080p", generate_audio: true, first_frame_url: "https://a", last_frame_url: "https://b" },
+      priceKey: "magi-2",
+      params: { duration: 8, resolution: "1080p", audio: true },
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a" }).input).toEqual({
+      prompt: "p", duration: 5, resolution: "1080p", generate_audio: true, first_frame_url: "https://a",
+    });
+    // Any reference (images, videos, audio, or audio alone) goes to reference-to-video, with the ratio.
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 6, aspectRatio: "1:1" }, { references: ["https://r"], referenceVideos: ["https://v"], referenceAudios: ["https://s"] })).toEqual({
+      model: "magi-2/reference-to-video",
+      input: { prompt: "p", duration: 6, resolution: "1080p", generate_audio: true, aspect_ratio: "1:1", reference_image_urls: ["https://r"], reference_video_urls: ["https://v"], reference_audio_urls: ["https://s"] },
+      priceKey: "magi-2",
+      params: { duration: 6, resolution: "1080p", aspectRatio: "1:1", audio: true },
+    });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { referenceAudios: ["https://s"] })).toMatchObject({ model: "magi-2/reference-to-video", input: { reference_audio_urls: ["https://s"] } });
+    expect(buildKieVideoPayload(m, { prompt: "p", duration: 2 }, {}).params.duration).toBe(4); // snapped to the shortest
+    expect(() => buildKieVideoPayload(m, { prompt: "", duration: 5 }, {})).toThrow("Needs a prompt");
+    expect(() => buildKieVideoPayload(m, { prompt: " ", duration: 5 }, { references: ["https://r"] })).toThrow("Needs a prompt");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5, aspectRatio: "3:2" }, {})).toThrow("Takes no 3:2");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", references: ["https://r"] })).toThrow("not both");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { referenceVideos: Array(6).fill("https://v") })).toThrow("up to 5 reference videos");
+    expect(() => buildKieVideoPayload(m, { prompt: "p", duration: 5 }, { referenceAudios: Array(6).fill("https://s") })).toThrow("up to 5 reference audio clips");
+  });
+
   it("Seedance: frames or references (not both), `adaptive` when no ratio is sent, and a 3-character prompt", () => {
     const m = video("bytedance/seedance-2.5");
     expect(buildKieVideoPayload(m, { prompt: "slow push in", duration: 12, resolution: "480p", audio: false }, { firstFrame: "https://a" })).toEqual({
@@ -173,6 +211,11 @@ describe("buildKieVideoPayload", () => {
     // Audio alone costs nothing extra; a reference video of unknown length leaves the run unpriced.
     expect(estimateKieVideoCost(video("alibaba/wan-3.0"), { duration: 5, resolution: "720p", referenceAudios: true })).toBeCloseTo(16 * 5 * 0.005);
     expect(estimateKieVideoCost(video("alibaba/wan-3.0"), { duration: 5, resolution: "720p", referenceVideos: true })).toBeUndefined();
+    // MAGI-2's reference files add nothing: the output only, priced even while the videos' length is unknown.
+    const magi = video("sand-ai/magi-2");
+    expect(kieVideoPayloadFor(magi, { prompt: "p", duration: 5, referenceVideos: true }).model).toBe("magi-2/reference-to-video");
+    expect(estimateKieVideoCost(magi, { prompt: "p", duration: 5, references: true, referenceVideos: true, referenceVideoSec: 10 })).toBeCloseTo(0.44);
+    expect(estimateKieVideoCost(magi, { prompt: "p", duration: 5, referenceVideos: true, referenceAudios: true })).toBeCloseTo(0.44);
   });
 
   it("video editing: the source video and the resolution, nothing else", () => {
@@ -327,6 +370,10 @@ describe("kie prices", () => {
     expect(estimateKieVideoCost(video("fal/kling-v4"), { prompt: "p", duration: 10, resolution: "1080p", references: true })).toBeCloseTo(2.125);
     expect(estimateKieVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(1.12);
     expect(estimateKieVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.22);
+    // MAGI-2: 17.6 credits a second at 1080p on its three models, with or without sound.
+    expect(estimateKieVideoCost(video("sand-ai/magi-2"), { prompt: "p", duration: 5 })).toBeCloseTo(0.44);
+    expect(estimateKieVideoCost(video("sand-ai/magi-2"), { prompt: "p", duration: 30, audio: false })).toBeCloseTo(2.64);
+    expect(estimateKieVideoCost(video("sand-ai/magi-2"), { duration: 10, firstFrame: true, lastFrame: true })).toBeCloseTo(0.88);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5, resolution: "1080p", videoSec: 8 })).toBeCloseTo(0.96);
     expect(estimateKieVideoCost(video("fal/wan-2.7-edit"), { prompt: "p", duration: 5 })).toBeUndefined(); // the source's length is not known yet
     expect(estimateKieVideoCost(video("x-ai/grok-imagine-video-1.5"), { prompt: "p", duration: 5, resolution: "1080p" })).toBeUndefined(); // no price listed

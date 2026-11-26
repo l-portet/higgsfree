@@ -48,7 +48,8 @@ kie.ai credits: …", 400 / 404 / 422 → 400 with kie's `msg`, 429 kept, 455 (m
 ## Video fields (`buildKieVideoPayload`)
 
 kie names its fields differently for every model family, so a route (`KieVideoRoute` in the catalog) names the
-family, the createTask model ids (a separate image-to-video id where kie splits them) and a tier. A request the
+family, the createTask model ids (a separate image-to-video id where kie splits them, and a reference-to-video one for
+MAGI-2) and a tier. A request the
 family cannot take throws a 400 whose message is what the price tooltip shows ("Takes clips of 6–30 s").
 
 | Family | Models (catalog → kie) | Fields | Refuses |
@@ -66,16 +67,26 @@ family cannot take throws a 400 whose message is what the price tooltip shows ("
 | `gemini-omni12` | Gemini Omni Flash 1.2 → `google/gemini-omni-flash-1-2` | `duration` 3–15 as a number (3–10 with a last frame), `aspect_ratio` (with a frame too), `resolution` (`4k`), `first_frame_url`, `last_frame_url`, `image_urls` (references, ≤ 6) | an empty prompt, frames and references together, over 10 s between two frames |
 | `pixverse` | PixVerse 6 → `pixverse-v6/text-to-video` / `image-to-video`, PixVerse 6 Max → `pixverse-v6-max/text-to-video` / `image-to-video` | `aspect_ratio` (text-to-video), `quality`, `duration`, `generate_audio_switch`, `image_urls` [first] | a prompt under 3 characters (6 Max: an empty prompt), a last frame |
 | `vidu` | Vidu Q4 → `vidu-q4/image-to-video` | `image_url`, `duration` 3–16, `resolution` (`2k`, `4k`), `audio` | no first frame, a last frame |
+| `magi2` | MAGI-2 → `magi-2/text-to-video`, `magi-2/image-to-video` (frames), `magi-2/reference-to-video` (references) | `duration` 4–30, `resolution` `1080p` (the only one), `generate_audio`, `aspect_ratio` (not with frames), `first_frame_url`, `last_frame_url`, `reference_image_urls` (≤ 10) | an empty prompt without a frame, frames and references together |
 | `wan27-edit` | Wan 2.7 Edit → `wan/2-7-videoedit` | `video_url` (stream upload), `resolution` | |
 
-Every family also refuses style references unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2), and a
-last frame without a first one.
+Every family also refuses style references unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2,
+MAGI-2), and a last frame without a first one.
 
 Gemini Omni Flash 1.2 (read 10 Nov 2026) takes one of four modes per request: text or reference images, a first frame,
 a first and a last frame, or a video edit (`video_list`). Unlike 1.1 its `duration` is a number, 3–15 s, and 3–10 s with
 a last frame; it has no `audio_ids` or `character_ids`. The ratio goes with a frame too, since kie defaults it to 16:9.
 Not sent: `seeds`, `aspect_ratio: "auto"`, 360p (the app has none) and `video_list`, since the model is not a video
 editor in the app.
+
+MAGI-2 (read 26 Nov 2026, `docs.kie.ai/market/magi-2/text-to-video.md`, `image-to-video.md`, `reference-to-video.md`)
+runs on kie.ai only, on three models with the same `duration` (4–30 s, a whole number), `resolution` (`1080p` only),
+`generate_audio` (on by default) and `seed` (not sent). Text to video needs a prompt of up to 15,000 characters and
+takes `aspect_ratio` (21:9, 16:9, 4:3, 1:1, 3:4 or 9:16; 16:9 by default). Image to video needs `first_frame_url`
+(JPG, PNG or WebP), takes an optional `last_frame_url` and an optional prompt, and has no `aspect_ratio`: the clip
+follows the image. Reference to video needs a prompt and at least one reference image, video or audio clip, and takes
+`aspect_ratio`; the app sends a run there as soon as one is attached. kie's docs give the references no names to use
+in the prompt: it describes them ("the person in the first reference image").
 
 **Reference videos and audio** (`caps.mediaReferences`), never with frames. kie.ai is the only provider that runs them
 (fal and OpenRouter refuse them in `video-cost.ts`, APIMart has no upload for them):
@@ -85,6 +96,7 @@ editor in the app.
 | `wan3` | `reference_video_urls`, ≤ 5, 1–15 s each, 15 s in all, MP4 / MOV ≤ 100 MB | `reference_audio_urls`, ≤ 5, 15 s in all, MP3 / WAV ≤ 15 MB | audio alone is fine; reference videos + `duration` ≤ 30 s; billed on output + reference-video seconds at the usual rate |
 | `seedance` | `reference_video_urls`, ≤ 3 (2.5: ≤ 10), 2–15 s each, 15 s in all (2.5: 30 s), ≤ 50 MB (2.5: 200 MB) | `reference_audio_urls`, same counts and totals, ≤ 15 MB | audio needs an image or a video with it (not on 2.5); billed on output + reference-video seconds at the lower "with video input" rate |
 | `kling4` | `video_urls` on `reference-to-video`, ≤ 5, 2–30 s each | none (kie only takes a voice to copy, `voices[]`) | billed like Seedance, at the "with video input" rate (output + input seconds, assumed from the other providers' docs) |
+| `magi2` | `reference_video_urls` on `magi-2/reference-to-video`, ≤ 5, MP4 / MOV, 2–30 s each, 30 s in all | `reference_audio_urls`, ≤ 5, MP3 / WAV, 2–30 s each, 30 s in all | audio alone is fine; reference files add nothing to the price (`referencesFree`): the output only is billed |
 
 The prompt can name them: `Image1`, `Video1`, `Audio1` (Wan 3.0), `@Image1`, `@Video1`, `@Audio1` (Seedance),
 `@image_1`, `@video_1` (Kling 4.0).
@@ -149,10 +161,12 @@ picked in the composer: picked onto kie, a FLUX.1 Kontext run at 3:2 still goes 
 
 `KIE_PRICES` (`src/shared/kie-prices.ts`) has kie's list price in credits ($0.005 each) for every model a
 route sends to, read from kie's pricing page (`kie.ai/pricing`, backed by the public
-`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov, MiniMax H3 Image on 12 Nov, Kling Image 4.0 on 20 Nov); a test checks every route is priced and
+`POST api.kie.ai/client/v1/model-pricing/page`) on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, GPT Image 2.6 Economy on 6 Nov, Gemini Omni Flash 1.2 on 10 Nov, Seedream 5.5 on 11 Nov, MiniMax H3 Image on 12 Nov, Kling Image 4.0 on 20 Nov, MAGI-2 on 26 Nov); a test checks every route is priced and
 every price is used. A price is per second (one rate or per resolution, a higher one with sound for Kling 3.0
 and PixVerse), per clip (Veo, whatever its length: not verified for 4 and 6 s; Gemini Omni Flash 1.1, by length),
-or per image (by size; Seedream 5.5's, MiniMax H3 Image's and Kling Image 4.0's edits also bill each reference image). `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
+or per image (by size; Seedream 5.5's, MiniMax H3 Image's and Kling Image 4.0's edits also bill each reference image).
+MAGI-2 is 17.6 credits ($0.088) a second on all three of its models, at 1080p, with or without sound, references and
+all: one price, `magi-2`. `estimateKieVideoCost` / `estimateKieImageCost` build the payload the run would send
 and price it, so the estimate follows the model id, tier, resolution, duration and sound sent.
 
 The exceptions are GPT Image 2.6 Flare and Sunburst (6 Nov 2026), which kie bills per million tokens at the same rates,

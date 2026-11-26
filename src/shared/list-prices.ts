@@ -19,6 +19,8 @@ export type ListPrice =
        * rate (`amount` when absent, as on Wan 3.0).
        */
       videoInputAmount?: Amount;
+      /** Reference videos add nothing: the run is billed on the output only, whatever they run (MAGI-2 on kie.ai). */
+      referencesFree?: boolean;
     }
   | {
       /** Per clip, whatever its length, or by its length. */

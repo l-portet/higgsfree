@@ -94,6 +94,35 @@ describe("kie.ai videos", () => {
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
+  it("MAGI-2, on kie.ai only: both frames on image-to-video with no ratio, a reference image on reference-to-video with one", async () => {
+    setStoredKey("test-key");
+    setStoredFalKey(FAL_KEY);
+    setProviderKey("kie", KIE_KEY);
+    const first = await uploadImage();
+    const last = await uploadImage();
+    const g = await video({ model: "sand-ai/magi-2", duration: 12, aspectRatio: "9:16", firstFrame: first, lastFrame: last, audio: false });
+    expect(g).toMatchObject({ provider: "kie", params: { duration: 12, resolution: "1080p", audio: false } });
+    expect(mock.kie("/api/v1/jobs/createTask")[0]?.body).toEqual({
+      model: "magi-2/image-to-video",
+      input: {
+        prompt: "slow push in", duration: 12, resolution: "1080p", generate_audio: false,
+        first_frame_url: "https://tempfile.redpandaai.co/higgsfree/up-1.png", last_frame_url: "https://tempfile.redpandaai.co/higgsfree/up-2.png",
+      },
+    });
+    await waitFor(completed(g.id));
+    expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
+
+    const ref = await uploadImage();
+    const r = await video({ model: "sand-ai/magi-2", aspectRatio: "21:9", references: [ref] });
+    expect(r).toMatchObject({ provider: "kie", inputs: { referenceImages: [ref] }, params: { duration: 5, resolution: "1080p", aspectRatio: "21:9", audio: true } });
+    expect(mock.kie("/api/v1/jobs/createTask")[1]?.body).toMatchObject({
+      model: "magi-2/reference-to-video",
+      input: { prompt: "slow push in", duration: 5, resolution: "1080p", generate_audio: true, aspect_ratio: "21:9", reference_image_urls: [expect.stringMatching(/^https:\/\/tempfile\.redpandaai\.co\/higgsfree\//)] },
+    });
+    await waitFor(completed(r.id));
+    expect(mock.calls("/api/v1/videos")).toHaveLength(0);
+  });
+
   it("with every key: kie runs what it makes cheapest, the others what they do, and refusals go elsewhere", async () => {
     setStoredKey("test-key");
     setStoredFalKey(FAL_KEY);
