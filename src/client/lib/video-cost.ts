@@ -29,7 +29,7 @@ export interface VideoQuoteRequest {
   /** Reference videos / audio are attached: only kie.ai takes them (as uploaded files). */
   referenceVideos?: boolean;
   referenceAudios?: boolean;
-  /** How long the reference videos run together, when known: they are billed too. */
+  /** How long the reference videos run together, when known: they are billed too, where the provider bills them (not MAGI-2). */
   referenceVideoSec?: number;
   /** Motion control and video editing: the input video's length, which sets the clip's. Unknown: no price. */
   videoSec?: number;

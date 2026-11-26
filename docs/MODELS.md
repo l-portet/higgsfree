@@ -404,7 +404,7 @@ and APIMart have no MAGI-2 (fal's `fal-ai/magi` endpoints are an older MAGI). Re
 there yet. Every run is 1080p, the only resolution, with sound (`generate_audio`, on by default; off is the same price).
 Text to video needs a prompt (up to 15,000 characters) and takes `aspect_ratio`. A first frame, and an optional last
 frame, go to `magi-2/image-to-video` as `first_frame_url` / `last_frame_url`, with no ratio (the clip follows the image)
-and an optional prompt. Reference images (kie takes 10, the app sends 8 at most), videos (5) and audio clips (5), any
+and an optional prompt. Reference images (kie takes 10, the app sends 4 at most), videos (5) and audio clips (5), any
 of them alone, go to `magi-2/reference-to-video` with a prompt and the ratio, never with frames; each video or audio
 clip runs 2–30 s, and 30 s in all per kind. 17.6 credits ($0.088) a second on all three models, with or without sound,
 and reference files add nothing (`KIE_PRICES`). `seed` is not sent.
