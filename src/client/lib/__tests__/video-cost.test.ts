@@ -101,6 +101,19 @@ describe("quoteVideo", () => {
     expect(quoteVideo(s15, { prompt: "a fox", duration: 5 }, { openrouter: true, fal: true, kie: true }, NOW)).toMatchObject({ quotes: [{ provider: "apimart", noKey: true }], reason: "none" });
   });
 
+  it("MAGI-2, on kie.ai only: kie runs it at its price, references and all, and no other key helps", () => {
+    const magi = video("sand-ai/magi-2");
+    const all = { openrouter: true, fal: true, kie: true, apimart: true, revana: true, bytedance: true, replicate: true };
+    // 10 s at 1080p: 176 credits, $0.88, with or without sound.
+    const q = quoteVideo(magi, { prompt: "a fox", duration: 10, resolution: "1080p", aspectRatio: "16:9" }, all, NOW);
+    expect(q).toMatchObject({ provider: "kie", reason: "only" });
+    expect(q.quotes).toEqual([{ provider: "kie", noKey: false, usd: expect.closeTo(0.88) }]);
+    // Reference videos and audio add nothing on kie.
+    expect(usd(quoteVideo(magi, { prompt: "a fox", duration: 10, referenceVideos: true, referenceVideoSec: 12, referenceAudios: true }, all, NOW))).toEqual({ kie: expect.closeTo(0.88) });
+    expect(quoteVideo(magi, { prompt: "", duration: 5, firstFrame: true }, all, NOW)).toMatchObject({ provider: "kie", reason: "only" });
+    expect(quoteVideo(magi, { prompt: "a fox", duration: 5 }, { openrouter: true, fal: true, apimart: true, revana: true }, NOW)).toMatchObject({ quotes: [{ provider: "kie", noKey: true }], reason: "none" });
+  });
+
   it("Gemini Omni Flash 1.2, on fal, kie.ai and APIMart: kie is the cheapest, fal takes no style references, APIMart no length and no price yet", () => {
     const omni = video("google/gemini-omni-flash-1.2");
     const all = { fal: true, kie: true, apimart: true };

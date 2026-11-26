@@ -11,7 +11,8 @@ const at = (amount: Amount | undefined, res: VideoResolution | undefined): numbe
 /**
  * USD for one clip. `params` is what the payload sends; `resolution` the requested one, for a payload that sends none
  * (the model's own); `seconds` the clip's length (the source's, for an edit). `inputVideoSec`: reference videos are
- * attached and run this long together (`null` while their length is not known). Undefined when no amount applies.
+ * attached and run this long together (`null` while their length is not known), billed too unless the price says
+ * `referencesFree`. Undefined when no amount applies.
  */
 export function videoListUsd(
   price: ListPrice | undefined, model: VideoModel, params: VideoParams, resolution: VideoResolution | undefined, seconds: number | undefined, unitUsd: number,
@@ -24,7 +25,7 @@ export function videoListUsd(
     return amount === undefined ? undefined : amount * unitUsd;
   }
   if (price?.unit !== "second" || !seconds) return undefined;
-  if (inputVideoSec !== undefined) {
+  if (inputVideoSec !== undefined && !price.referencesFree) {
     const rate = at(price.videoInputAmount ?? price.amount, res);
     return rate === undefined || inputVideoSec === null ? undefined : rate * (seconds + inputVideoSec) * unitUsd;
   }

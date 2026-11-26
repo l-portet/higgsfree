@@ -352,4 +352,12 @@ describe("fal routes", () => {
     expect(m?.offOpenRouter).toBe(true);
     expect(m?.verified).toBe(false);
   });
+
+  it("MAGI-2 is on kie.ai only, on its three models, and is not verified", () => {
+    const m = findVideoModel("sand-ai/magi-2");
+    expect(m?.kie).toEqual({ family: "magi2", model: "magi-2/text-to-video", imageModel: "magi-2/image-to-video", referenceModel: "magi-2/reference-to-video" });
+    expect(m?.fal ?? m?.apimart ?? m?.revana ?? m?.bytedance ?? m?.replicate).toBeUndefined();
+    expect(m).toMatchObject({ provider: "sand-ai", offOpenRouter: true, verified: false, resolutions: ["1080p"], estCostPerSecUsd: {} });
+    expect(m?.caps.mediaReferences).toEqual({ videos: 5, audios: 5, maxSec: 30 });
+  });
 });

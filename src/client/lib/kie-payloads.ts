@@ -67,6 +67,7 @@ const VIDEO_LIMITS: Record<KieVideoRoute["family"], { durations?: number[]; aspe
   "gemini-omni12": { durations: range(3, 15), aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   pixverse: { durations: range(1, 15), aspects: ["16:9", "4:3", "1:1", "3:4", "9:16", "2:3", "3:2", "21:9"], resolutions: { "720p": "720p", "1080p": "1080p" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2k", "4K": "4k" } },
+  magi2: { durations: range(4, 30), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "1080p": "1080p" } },
   "wan27-edit": { resolutions: { "720p": "720p", "1080p": "1080p" } },
   "topaz-video-upscale": {},
 };
@@ -83,11 +84,12 @@ function durationsLabel(list: number[]): string {
 /** Families whose clips always have sound: a run with the sound off goes elsewhere. */
 const ALWAYS_SOUND = new Set<KieVideoRoute["family"]>(["veo", "minimax-h3"]);
 /** Families that take style references. */
-const TAKES_REFERENCES = new Set<KieVideoRoute["family"]>(["seedance", "wan3", "kling4", "gemini-omni12"]);
+const TAKES_REFERENCES = new Set<KieVideoRoute["family"]>(["seedance", "wan3", "kling4", "gemini-omni12", "magi2"]);
 /** How many reference videos and audio clips each family takes (the rest take none). Seedance 2.5 takes more than 2.0. */
 function mediaLimits(route: KieVideoRoute): { videos: number; audios: number } {
   switch (route.family) {
     case "wan3":
+    case "magi2":
       return { videos: 5, audios: 5 };
     case "seedance":
       return route.model === "bytedance/seedance-2-5" ? { videos: 10, audios: 10 } : { videos: 3, audios: 3 };
@@ -268,6 +270,27 @@ export function buildKieVideoPayload(model: VideoModel, req: KieVideoParams, med
         input.image_urls = [first];
       } else input.aspect_ratio = aspect ?? "16:9";
       priceKey = max ? "pixverse-v6-max" : "pixverse-v6";
+      break;
+    }
+    case "magi2": {
+      // Three models: frames go to image-to-video (the clip follows the image, the prompt is optional), any reference
+      // image, video or audio to reference-to-video (which needs one), the rest to text-to-video. One price for all
+      // three, with or without sound. `seed` is not sent.
+      if (!prompt && !frames) throw badRequest("Needs a prompt");
+      if (prompt) input.prompt = prompt;
+      Object.assign(input, { duration: params.duration, resolution: kieResolution, generate_audio: sound(true) });
+      if (frames) {
+        id = route.imageModel ?? route.model;
+        input.first_frame_url = first;
+        if (last) input.last_frame_url = last;
+      } else {
+        input.aspect_ratio = aspect ?? "16:9";
+        if (refs.length || refVideos.length || refAudios.length) id = route.referenceModel ?? route.model;
+        if (refs.length) input.reference_image_urls = refs;
+        if (refVideos.length) input.reference_video_urls = refVideos;
+        if (refAudios.length) input.reference_audio_urls = refAudios;
+      }
+      priceKey = "magi-2";
       break;
     }
     case "vidu":

@@ -16,9 +16,9 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 [Live catalog and discovered models](#live-catalog-and-discovered-models) for what changes at
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
-Curated today: 28 image models (10 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 50 video models, of which 48 are offered
-(20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 8 of the 48 are [video editors](#video-editing)) and 2
-are hidden.
+Curated today: 28 image models (10 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 51 video models, of which 49 are offered
+(20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 1 [on kie.ai only](#kieai-only-video-models), 8 of the 49
+are [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
 
@@ -175,13 +175,14 @@ Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced abov
 
 **Reference videos and audio** (`caps.mediaReferences`): Wan 3.0 and Wan 3.0 Prime (5 videos and 5 audio clips,
 15 s of each), Seedance 2.0, 2.0 Fast and 2.0 Mini (3 and 3, 15 s), Seedance 2.5 (10 and 10, 30 s) and Kling 4.0
-(5 videos, 30 s, no audio) take MP4 / MOV / WebM clips and MP3 / WAV audio besides reference images, never with
+(5 videos, 30 s, no audio) and MAGI-2 (5 and 5, 30 s of each) take MP4 / MOV / WebM clips and MP3 / WAV audio besides reference images, never with
 frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` lists `video_url` and `audio_url`
 parts but documents no inline data, and APIMart uploads images only.
 
 Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 and PixVerse 6 Max on fal, kie.ai and APIMart (see
 [fal models](#fal-models)); Seedance 1.5 Pro, which OpenRouter retired on 11 Nov 2026, runs on APIMart only (see
-[APIMart-only video models](#apimart-only-video-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
+[APIMart-only video models](#apimart-only-video-models)); MAGI-2 runs on kie.ai only (see
+[kie.ai-only video models](#kieai-only-video-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
 Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
@@ -389,6 +390,25 @@ APIMart or Revana. It generates at 1K only, with no `resolution` field, and has 
 sends 8 at most. Not sent: `background`, `output_format` (`png` by default), `frame_count` and `frame_duration_ms`. 5
 credits ($0.025) an image, with or without references (`KIE_PRICES`).
 
+### kie.ai-only video models
+
+Not on OpenRouter, fal nor APIMart: this runs only with a kie.ai key (fields and rules in [KIE.md](KIE.md)). The id is
+the app's own (`<maker>/<name>`). It is not verified yet. `†` = the aspect ratio is sent without frames only.
+
+| Model | Id | kie models | t2v | i2v | Last frame | Audio | Real faces | Resolutions | Durations (s) | Aspect ratios | Est. cost / second |
+|---|---|---|:-:|:-:|:-:|:-:|:-:|---|---|---|---|
+| **MAGI-2** <sub>NEW</sub> | `sand-ai/magi-2` | `magi-2/text-to-video` · `image-to-video` · `reference-to-video` ¹ | ✓ | ✓ | ✓ | ✓ | ? | 1080p (default 1080p) | 4–30 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † | 1080p $0.088 |
+
+¹ Sand AI's MAGI-2 (Nov 2026), read from kie's three doc pages and its pricing API on 26 Nov 2026; OpenRouter, fal
+and APIMart have no MAGI-2 (fal's `fal-ai/magi` endpoints are an older MAGI). Revana lists it too; it is not routed
+there yet. Every run is 1080p, the only resolution, with sound (`generate_audio`, on by default; off is the same price).
+Text to video needs a prompt (up to 15,000 characters) and takes `aspect_ratio`. A first frame, and an optional last
+frame, go to `magi-2/image-to-video` as `first_frame_url` / `last_frame_url`, with no ratio (the clip follows the image)
+and an optional prompt. Reference images (kie takes 10, the app sends 8 at most), videos (5) and audio clips (5), any
+of them alone, go to `magi-2/reference-to-video` with a prompt and the ratio, never with frames; each video or audio
+clip runs 2–30 s, and 30 s in all per kind. 17.6 credits ($0.088) a second on all three models, with or without sound,
+and reference files add nothing (`KIE_PRICES`). `seed` is not sent.
+
 ### kie.ai
 
 With a kie.ai key, these also run on kie ([KIE.md](../docs/KIE.md) has the fields and the rules), at kie's
@@ -408,7 +428,7 @@ what each run cost.
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | GPT Image 2.6 Sunburst ¹ | `gpt-image-2-6/sunburst-text-to-image` / `sunburst-image-to-image` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
-| | | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
+| MAGI-2 (only here) | `magi-2/text-to-video` / `image-to-video` / `reference-to-video` | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
 | | | Kling Image 4.0 | `kling-4-0/image` (text to image and edits) |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
@@ -694,7 +714,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 |---|---|
 | `kind` | Always `"image"`. |
 | `id` | OpenRouter slug, e.g. `google/gemini-3-pro-image`. Must match `GET /api/v1/models` exactly. A fal-only model uses the app's own `fal/<name>`. |
-| `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
+| `name` / `provider` / `description` | Picker display. `provider` must be a `ModelProvider` (`google`, `openai`, `bytedance`, `kwaivgi`, `minimax`, `x-ai`, `alibaba`, `black-forest-labs`, `runway`, `krea`, `heygen`, `qwen`, `recraft`, `microsoft`, `meta`, `sourceful`, `tencent`, `pixverse`, `vidu`, `lightricks`, `luma`, `ideogram`, `sand-ai`, `openrouter`); add the label to `PROVIDER_LABEL` if you add a provider. |
 | `endpoint` | `"chat"` → `chat/completions` with `modalities: ["image","text"]` (result in `choices[0].message.images[0].image_url.url` as a data URL). `"images"` → `images/generations` (result in `data[0].b64_json`). `"native"` → `POST /api/v1/images` with the catalog's own fields; options then come from the live catalog. `"fal"` → not on OpenRouter at all (fal-only, GPT Image 2.6 on APIMart only, or GPT Image 2.6 Economy on kie.ai only). Gemini/GPT-5 image models are `chat`, Krea and `gpt-image-2` are `images`, GPT Image 2.6 Flare, Sunburst, MiniMax H3 Image, Seedream 5.5, MAI-Image-2.7 and everything discovered are `native`. |
 | `featured` | Shows in the "Featured models" group at the top of the picker. Keep this short. |
 | `badges` | `"new"`, `"pro"`, `"fast"`, `"beta"`. Purely visual. |
@@ -737,7 +757,7 @@ When a newer tier ships, change the id there and the name shown in the dialog fo
 | `hidden` | Keep in the catalog but don't list it (upscaling, avatar models). |
 | `discovered` | Set by the browser (`src/client/lib/catalog.ts`), never in `models.ts`: OpenRouter lists the model but the curated catalog does not (see above). |
 | `fal` | How fal serves the model (`FalVideoRoute`): `textToVideo`, `imageToVideo`, `motionControl` and `edit` endpoint ids; `imageField` (first frame as `image_url`, the default, or `start_image_url`); `endImage` (the last frame goes in `end_image_url`); `endImageMaxSec` (the longest clip with a last frame, when less than the model's longest); `duration` (`"number"` → `5`, `"string"` → `"5"`, `"seconds"` → `"5s"`, absent = never sent); `aspect` (`"always"`, `"text"` = text-to-video only, absent = never sent); `resolutions` (app value → fal's, e.g. `{ "480p": "480P" }`; absent = never sent); `audio` (`"generate_audio"` or `"generate_audio_switch"`); `extra` (fixed fields). See [FAL.md](FAL.md#video-fields-buildfalvideopayload). |
-| `kie` | How kie.ai serves the model (`KieVideoRoute`): its `family` (which builder maps the fields), the createTask `model`, an `imageModel` used with a frame where kie splits the two, a `tier` (Veo's `model`, Kling's `mode`). See [KIE.md](KIE.md#video-fields-buildkievideopayload). |
+| `kie` | How kie.ai serves the model (`KieVideoRoute`): its `family` (which builder maps the fields), the createTask `model`, an `imageModel` used with a frame where kie splits the two, a `referenceModel` used with reference images, videos or audio where kie splits those off too (MAGI-2), a `tier` (Veo's `model`, Kling's `mode`). See [KIE.md](KIE.md#video-fields-buildkievideopayload). |
 | `apimart` | How APIMart serves the model (`ApimartVideoRoute`): its `family`, APIMart's `model` id and a `tier` (Kling's `mode`). See [APIMART.md](APIMART.md#video-fields-buildapimartvideopayload). |
 | `revana` | How Revana serves the model (`RevanaRoute`): Revana's `model` id. See [REVANA.md](REVANA.md). |
 | `bytedance` | How ByteDance serves the model on BytePlus ModelArk (`BytedanceRoute`): ModelArk's `model` id, whose options and token prices are in `BYTEDANCE_VIDEO_MODELS`. Videos only. See [BYTEDANCE.md](BYTEDANCE.md). |

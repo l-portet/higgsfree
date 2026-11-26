@@ -43,6 +43,9 @@ export const KIE_PRICES: Record<string, ListPrice> = {
   // Read 26 Oct 2026.
   "pixverse-v6-max": { unit: "second", amount: { "720p": 8.8, "1080p": 17.6 }, audioAmount: { "720p": 12, "1080p": 22.4 } },
   "vidu-q4/image-to-video": { unit: "second", amount: { "720p": 15.2, "1080p": 19.2, "2K": 30.4, "4K": 62.4 } },
+  // MAGI-2 (read 26 Nov 2026): the same on text-, image- and reference-to-video, 1080p only, with or without sound;
+  // reference files add nothing (kie's reference-to-video doc).
+  "magi-2": { unit: "second", amount: { "1080p": 17.6 }, referencesFree: true },
 
   // ---------- image ----------
   "nano-banana-pro": { unit: "image", amount: { "1K": 18, "2K": 18, "4K": 24 } },

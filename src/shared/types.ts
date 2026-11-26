@@ -138,7 +138,7 @@ export interface FolderRequest {
 export type ModelProvider =
   | "google" | "openai" | "bytedance" | "kwaivgi" | "minimax" | "x-ai" | "alibaba"
   | "black-forest-labs" | "runway" | "krea" | "heygen" | "qwen" | "recraft" | "microsoft"
-  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "fal" | "openrouter" | "kie" | "apimart" | "revana" | "replicate";
+  | "meta" | "sourceful" | "tencent" | "pixverse" | "vidu" | "lightricks" | "luma" | "ideogram" | "topaz" | "sand-ai" | "fal" | "openrouter" | "kie" | "apimart" | "revana" | "replicate";
 
 export type ModelBadge = "new" | "pro" | "fast" | "beta";
 
@@ -354,12 +354,14 @@ export interface KieVideoRoute {
   model: string;
   /** createTask `model` when a frame is attached, for families that split the two. */
   imageModel?: string;
+  /** createTask `model` when reference images, videos or audio are attached, for families that split them off too (MAGI-2). */
+  referenceModel?: string;
   /** A tier inside the model, sent in its own field: Veo's `model` (`veo3`, `veo3_fast`), Kling's `mode` (`std`, `pro`). */
   tier?: string;
 }
 
 export type KieVideoFamily =
-  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "gemini-omni12" | "pixverse" | "vidu" | "wan27-edit" | "topaz-video-upscale";
+  | "veo" | "kling3" | "kling4" | "seedance" | "minimax-h3" | "wan3" | "wan27" | "grok" | "grok15" | "gemini-omni" | "gemini-omni12" | "pixverse" | "vidu" | "magi2" | "wan27-edit" | "topaz-video-upscale";
 
 export interface KieImageRoute {
   family: KieImageFamily;
