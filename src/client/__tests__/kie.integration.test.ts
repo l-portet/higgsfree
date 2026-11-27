@@ -94,7 +94,7 @@ describe("kie.ai videos", () => {
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "kie", costUsd: 0.315 });
   });
 
-  it("MAGI-2, on kie.ai only: both frames on image-to-video with no ratio, a reference image on reference-to-video with one", async () => {
+  it("MAGI-2 on kie.ai: both frames on image-to-video with no ratio, a reference image on reference-to-video with one", async () => {
     setStoredKey("test-key");
     setStoredFalKey(FAL_KEY);
     setProviderKey("kie", KIE_KEY);

@@ -146,6 +146,51 @@ describe("APIMart videos", () => {
     expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", costUsd: 0.42 });
   });
 
+  it("MAGI-2, on kie.ai and APIMart: APIMart, the cheaper, takes frames and reference images; kie a frame without a prompt", async () => {
+    setStoredKey("test-key");
+    await expect(video({ model: "sand-ai/magi-2" })).rejects.toMatchObject({ status: 401 });
+    setProviderKey("kie", KIE_KEY);
+    setProviderKey("apimart", APIMART_KEY);
+    const [first, last] = [await uploadImage(), await uploadImage()];
+    // 12 s at 1080p: $0.96 on APIMart, $1.056 on kie.
+    const g = await video({ model: "sand-ai/magi-2", duration: 12, aspectRatio: "21:9", audio: false, firstFrame: first, lastFrame: last });
+    expect(g).toMatchObject({ provider: "apimart", params: { duration: 12, resolution: "1080p", audio: false } });
+    expect(mock.apimart("/v1/videos/generations")[0]?.body).toEqual({
+      model: "magi-2",
+      prompt: "a fox in the snow",
+      duration: 12,
+      resolution: "1080p",
+      generate_audio: false,
+      first_frame_image: "https://upload.apimart.ai/f/image/up-1.png",
+      last_frame_image: "https://upload.apimart.ai/f/image/up-2.png",
+    });
+    await waitFor(completed(g.id));
+    expect(await api.getGeneration(g.id)).toMatchObject({ status: "completed", provider: "apimart", costUsd: 0.42 });
+
+    const ref = await uploadImage();
+    const r = await video({ model: "sand-ai/magi-2", aspectRatio: "9:16", references: [ref] });
+    expect(r).toMatchObject({ provider: "apimart", params: { duration: 5, resolution: "1080p", aspectRatio: "9:16", audio: true } });
+    expect(mock.apimart("/v1/videos/generations")[1]?.body).toEqual({
+      model: "magi-2",
+      prompt: "a fox in the snow",
+      duration: 5,
+      resolution: "1080p",
+      generate_audio: true,
+      aspect_ratio: "9:16",
+      image_with_roles: [{ url: expect.stringMatching(/^https:\/\/upload\.apimart\.ai\//), role: "reference_image" }],
+      omni_reference_task_type: "reference",
+    });
+    await waitFor(completed(r.id));
+
+    // APIMart needs a prompt with frames too: kie runs this one.
+    const k = await video({ model: "sand-ai/magi-2", prompt: "", firstFrame: first });
+    expect(k).toMatchObject({ provider: "kie" });
+    expect(mock.kie("/api/v1/jobs/createTask")[0]?.body).toMatchObject({ model: "magi-2/image-to-video" });
+    expect(mock.apimart("/v1/videos/generations")).toHaveLength(2);
+    await waitFor(completed(k.id));
+    expect(mock.calls("/api/v1/videos")).toHaveLength(0);
+  });
+
   it("a task APIMart fails ends with its message; a refused submit is a 400", async () => {
     setProviderKey("apimart", APIMART_KEY);
     const g = await video({ prompt: "APIMART_FAIL" });

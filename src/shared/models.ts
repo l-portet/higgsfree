@@ -1473,9 +1473,11 @@ export const VIDEO_MODELS: VideoModel[] = [
     omitAspectRatioOnI2v: true,
     estCostPerSecUsd: {},
     verified: false,
-    // Not on OpenRouter, fal nor APIMart yet (26 Nov 2026): kie.ai only, on three models. Revana lists it too, not routed yet.
+    // Not on OpenRouter nor fal (27 Nov 2026): kie.ai, on three models, and APIMart (since 27 Nov 2026), on one, which takes
+    // no reference videos or audio here. Revana lists it too, not routed yet.
     offOpenRouter: true,
     kie: { family: "magi2", model: "magi-2/text-to-video", imageModel: "magi-2/image-to-video", referenceModel: "magi-2/reference-to-video" },
+    apimart: { family: "magi2", model: "magi-2" },
   },
   {
     kind: "video",

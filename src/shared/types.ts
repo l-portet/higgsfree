@@ -414,7 +414,7 @@ export interface ApimartVideoRoute {
 }
 
 export type ApimartVideoFamily =
-  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "kling4" | "pixverse" | "pixverse-max" | "gemini-omni" | "gemini-omni12" | "flux3" | "vidu";
+  | "veo" | "seedance" | "seedance15" | "minimax-h3" | "hailuo23" | "wan3" | "wan27" | "wan26" | "kling" | "kling4" | "pixverse" | "pixverse-max" | "gemini-omni" | "gemini-omni12" | "flux3" | "vidu" | "magi2";
 
 export interface ApimartImageRoute {
   family: ApimartImageFamily;

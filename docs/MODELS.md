@@ -17,7 +17,7 @@ The tables below are the curated catalog as OpenRouter listed it on 14 Oct 2026;
 runtime. Models that run on fal, only there or as well, are listed under [fal models](#fal-models).
 
 Curated today: 28 image models (10 of them fal-only, 1 [on APIMart only](#apimart-only-image-models), 1 [on kie.ai only](#kieai-only-image-models)) and 51 video models, of which 49 are offered
-(20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 1 [on kie.ai only](#kieai-only-video-models), 8 of the 49
+(20 fal-only, 1 [on APIMart only](#apimart-only-video-models), 1 [on kie.ai and APIMart only](#kieai-and-apimart-video-models), 8 of the 49
 are [video editors](#video-editing)) and 2 are hidden.
 
 **Legend**
@@ -177,12 +177,13 @@ Wan 3.0 Prime is the fast-mode Wan 3.0 per OpenRouter's description, priced abov
 15 s of each), Seedance 2.0, 2.0 Fast and 2.0 Mini (3 and 3, 15 s), Seedance 2.5 (10 and 10, 30 s) and Kling 4.0
 (5 videos, 30 s, no audio) and MAGI-2 (5 and 5, 30 s of each) take MP4 / MOV / WebM clips and MP3 / WAV audio besides reference images, never with
 frames. They run on kie.ai only (docs/KIE.md): OpenRouter's `input_references` lists `video_url` and `audio_url`
-parts but documents no inline data, and APIMart uploads images only.
+parts but documents no inline data, and the app uploads only images to APIMart (it has video and audio uploads since
+Nov 2026, not wired yet; see [APIMART.md](APIMART.md#known-gaps)).
 
 Not on OpenRouter: Gemini Omni Flash 1.1, Kling 4.0, Kling 3.0 Motion Control, FLUX.3 Max and FLUX.3 Video Draft run on fal, Gemini Omni Flash 1.2 and PixVerse 6 Max on fal, kie.ai and APIMart (see
 [fal models](#fal-models)); Seedance 1.5 Pro, which OpenRouter retired on 11 Nov 2026, runs on APIMart only (see
-[APIMart-only video models](#apimart-only-video-models)); MAGI-2 runs on kie.ai only (see
-[kie.ai-only video models](#kieai-only-video-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
+[APIMart-only video models](#apimart-only-video-models)); MAGI-2 runs on kie.ai and APIMart (see
+[kie.ai and APIMart video models](#kieai-and-apimart-video-models)); Higgsfield Genjutsu and Seedance 2.5 Draft and Edit are not in the app.
 Sora 2 Pro left OpenRouter and was removed.
 
 Default video model: **Seedance 2.5** (`bytedance/seedance-2.5`).
@@ -390,24 +391,35 @@ APIMart or Revana. It generates at 1K only, with no `resolution` field, and has 
 sends 8 at most. Not sent: `background`, `output_format` (`png` by default), `frame_count` and `frame_duration_ms`. 5
 credits ($0.025) an image, with or without references (`KIE_PRICES`).
 
-### kie.ai-only video models
+### kie.ai and APIMart video models
 
-Not on OpenRouter, fal nor APIMart: this runs only with a kie.ai key (fields and rules in [KIE.md](KIE.md)). The id is
-the app's own (`<maker>/<name>`). It is not verified yet. `†` = the aspect ratio is sent without frames only.
+Not on OpenRouter nor fal: this runs only with a kie.ai or APIMart key (fields and rules in [KIE.md](KIE.md) and
+[APIMART.md](APIMART.md)), on whichever is cheaper for the run. The id is the app's own (`<maker>/<name>`). It is not
+verified yet. `†` = the aspect ratio is sent without frames only.
 
-| Model | Id | kie models | t2v | i2v | Last frame | Audio | Real faces | Resolutions | Durations (s) | Aspect ratios | Est. cost / second |
+| Model | Id | kie models · APIMart model | t2v | i2v | Last frame | Audio | Real faces | Resolutions | Durations (s) | Aspect ratios | Est. cost / second |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|---|---|---|---|
-| **MAGI-2** <sub>NEW</sub> | `sand-ai/magi-2` | `magi-2/text-to-video` · `image-to-video` · `reference-to-video` ¹ | ✓ | ✓ | ✓ | ✓ | ? | 1080p (default 1080p) | 4–30 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † | 1080p $0.088 |
+| **MAGI-2** <sub>NEW</sub> | `sand-ai/magi-2` | `magi-2/text-to-video` · `image-to-video` · `reference-to-video` · `magi-2` ¹ | ✓ | ✓ | ✓ | ✓ | ? | 1080p (default 1080p) | 4–30 (default 5) | 21:9, 16:9, 4:3, 1:1, 3:4, 9:16 † | 1080p kie $0.088 · APIMart $0.08 |
 
-¹ Sand AI's MAGI-2 (Nov 2026), read from kie's three doc pages and its pricing API on 26 Nov 2026; OpenRouter, fal
-and APIMart have no MAGI-2 (fal's `fal-ai/magi` endpoints are an older MAGI). Revana lists it too; it is not routed
-there yet. Every run is 1080p, the only resolution, with sound (`generate_audio`, on by default; off is the same price).
-Text to video needs a prompt (up to 15,000 characters) and takes `aspect_ratio`. A first frame, and an optional last
-frame, go to `magi-2/image-to-video` as `first_frame_url` / `last_frame_url`, with no ratio (the clip follows the image)
+¹ Sand AI's MAGI-2 (Nov 2026), read from kie's three doc pages and its pricing API on 26 Nov 2026, and from APIMart's
+doc page and pricing APIs on 27 Nov 2026 (APIMart listed it that day); OpenRouter and fal have no MAGI-2 (fal's
+`fal-ai/magi` endpoints are an older MAGI). Revana lists it too; it is not routed there yet. Every run is 1080p, the
+only resolution, with sound (`generate_audio`, on by default; off is the same price) on both. On kie, text to video
+needs a prompt (up to 15,000 characters) and takes `aspect_ratio`. A first frame, and an optional last frame, go to
+`magi-2/image-to-video` as `first_frame_url` / `last_frame_url`, with no ratio (the clip follows the image)
 and an optional prompt. Reference images (kie takes 10, the app sends 4 at most), videos (5) and audio clips (5), any
 of them alone, go to `magi-2/reference-to-video` with a prompt and the ratio, never with frames; each video or audio
 clip runs 2–30 s, and 30 s in all per kind. 17.6 credits ($0.088) a second on all three models, with or without sound,
 and reference files add nothing (`KIE_PRICES`). `seed` is not sent.
+
+APIMart runs all three modes on one model, `magi-2`, picked by the inputs: frames as `first_frame_image` /
+`last_frame_image` (no ratio), reference images as `image_with_roles` (`reference_image`) with
+`omni_reference_task_type: "reference"` and the ratio (APIMart takes 10, the app sends 4 at most), and the same
+`duration`, `resolution` (`1080p`), `generate_audio` and `aspect_ratio` otherwise. It needs a prompt in every mode, so a
+frame without one goes to kie. APIMart also takes reference videos and audio (`video_urls`, `audio_urls`), but the
+app uploads only images there, so those runs go to kie. $0.08 a second at Gold, its list price, with or without sound
+and with references (`APIMART_PRICES`), so APIMart is the cheaper: 10 s cost $0.80 there and $0.88 on kie. `seed` and
+`nsfw_check` (off by default) are not sent.
 
 ### kie.ai
 
@@ -428,7 +440,7 @@ what each run cost.
 | Kling 4.0 | `kling-4.0/reference-to-video` (text-to-video, style references), `kling-4.0/keyframe-to-video` (frames) | GPT Image 2.6 Sunburst ¹ | `gpt-image-2-6/sunburst-text-to-image` / `sunburst-image-to-image` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6/…`, `pixverse-v6-max/…`, `vidu-q4/image-to-video` | GPT Image 2.6 Economy (only here) | `gpt-image-2-6/economy-text-to-image` / `economy-image-to-image` |
 | Wan 2.7 Edit | `wan/2-7-videoedit` | Seedream 5.5 | `seedream/5-5-text-to-image` / `5-5-image-to-image` |
-| MAGI-2 (only here) | `magi-2/text-to-video` / `image-to-video` / `reference-to-video` | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
+| MAGI-2 | `magi-2/text-to-video` / `image-to-video` / `reference-to-video` | MiniMax H3 Image | `minimax-h3/text-to-image` / `image-edit` |
 | | | Kling Image 4.0 | `kling-4-0/image` (text to image and edits) |
 
 ¹ Read from kie's docs and pricing API on 6 Nov 2026. kie bills both per million tokens at the same rates, with no
@@ -482,7 +494,7 @@ run cost. It takes no video input, so editing and motion control never go there.
 | Kling 4.0, Kling 3.0 Pro / Standard, Kling O1 | `kling-v4`, `kling-v3` (`pro` / `std`), `kling-video-o1` | GPT Image 2, 2.6 (only here), 2.6 Flare, 2.6 Sunburst | `gpt-image-2`, `gpt-image-2.6`, `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst` |
 | PixVerse 6, PixVerse 6 Max, Vidu Q4 | `pixverse-v6`, `pixverse-v6-max`, `viduq4-preview` | FLUX.1 Kontext Pro | `flux-kontext-pro` |
 | Gemini Omni Flash 1.1, 1.2, FLUX.3 Video | `gemini-omni-1.1-flash-ext`, `gemini-omni-1.2-flash`, `flux-3-video` | Z-Image Turbo | `z-image-turbo` |
-| | | Seedream 5.5 | `seedream-5-5` |
+| MAGI-2 | `magi-2` | Seedream 5.5 | `seedream-5-5` |
 | | | MiniMax H3 Image | `minimax-h3-image` |
 
 ### Models on both

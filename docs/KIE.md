@@ -80,16 +80,18 @@ Not sent: `seeds`, `aspect_ratio: "auto"`, 360p (the app has none) and `video_li
 editor in the app.
 
 MAGI-2 (read 26 Nov 2026, `docs.kie.ai/market/magi-2/text-to-video.md`, `image-to-video.md`, `reference-to-video.md`)
-runs on kie.ai only, on three models with the same `duration` (4–30 s, a whole number), `resolution` (`1080p` only),
+runs on kie.ai and APIMart (see [APIMART.md](APIMART.md)); here on three models with the same `duration` (4–30 s, a whole number), `resolution` (`1080p` only),
 `generate_audio` (on by default) and `seed` (not sent). Text to video needs a prompt of up to 15,000 characters and
 takes `aspect_ratio` (21:9, 16:9, 4:3, 1:1, 3:4 or 9:16; 16:9 by default). Image to video needs `first_frame_url`
 (JPG, PNG or WebP), takes an optional `last_frame_url` and an optional prompt, and has no `aspect_ratio`: the clip
 follows the image. Reference to video needs a prompt and at least one reference image, video or audio clip, and takes
 `aspect_ratio`; the app sends a run there as soon as one is attached. kie's docs give the references no names to use
-in the prompt: it describes them ("the person in the first reference image").
+in the prompt: it describes them ("the person in the first reference image"). APIMart's `magi-2` ($0.08 a second) is
+the cheaper, so with both keys a run goes there, except with reference videos or audio, or a frame without a prompt,
+which only kie takes.
 
 **Reference videos and audio** (`caps.mediaReferences`), never with frames. kie.ai is the only provider that runs them
-(fal and OpenRouter refuse them in `video-cost.ts`, APIMart has no upload for them):
+(fal and OpenRouter refuse them in `video-cost.ts`; APIMart's models take them by url, but the app uploads only images there):
 
 | Family | Videos | Audio | Notes |
 |---|---|---|---|
