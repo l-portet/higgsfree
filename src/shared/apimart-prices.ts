@@ -47,6 +47,10 @@ export const APIMART_PRICES: Record<string, ListPrice> = {
   // The same with the sound off.
   "flux-3-video": { unit: "second", amount: { "720p": 0.136, "1080p": 0.232 } },
   "viduq4-preview": { unit: "second", amount: { "720p": 0.0912, "1080p": 0.1024, "2K": 0.1624, "4K": 0.3328 } },
+  // MAGI-2 (read 27 Nov 2026, the catalog and `api.apimart.ai/api/pricing/model?model=magi-2`): one rate, the catalog's
+  // `default` tier, at 1080p (the only resolution), with or without sound; no `input_material_prices`, so reference
+  // images add nothing. Gold is the list price here.
+  "magi-2": { unit: "second", amount: { "1080p": 0.08 } },
 
   // ---------- image ----------
   "gemini-3-pro-image-preview": { unit: "image", amount: { "1K": 0.03, "2K": 0.03, "4K": 0.04 } },

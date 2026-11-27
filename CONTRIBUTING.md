@@ -100,8 +100,9 @@ If you change one, change the type first, then both sides. Keep `src/shared` dep
   provider prices only in part (Kling Image 4.0 at 4K on fal, which lists its 2K price only, though kie.ai prices it) carry no estimate rather than a guessed one. An
   estimate that can fall short says so (Ideogram 4.6's `auto` edits on fal, billed at fal's above-2K rate when the source
   image is larger than 2048 × 2048 in area). Reference videos count only where the provider bills them: kie.ai adds their
-  length to the clip's for Seedance, Wan 3.0 and Kling 4.0, and nothing for MAGI-2, whose reference files are free. If you
-  change an estimate, say where the number came from.
+  length to the clip's for Seedance, Wan 3.0 and Kling 4.0, and nothing for MAGI-2, whose reference files are free (APIMart,
+  which bills MAGI-2's output only too, gets no reference videos from the app). If you change an estimate, say where the
+  number came from.
 
 ## Adding or updating a model
 

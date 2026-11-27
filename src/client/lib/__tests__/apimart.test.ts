@@ -140,6 +140,43 @@ describe("buildApimartVideoPayload", () => {
     expect(() => buildApimartVideoPayload(m, { prompt: "", duration: 5 }, {})).toThrow("Needs a prompt");
   });
 
+  it("MAGI-2: one model for every mode, 4–30 s at 1080p, frames in their own fields, references as roles, a prompt always", () => {
+    const m = video("sand-ai/magi-2");
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 30, aspectRatio: "21:9" }, {})).toEqual({
+      kind: "videos",
+      body: { model: "magi-2", prompt: "p", duration: 30, resolution: "1080p", generate_audio: true, aspect_ratio: "21:9" },
+      priceKey: "magi-2",
+      params: { duration: 30, resolution: "1080p", aspectRatio: "21:9", audio: true },
+    });
+    // Frames: no ratio (the clip follows the first frame, and 21:9 is refused there).
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 12, aspectRatio: "21:9", audio: false }, { firstFrame: "https://a", lastFrame: "https://b" })).toEqual({
+      kind: "videos",
+      body: { model: "magi-2", prompt: "p", duration: 12, resolution: "1080p", generate_audio: false, first_frame_image: "https://a", last_frame_image: "https://b" },
+      priceKey: "magi-2",
+      params: { duration: 12, resolution: "1080p", audio: false },
+    });
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a" }).body).not.toHaveProperty("last_frame_image");
+    // References: `reference_image` roles and the reference task named, with the ratio (16:9 when none is picked).
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { references: ["https://r1", "https://r2"] }).body).toEqual({
+      model: "magi-2",
+      prompt: "p",
+      duration: 5,
+      resolution: "1080p",
+      generate_audio: true,
+      aspect_ratio: "16:9",
+      image_with_roles: [{ url: "https://r1", role: "reference_image" }, { url: "https://r2", role: "reference_image" }],
+      omni_reference_task_type: "reference",
+    });
+    for (const aspectRatio of m.aspectRatios) expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5, aspectRatio }, {})).not.toThrow();
+    // A prompt in every mode (kie takes frames without one).
+    expect(() => buildApimartVideoPayload(m, { prompt: " ", duration: 5 }, { firstFrame: "https://a" })).toThrow("Needs a prompt");
+    expect(buildApimartVideoPayload(m, { prompt: "p", duration: 3 }, {}).params.duration).toBe(4);
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { firstFrame: "https://a", references: ["https://r"] })).toThrow("Takes frames or style references, not both");
+    // Reference videos and audio run on kie.ai: the app uploads only images to APIMart.
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { referenceVideos: ["https://v"] })).toThrow("Takes no uploaded video or audio");
+    expect(() => buildApimartVideoPayload(m, { prompt: "p", duration: 5 }, { referenceAudios: ["https://s"] })).toThrow("Takes no uploaded video or audio");
+  });
+
   it("maps the other families' own field names", () => {
     expect(buildApimartVideoPayload(video("minimax/hailuo-3"), { prompt: "p", duration: 6 }, { firstFrame: "https://a" }).body).toEqual({
       model: "MiniMax-H3",
@@ -299,6 +336,13 @@ describe("APIMart prices", () => {
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 10, resolution: "1080p", audio: true })).toBeCloseTo(0.9956);
     expect(estimateApimartVideoCost(video("pixverse/pixverse-v6-max"), { prompt: "p", duration: 5, resolution: "720p", audio: false })).toBeCloseTo(0.1956);
     expect(estimateApimartVideoCost(video("bytedance/seedance-1-5-pro"), { prompt: "p", duration: 10, resolution: "1080p" })).toBeCloseTo(1.08);
+    // MAGI-2: $0.08 a second at 1080p, with or without sound, with frames or reference images.
+    const magi = video("sand-ai/magi-2");
+    expect(estimateApimartVideoCost(magi, { prompt: "p", duration: 10 })).toBeCloseTo(0.8);
+    expect(estimateApimartVideoCost(magi, { prompt: "p", duration: 30, audio: false })).toBeCloseTo(2.4);
+    expect(estimateApimartVideoCost(magi, { prompt: "p", duration: 5, firstFrame: true, lastFrame: true })).toBeCloseTo(0.4);
+    expect(estimateApimartVideoCost(magi, { prompt: "p", duration: 5, references: true })).toBeCloseTo(0.4);
+    expect(estimateApimartVideoCost(magi, { prompt: "p", duration: 5, referenceVideos: true })).toBeUndefined();
     expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, 0)).toBeCloseTo(0.12);
     // A model with no reference fee costs the same with references.
     expect(estimateApimartImageCost(image("google/gemini-3-pro-image"), { aspectRatio: "1:1", size: "2K" }, 4, 3)).toBeCloseTo(0.12);

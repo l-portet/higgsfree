@@ -7,7 +7,7 @@
  *  - `GET  https://api.apimart.ai/v1/tasks/<id>` → `status`, `result.videos|images[0].url[]`, `cost` (USD).
  *  - `GET  https://api.apimart.ai/v1/balance` → `remain_balance` (USD): the key test.
  *  - `POST https://api.apimart.ai/v1/uploads/images` (multipart `file`) → a public `url`, kept 72 h: models
- *    take images by url. There is no upload for videos.
+ *    take images by url. APIMart also has `/v1/uploads/videos` and `/audios` (since Nov 2026); the app uses neither.
  *
  * The key only ever goes to `api.apimart.ai`. Results come from `upload.apimart.ai` without it.
  */

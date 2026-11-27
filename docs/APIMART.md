@@ -16,7 +16,9 @@ docs (`docs.apimart.ai`, every page as `.md`) and probed without a key in Chrome
 - `GET https://api.apimart.ai/v1/balance` returns the key's `remain_balance` in USD (−1: unlimited): the key
   test (Settings shows it).
 - `POST https://api.apimart.ai/v1/uploads/images` (multipart `file`, JPEG / PNG / WebP / GIF, up to 20 MB)
-  returns a public `url` on `upload.apimart.ai`, kept 72 h. There is no upload for videos.
+  returns a public `url` on `upload.apimart.ai`, kept 72 h. `/v1/uploads/videos` (MP4 / MOV / WebM, 50 MB) and
+  `/v1/uploads/audios` exist too (documented, and since Nov 2026 they answer a keyless POST with 401 where an unknown
+  upload path answers 404, read 27 Nov 2026), but the app does not use them: it uploads only images here.
 - Results come from `upload.apimart.ai`, fetched without the key.
 - Every endpoint answers `access-control-allow-origin: *` with `access-control-allow-headers: *` (the
   `Authorization` header passes through that wildcard in every engine today, which the Fetch spec does not
@@ -38,7 +40,7 @@ returns a task id, the task url polled until the result urls are there.
 
 - Frames and reference images are uploaded at submit (`/v1/uploads/images`), then the task is submitted. The
   payload is built once before anything exists with placeholder urls, so a request APIMart cannot take is a
-  400 before a record is created. A video to edit cannot go to APIMart (no video upload).
+  400 before a record is created. A video to edit cannot go to APIMart (the app uploads no videos here).
 - Poll every 6 s (videos, under the job's lock and resumable) or inline (images). `pending`, `submitted`,
   `processing`, `in_progress` keep polling; `completed` reads `result.videos[0].url[0]` (or `images`: each
   `url` is an array); `failed` / `cancelled` end the job. An unknown status keeps polling.
@@ -65,11 +67,24 @@ returns a task id, the task url polled until the result urls are there.
 | `gemini-omni12` | Gemini Omni Flash 1.2 → `gemini-omni-1.2-flash` | no `duration` (the prompt sets the length, about 3–10 s), `resolution` (`4k`), `aspect_ratio` (with frames too), `first_frame_image`, `last_frame_image`, references as `image_urls`; no `metadata.task` (APIMart picks the task) | an empty prompt, frames and references together, any length but the catalog's default (8 s, a placeholder) |
 | `flux3` | FLUX.3 Video → `flux-3-video` | `duration` 5–20, `resolution` `hd` / `fhd`, `aspect_ratio` (`auto`), `image_urls` [first], `audio` | a last frame |
 | `vidu` | Vidu Q4 → `viduq4-preview` | `first_frame_image`, `duration` 3–16, `resolution` (`2K`, `4K`), `audio` | no first frame |
+| `magi2` | MAGI-2 → `magi-2` (every mode, picked by the inputs) | `duration` 4–30, `resolution` `1080p` (the only one), `generate_audio`, `aspect_ratio` (not with frames), `first_frame_image`, `last_frame_image`, references as `image_with_roles` (`reference_image`) with `omni_reference_task_type: "reference"` | an empty prompt (with frames too), frames and references together |
 
 Most families need a prompt. Every family refuses a last frame without a first one, and style references
-unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2). Reference videos and audio are
-refused too: APIMart's models take them as public urls (`video_urls`, `audio_urls`), but it only uploads images
-(`/v1/uploads/videos` and `/audios` are 404s, Oct 2026), so they run on kie.ai (docs/KIE.md).
+unless it takes them (Seedance, Wan 3.0, Kling 4.0, Gemini Omni Flash 1.2, MAGI-2). Reference videos and audio are
+refused too: APIMart's models take them as public urls (`video_urls`, `audio_urls`), but the app uploads only
+images here (`/v1/uploads/videos` and `/audios` were 404s in Oct 2026; they answer since Nov 2026 and are not wired
+yet), so they run on kie.ai (docs/KIE.md).
+
+MAGI-2 (`magi-2`), Sand AI's model, also runs on kie.ai (see [KIE.md](KIE.md)), which splits it into three models.
+APIMart listed it on 27 Nov 2026; its doc page (`docs.apimart.ai/en/api-reference/videos/magi-2/generation.md`, read
+that day) has text to video, image to video (a first frame and an optional last one) and reference to video (up to 10
+reference images, 5 videos and 5 audio clips) on one model, the mode picked by the inputs. The app sends frames in their
+own fields (`first_frame_image`, `last_frame_image`) and no ratio with them (APIMart's image to video follows the first
+frame, and takes no 21:9), and reference images as `reference_image` roles with `omni_reference_task_type: "reference"`
+(bare `image_urls` would be read as frames) and the ratio; the app sends 4 at most. A prompt (up to 15,000 characters) is
+needed in every mode, unlike on kie, so a frame without one runs there. `duration` is 4–30 s (5 by default),
+`resolution` only `1080p`, `generate_audio` on by default. Not sent: `seed`, `nsfw_check` (off by default), the
+`audio` and `seconds` aliases, and reference videos and audio (`video_urls`, `audio_urls`), which go to kie.
 
 ## Image fields (`buildApimartImagePayload`)
 
@@ -131,9 +146,9 @@ it as unpriced, and with a kie.ai key the run goes to kie, which has a price. Th
 ## Cost estimates
 
 `APIMART_PRICES` (`src/shared/apimart-prices.ts`) has APIMart's price in USD for every model a route sends to,
-from its public catalog on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct); a test checks every route is priced and every price is used. They are
-the **Gold tier**, the "current price" APIMart shows (80% of its list price; 65% for Seedream 5.5): a Platinum or
-Diamond account pays 5–10% less. A price is per second (one rate or per resolution, a higher one with sound for
+from its public catalog on 20 Oct 2026 (Kling 4.0 on 22 Oct, PixVerse 6 Max on 26 Oct, MAGI-2 on 27 Nov); a test checks every route is priced and every price is used. They are
+the **Gold tier**, the "current price" APIMart shows (80% of its list price; 65% for Seedream 5.5; the list price
+itself for MAGI-2): a Platinum or Diamond account pays 5–10% less. A price is per second (one rate or per resolution, a higher one with sound for
 Kling 3.0 and PixVerse), per clip (Veo, 8 s; Gemini Omni Flash 1.1 by length), or per image (by size; Seedream 5.5
 also bills each reference image). The shared estimator (`list-pricing.ts`) prices the payload the run would send.
 
@@ -142,6 +157,12 @@ $0.0052 for each reference image, the first included (`inputImageAmount`). The c
 the reference fee is `input_image_paid_price` in `api.apimart.ai/api/pricing/model?model=seedream-5-5`, the
 per-model price the model page's estimate reads. It is the cheapest of Seedream 5.5's four providers, so with an
 APIMart key it runs here.
+
+MAGI-2 (`magi-2`, read 27 Nov 2026 from the catalog and `api.apimart.ai/api/pricing/model?model=magi-2`) costs $0.08 a
+second at Gold, one rate (the catalog's `default` tier) for its one resolution, 1080p, with or without sound. Its
+entry has no `input_material_prices` (Grok Imagine's has a per-image and per-second input fee) and the per-model API no
+input fee, so reference images add nothing. kie.ai bills $0.088, so with both keys APIMart runs it, except what only
+kie takes (reference videos and audio, a frame without a prompt).
 
 The exceptions are Gemini Omni Flash 1.2 (`gemini-omni-1.2-flash`) and GPT Image 2.6 (`gpt-image-2.6`), which
 neither the catalog nor their model pages priced on 30 Oct 2026, and GPT Image 2.6 Flare (`gpt-image-2.6-flare`) and Sunburst (`gpt-image-2.6-sunburst`),
@@ -155,7 +176,9 @@ its 20 Oct price: the catalog no longer lists it (12 Nov 2026), though its doc p
   disagree with themselves in places (the `image_urls` item shape, result lifetimes). APIMart's message is
   shown verbatim on the card.
 - **The account tier is not known.** Estimates use Gold prices; the recorded cost is what was charged.
-- **No video inputs.** Video editing and motion control never go to APIMart.
+- **No video or audio inputs.** Video editing, motion control and reference videos and audio never go to APIMart,
+  though its models take them by url and it has had `/v1/uploads/videos` and `/audios` since Nov 2026 (not wired:
+  the engine sends every run with reference videos or audio to kie.ai, and the composer asks for a kie.ai key).
 - **Gemini Omni Flash 1.2 has no length or price to show.** The prompt sets the clip's length, so it runs here only
   at the composer's default 8 s, a placeholder; any other length goes to fal or kie.ai. APIMart lists no price for it
   yet, so with a kie.ai key too it goes to kie (which also takes style references), and with a fal key to fal unless

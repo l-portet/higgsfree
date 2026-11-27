@@ -31,7 +31,7 @@ export interface ApimartVideoMedia {
   firstFrame?: string;
   lastFrame?: string;
   references?: string[];
-  /** Refused: APIMart uploads images only, and a library file has no public url to give it. */
+  /** Refused: the app uploads only images to APIMart, and a library file has no public url to give it. */
   referenceVideos?: string[];
   referenceAudios?: string[];
 }
@@ -62,6 +62,8 @@ const VIDEO_LIMITS: Record<ApimartVideoRoute["family"], { durations: number[]; a
   "gemini-omni12": { durations: [8], aspects: ["16:9", "9:16"], resolutions: { "720p": "720p", "1080p": "1080p", "4K": "4k" } },
   flux3: { durations: range(5, 20), aspects: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], resolutions: { "720p": "hd", "1080p": "fhd" } },
   vidu: { durations: range(3, 16), resolutions: { "720p": "720p", "1080p": "1080p", "2K": "2K", "4K": "4K" } },
+  // 1080p only; 21:9 on text- and reference-to-video only, and the app sends no ratio with frames anyway.
+  magi2: { durations: range(4, 30), aspects: RATIOS, resolutions: { "1080p": "1080p" } },
 };
 
 /** "4–15 s" or "6 or 10 s". */
@@ -77,9 +79,9 @@ function durationsLabel(list: number[]): string {
 /** Families whose clips always have sound: a run with the sound off goes elsewhere. */
 const ALWAYS_SOUND = new Set<ApimartVideoRoute["family"]>(["veo", "minimax-h3"]);
 /** Families that take style references (as `reference_image` roles; Gemini Omni Flash 1.2 as `image_urls`). */
-const TAKES_REFERENCES = new Set<ApimartVideoRoute["family"]>(["seedance", "wan3", "kling4", "gemini-omni12"]);
+const TAKES_REFERENCES = new Set<ApimartVideoRoute["family"]>(["seedance", "wan3", "kling4", "gemini-omni12", "magi2"]);
 /** Families that take a last frame with the first. */
-const TAKES_LAST = new Set<ApimartVideoRoute["family"]>(["veo", "seedance", "seedance15", "minimax-h3", "wan3", "wan27", "kling", "kling4", "pixverse", "gemini-omni12"]);
+const TAKES_LAST = new Set<ApimartVideoRoute["family"]>(["veo", "seedance", "seedance15", "minimax-h3", "wan3", "wan27", "kling", "kling4", "pixverse", "gemini-omni12", "magi2"]);
 
 const roles = (first?: string, last?: string, refs: string[] = []): { url: string; role: string }[] => [
   ...(first ? [{ url: first, role: "first_frame" }] : []),
@@ -240,6 +242,21 @@ export function buildApimartVideoPayload(model: VideoModel, req: ApimartVideoPar
     case "vidu":
       if (!first) throw badRequest("Needs a first frame");
       Object.assign(body, { first_frame_image: first, duration: params.duration, resolution: res, audio: sound(true) });
+      break;
+    case "magi2":
+      // One model for all three modes, picked by the inputs: frames in their own fields (no ratio: the clip follows
+      // the first), reference images as `reference_image` roles with the reference task named (bare `image_urls`
+      // would be read as frames), the rest text to video. A prompt in every mode, unlike kie. `seed` and
+      // `nsfw_check` (off by default) are not sent.
+      needsPrompt();
+      Object.assign(body, { duration: params.duration, resolution: res, generate_audio: sound(true) });
+      if (frames) {
+        body.first_frame_image = first;
+        if (last) body.last_frame_image = last;
+      } else {
+        body.aspect_ratio = aspect ?? "16:9";
+        if (refs.length) Object.assign(body, { image_with_roles: roles(undefined, undefined, refs), omni_reference_task_type: "reference" });
+      }
       break;
   }
   return { kind: "videos", body, priceKey, params };
