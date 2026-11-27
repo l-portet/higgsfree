@@ -41,7 +41,7 @@ export interface TaskProvider {
   name: string;
   /** An image input as the provider takes it: uploaded, then its url (ByteDance and Replicate: the data URL itself). */
   uploadImage(key: string, dataUrl: string, signal?: AbortSignal): Promise<string>;
-  /** Undefined when the provider has no upload for videos (APIMart). */
+  /** Undefined when the app uploads no videos to the provider (APIMart). */
   uploadVideo?: (key: string, blob: Blob, fileName: string, signal?: AbortSignal) => Promise<string>;
   video(model: VideoModel, req: KieVideoParams, media: KieVideoMedia): TaskRequest;
   image(model: ImageModel, req: KieImageParams, referenceUrls: string[]): TaskRequest;

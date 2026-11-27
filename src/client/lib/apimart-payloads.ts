@@ -31,7 +31,7 @@ export interface ApimartVideoMedia {
   firstFrame?: string;
   lastFrame?: string;
   references?: string[];
-  /** Refused: APIMart uploads images only, and a library file has no public url to give it. */
+  /** Refused: the app uploads only images to APIMart, and a library file has no public url to give it. */
   referenceVideos?: string[];
   referenceAudios?: string[];
 }
